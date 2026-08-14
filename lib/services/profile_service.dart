@@ -19,7 +19,8 @@ class ProfileService {
   }
 
   Future<void> updatePersonalInfo({
-    required String name,
+    required String firstName,
+    required String lastName,
     String? studentNumber,
     String? contactNumber,
     int? campusId,
@@ -34,7 +35,8 @@ class ProfileService {
     await _client.put(
       '/student/profile',
       {
-        'name': name,
+        'first_name': firstName,
+        'last_name': lastName,
         'student_number': studentNumber,
         'contact_number': contactNumber,
         'campus_id': campusId,

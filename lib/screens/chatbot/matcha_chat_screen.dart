@@ -120,9 +120,10 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
     final destination = chatDestinationFor(card.screen);
 
     if (destination == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${card.title} isn\'t available in the app yet.')),
-      );
+      // Say why when we know, rather than a blanket "not available".
+      final reason = unavailableReasonFor(card.screen)
+          ?? '${card.title} isn\'t available in the app yet.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(reason)));
       return;
     }
 

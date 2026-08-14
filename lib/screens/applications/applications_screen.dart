@@ -10,6 +10,7 @@ import '../../services/application_service.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/empty_results.dart';
 import '../assessments/assessment_intro_screen.dart';
+import '../../widgets/app_sidebar.dart';
 
 /// Applications — GET /api/student/applications, the same rows and the same
 /// status/assessment rules as the web app's Applications page.
@@ -164,6 +165,7 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppSidebar(current: SidebarItem.applications),
       backgroundColor: AppColors.primaryDark,
       body: Column(
         children: [
@@ -173,6 +175,17 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
               child: Row(
                 children: [
+                  // Builder so openDrawer() sees the Scaffold above it.
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu, color: Colors.white),
+                      onPressed: Scaffold.of(context).openDrawer,
+                      tooltip: 'Menu',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
                       'Applications',

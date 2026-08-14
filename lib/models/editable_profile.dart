@@ -15,6 +15,8 @@ class CampusOption {
 /// already formatted for reading, so editing needs the underlying values.
 class EditableProfile {
   EditableProfile({
+    required this.firstName,
+    required this.lastName,
     required this.name,
     required this.email,
     this.studentNumber,
@@ -31,6 +33,10 @@ class EditableProfile {
     required this.campuses,
   });
 
+  /// `users.first_name` / `users.last_name` — the two columns the web profile
+  /// page edits. `name` is the composed display value the model keeps in sync.
+  final String firstName;
+  final String lastName;
   final String name;
   final String email;
   final String? studentNumber;
@@ -48,6 +54,8 @@ class EditableProfile {
 
   factory EditableProfile.fromJson(Map<String, dynamic> json) {
     return EditableProfile(
+      firstName: json['first_name'] as String? ?? '',
+      lastName: json['last_name'] as String? ?? '',
       name: json['name'] as String? ?? '',
       email: json['email'] as String? ?? '',
       studentNumber: json['student_number'] as String?,

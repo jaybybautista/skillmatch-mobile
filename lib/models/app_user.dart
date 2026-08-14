@@ -31,6 +31,8 @@ class AppUser {
     required this.email,
     required this.role,
     required this.status,
+    this.givenName,
+    this.familyName,
     this.profilePictureUrl,
     this.student,
   });
@@ -40,15 +42,27 @@ class AppUser {
   final String email;
   final String role;
   final String status;
+
+  /// `users.first_name` / `users.last_name`. Older tokens and any payload that
+  /// predates the split can still be missing them, so they stay nullable and
+  /// [firstName] falls back to the composed name.
+  final String? givenName;
+  final String? familyName;
   final String? profilePictureUrl;
   final StudentInfo? student;
 
-  String get firstName => name.trim().split(' ').first;
+  String get firstName {
+    final given = givenName?.trim();
+    if (given != null && given.isNotEmpty) return given;
+    return name.trim().split(' ').first;
+  }
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
       id: json['id'] as int,
       name: json['name'] as String,
+      givenName: json['first_name'] as String?,
+      familyName: json['last_name'] as String?,
       email: json['email'] as String,
       role: json['role'] as String,
       status: json['status'] as String,

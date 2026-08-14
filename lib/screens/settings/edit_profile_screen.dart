@@ -24,7 +24,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   late Future<EditableProfile> _future = _service.fetchEditableProfile();
 
-  final _name = TextEditingController();
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
   final _studentNumber = TextEditingController();
   final _contactNumber = TextEditingController();
   final _course = TextEditingController();
@@ -46,7 +47,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   void dispose() {
-    for (final c in [_name, _studentNumber, _contactNumber, _course, _address, _region, _province, _city, _barangay]) {
+    for (final c in [
+      _firstName,
+      _lastName,
+      _studentNumber,
+      _contactNumber,
+      _course,
+      _address,
+      _region,
+      _province,
+      _city,
+      _barangay,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -56,7 +68,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (_initialised) return;
     _initialised = true;
 
-    _name.text = profile.name;
+    _firstName.text = profile.firstName;
+    _lastName.text = profile.lastName;
     _studentNumber.text = profile.studentNumber ?? '';
     _contactNumber.text = profile.contactNumber ?? '';
     _course.text = profile.course ?? '';
@@ -79,7 +92,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isSaving = true);
     try {
       await _service.updatePersonalInfo(
-        name: _name.text.trim(),
+        firstName: _firstName.text.trim(),
+        lastName: _lastName.text.trim(),
         studentNumber: _blankToNull(_studentNumber.text),
         contactNumber: _blankToNull(_contactNumber.text),
         campusId: _campusId,
@@ -216,7 +230,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               children: [
                 const _SectionHeading('Personal Information'),
                 const SizedBox(height: 12),
-                _Field(label: 'Full Name', controller: _name, isRequired: true),
+                _Field(label: 'First Name', controller: _firstName, isRequired: true),
+                _Field(label: 'Last Name', controller: _lastName, isRequired: true),
                 _Field(label: 'Student Number', controller: _studentNumber),
                 _Field(label: 'Contact Number', controller: _contactNumber, keyboardType: TextInputType.phone),
                 _CampusDropdown(

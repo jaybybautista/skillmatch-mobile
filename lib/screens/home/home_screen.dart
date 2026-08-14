@@ -8,6 +8,7 @@ import '../../models/internship.dart';
 import '../../services/auth_service.dart';
 import '../../services/internship_service.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/app_sidebar.dart';
 import '../../widgets/draggable_chatbot_button.dart';
 import '../../widgets/match_card.dart';
 import '../bookmarks/bookmarks_screen.dart';
@@ -43,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.primaryDark,
+      drawer: const AppSidebar(current: SidebarItem.home),
       body: Stack(
         children: [
           Column(
@@ -57,6 +59,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          // Builder so openDrawer() sees the Scaffold above it.
+                          Builder(
+                            builder: (context) => _HeaderIconButton(
+                              icon: Icons.menu,
+                              onTap: Scaffold.of(context).openDrawer,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

@@ -57,7 +57,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         const SnackBar(content: Text('Your password has been changed. You can now sign in.')),
       );
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthScreen(initialTab: 0)),
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
         (route) => false,
       );
     } on ApiException catch (e) {

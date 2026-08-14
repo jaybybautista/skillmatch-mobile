@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
 import '../../models/internship_detail.dart';
 import '../../services/internship_service.dart';
+import '../reviews/reviews_section.dart';
 
 /// Internship posting detail — mirrors the web's internship detail page
 /// (resources/views/student/internships/show.blade.php): gradient banner
@@ -131,7 +132,10 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen> with Si
                     children: [
                       _WorkDescriptionTab(detail: detail),
                       _CompanyTab(detail: detail),
-                      _ReviewsTab(detail: detail),
+                      ReviewsSection(
+                        reviewableType: 'internship',
+                        reviewableId: widget.internshipId,
+                      ),
                     ],
                   ),
                 ),
@@ -432,80 +436,6 @@ class _CompanyTab extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ReviewsTab extends StatelessWidget {
-  const _ReviewsTab({required this.detail});
-
-  final InternshipDetail detail;
-
-  @override
-  Widget build(BuildContext context) {
-    if (detail.reviews.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text('No reviews yet.', style: TextStyle(color: AppColors.textMuted)),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-      itemCount: detail.reviews.length,
-      separatorBuilder: (context, index) => const Divider(height: 32),
-      itemBuilder: (context, index) {
-        final review = detail.reviews[index];
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: AppColors.chipBackground,
-              backgroundImage: review.avatarUrl != null ? NetworkImage(review.avatarUrl!) : null,
-              child: review.avatarUrl == null
-                  ? Text(
-                      review.userName.isNotEmpty ? review.userName[0].toUpperCase() : '?',
-                      style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(review.userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      for (var i = 1; i <= 5; i++)
-                        Icon(
-                          i <= review.rating ? Icons.star : Icons.star_border,
-                          size: 14,
-                          color: const Color(0xFFF5A623),
-                        ),
-                      if (review.createdAt != null) ...[
-                        const SizedBox(width: 8),
-                        Text(review.createdAt!, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                      ],
-                    ],
-                  ),
-                  if (review.content != null && review.content!.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      review.content!,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.4),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

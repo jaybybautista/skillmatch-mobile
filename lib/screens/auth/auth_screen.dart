@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_theme.dart';
+import 'role_picker_screen.dart';
 import 'widgets/login_form.dart';
-import 'widgets/register_form.dart';
 
-/// Combined login / sign-up screen matching the SkillMatch prototype: one
-/// logo header, a pill-shaped tab toggle, and a form body that swaps between
-/// the login and registration flows.
+/// Login screen matching the SkillMatch prototype: one logo header, a
+/// pill-shaped tab toggle, and the login form.
+///
+/// "Sign Up" is not a second form here — it opens [RolePickerScreen], so the
+/// role question is asked every single time registration is entered, from
+/// either the toggle or the form's "Create one" link.
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key, this.initialTab = 0});
-
-  final int initialTab;
+  const AuthScreen({super.key});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  late int _tabIndex = widget.initialTab;
+  void _openRegistration() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const RolePickerScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +46,7 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 24),
               _buildTabToggle(),
               const SizedBox(height: 28),
-              if (_tabIndex == 0)
-                LoginForm(onSwitchToRegister: () => setState(() => _tabIndex = 1))
-              else
-                RegisterForm(onSwitchToLogin: () => setState(() => _tabIndex = 0)),
+              LoginForm(onSwitchToRegister: _openRegistration),
             ],
           ),
         ),
@@ -61,17 +63,18 @@ class _AuthScreenState extends State<AuthScreen> {
       ),
       child: Row(
         children: [
-          Expanded(child: _tabButton('Log in', 0)),
-          Expanded(child: _tabButton('Sign Up', 1)),
+          // "Log in" stays selected: Sign Up pushes the role picker rather
+          // than swapping this screen's body, so there is no second tab state.
+          Expanded(child: _tabButton('Log in', selected: true, onTap: null)),
+          Expanded(child: _tabButton('Sign Up', selected: false, onTap: _openRegistration)),
         ],
       ),
     );
   }
 
-  Widget _tabButton(String label, int index) {
-    final selected = _tabIndex == index;
+  Widget _tabButton(String label, {required bool selected, required VoidCallback? onTap}) {
     return GestureDetector(
-      onTap: () => setState(() => _tabIndex = index),
+      onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(vertical: 12),

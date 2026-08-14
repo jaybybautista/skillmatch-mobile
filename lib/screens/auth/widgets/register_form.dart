@@ -7,7 +7,6 @@ import '../../../models/campus.dart';
 import '../../../services/auth_service.dart';
 import '../../../widgets/app_text_field.dart';
 import '../../../widgets/primary_button.dart';
-import '../../home/home_screen.dart';
 
 class RegisterForm extends StatefulWidget {
   const RegisterForm({super.key, required this.onSwitchToLogin});
@@ -73,10 +72,10 @@ class _RegisterFormState extends State<RegisterForm> {
           );
 
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (route) => false,
-      );
+      // Pop back to the session gate instead of pushing Home directly: a
+      // brand-new account is by definition first-run, and the gate is what
+      // decides between the profile-setup wizard and Home.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       setState(() => _errorText = e.message);
     } catch (_) {

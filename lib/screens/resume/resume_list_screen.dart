@@ -9,6 +9,7 @@ import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/primary_button.dart';
 import 'import_resume_screen.dart';
 import 'resume_sections_screen.dart';
+import '../../widgets/app_sidebar.dart';
 
 /// Resume list — GET/POST/rename/delete /api/resumes, the same `resumes`
 /// table the web app's Resume Builder index page reads and writes.
@@ -253,6 +254,7 @@ class _ResumeListScreenState extends State<ResumeListScreen> with WidgetsBinding
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppSidebar(current: SidebarItem.resumeBuilder),
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,

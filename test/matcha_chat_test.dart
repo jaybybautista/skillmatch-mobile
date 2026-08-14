@@ -123,12 +123,20 @@ void main() {
     });
 
     test('screens the app lacks resolve to nothing rather than the wrong place', () {
-      // These exist on the web only; the chat says so instead of guessing.
+      // Web-only, and the chat now says why rather than just failing.
       expect(chatDestinationFor('roadmap'), isNull);
-      expect(chatDestinationFor('notifications'), isNull);
+      expect(unavailableReasonFor('roadmap'), isNotNull);
       expect(chatDestinationFor('requirements'), isNull);
+      expect(unavailableReasonFor('requirements'), isNotNull);
+
+      // Company capabilities and junk never resolve in the student app.
       expect(chatDestinationFor('company_analytics'), isNull);
       expect(chatDestinationFor(''), isNull);
+    });
+
+    test('notifications now has a real screen to land on', () {
+      expect(chatDestinationFor('notifications'), isNotNull);
+      expect(unavailableReasonFor('notifications'), isNull);
     });
   });
 

@@ -6,7 +6,6 @@ import '../../../core/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../widgets/app_text_field.dart';
 import '../../../widgets/primary_button.dart';
-import '../../home/home_screen.dart';
 import '../forgot_password_screen.dart';
 
 class LoginForm extends StatefulWidget {
@@ -50,10 +49,9 @@ class _LoginFormState extends State<LoginForm> {
           );
 
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (route) => false,
-      );
+      // The session gate at the root routes to the setup wizard or Home, so a
+      // student who never finished setup still lands there after signing in.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       setState(() => _errorText = e.message);
     } catch (_) {
@@ -74,10 +72,9 @@ class _LoginFormState extends State<LoginForm> {
       if (user == null) return; // User dismissed the account picker.
 
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (route) => false,
-      );
+      // The session gate at the root routes to the setup wizard or Home, so a
+      // student who never finished setup still lands there after signing in.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       _showGoogleError(e.message);
     } catch (e) {

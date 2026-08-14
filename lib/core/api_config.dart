@@ -2,31 +2,17 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-/// Central place to point the app at the SkillMatch Laravel backend.
-///
-/// The web project is served via `php artisan serve` on port 8000 (see
-/// APP_URL in the Laravel .env). Run it reachable from other devices on your
-/// network with:
-///
+///irun mo ito:
 ///   php artisan serve --host=0.0.0.0 --port=8000
-///
-/// Then pick the right host below depending on how you're running the app:
-///
-/// - Physical phone (USB or wireless debugging): use your PC's LAN IP —
-///   both devices must be on the same Wi-Fi network. Find it with
-///   `ipconfig` (look for "IPv4 Address" under your Wi-Fi adapter).
-/// - Android emulator: use the special alias 10.0.2.2, which the emulator
-///   maps back to your host machine's localhost.
-/// - iOS simulator / web / desktop: use localhost directly.
+/// para mafetch niya 
+
 class ApiConfig {
   ApiConfig._();
 
-  /// Your computer's LAN IP — used when testing on a physical device.
-  /// Update this if your PC's IP changes (e.g. you reconnect to Wi-Fi).
+  ///same dapat ung ip teh ng wifi niyu, check mo nalang ipconfig tas same wifi dapat
   static const String _lanHost = '192.168.100.51';
 
-  /// Flip to true only when running on the Android *emulator* (not a real
-  /// phone) — swaps in the 10.0.2.2 loopback alias instead of [_lanHost].
+  ///gawin mo siyang true teh if want mo gumamit ng emulator
   static const bool _useAndroidEmulator = false;
 
   static const int port = 8000;
@@ -39,6 +25,11 @@ class ApiConfig {
   }
 
   static String get baseUrl => 'http://$_host:$port/api';
+
+  /// The SkillMatch website itself (not the API). Shown to anyone the app has
+  /// to turn away — company sign-ups and coordinator/admin sign-ins both live
+  /// on the web, since the app only has student screens.
+  static String get siteUrl => 'http://$_host:$port';
 
   /// The same "Web application" OAuth client ID the Laravel backend already
   /// uses for Socialite (GOOGLE_CLIENT_ID in the web .env). Passing this as
