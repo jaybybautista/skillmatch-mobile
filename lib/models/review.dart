@@ -14,6 +14,8 @@ class Review {
     required this.authorRole,
     required this.authorAvatarUrl,
     required this.authorInitial,
+    required this.authorScreen,
+    required this.authorScreenParams,
     required this.isMine,
     required this.likeCount,
     required this.hasLiked,
@@ -40,6 +42,12 @@ class Review {
   final String authorRole;
   final String? authorAvatarUrl;
   final String authorInitial;
+
+  /// Where tapping this author's name or avatar goes — resolved server-side
+  /// by ProfileLinkService, the same service that answers people search.
+  /// Null when the author has no viewable profile (a deleted account).
+  final String? authorScreen;
+  final Map<String, dynamic> authorScreenParams;
   final bool isMine;
   final int likeCount;
   final bool hasLiked;
@@ -70,6 +78,8 @@ class Review {
       authorRole: json['author_role'] as String? ?? 'user',
       authorAvatarUrl: json['author_avatar_url'] as String?,
       authorInitial: json['author_initial'] as String? ?? 'U',
+      authorScreen: json['author_screen'] as String?,
+      authorScreenParams: (json['author_screen_params'] as Map?)?.cast<String, dynamic>() ?? const {},
       isMine: json['is_mine'] as bool? ?? false,
       likeCount: (json['like_count'] as num?)?.toInt() ?? 0,
       hasLiked: json['has_liked'] as bool? ?? false,
@@ -104,6 +114,8 @@ class Review {
       authorRole: authorRole,
       authorAvatarUrl: authorAvatarUrl,
       authorInitial: authorInitial,
+      authorScreen: authorScreen,
+      authorScreenParams: authorScreenParams,
       isMine: isMine,
       likeCount: likeCount ?? this.likeCount,
       hasLiked: hasLiked ?? this.hasLiked,

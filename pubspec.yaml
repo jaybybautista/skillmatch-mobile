@@ -53,6 +53,8 @@ dependencies:
   file_picker: ^10.3.10
   pdf: ^3.12.0
   printing: ^5.14.3
+  # Hands raw bytes (Requirements downloads) to the OS share sheet.
+  share_plus: ^10.1.4
 
   # Keeps an in-progress quiz (answers, current question, timer deadline) alive
   # across app restarts, the same way the web quiz uses localStorage.

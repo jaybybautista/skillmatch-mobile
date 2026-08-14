@@ -67,6 +67,7 @@ class ReviewTile extends StatelessWidget {
     required this.onReply,
     required this.onEdit,
     required this.onDelete,
+    required this.onAuthorTap,
     this.showReplies = true,
     this.onOpenThread,
   });
@@ -76,6 +77,11 @@ class ReviewTile extends StatelessWidget {
   final ReviewAction onReply;
   final ReviewAction onEdit;
   final ReviewAction onDelete;
+
+  /// Raised when the author's name or avatar is tapped — the screen resolves
+  /// [Review.authorScreen] into actual navigation, the same way it resolves
+  /// [onReply] and the rest, so this widget never has to know about routes.
+  final ReviewAction onAuthorTap;
 
   /// False on the reviews list, where a "N replies" button opens the thread
   /// instead of expanding it inline.
@@ -101,6 +107,7 @@ class ReviewTile extends StatelessWidget {
             onReply: onReply,
             onEdit: onEdit,
             onDelete: onDelete,
+            onAuthorTap: onAuthorTap,
           ),
           if (showReplies)
             for (var i = 0; i < review.replies.length; i++)
@@ -111,6 +118,7 @@ class ReviewTile extends StatelessWidget {
                 onReply: onReply,
                 onEdit: onEdit,
                 onDelete: onDelete,
+                onAuthorTap: onAuthorTap,
               )
           else if (review.replyCount > 0 && onOpenThread != null)
             Padding(
@@ -145,6 +153,7 @@ class ReplyRow extends StatelessWidget {
     required this.onReply,
     required this.onEdit,
     required this.onDelete,
+    required this.onAuthorTap,
   });
 
   final Review review;
@@ -155,6 +164,7 @@ class ReplyRow extends StatelessWidget {
   final ReviewAction onReply;
   final ReviewAction onEdit;
   final ReviewAction onDelete;
+  final ReviewAction onAuthorTap;
 
   @override
   Widget build(BuildContext context) {
@@ -177,6 +187,7 @@ class ReplyRow extends StatelessWidget {
             onReply: onReply,
             onEdit: onEdit,
             onDelete: onDelete,
+            onAuthorTap: onAuthorTap,
           ),
         ),
       ],
@@ -193,6 +204,7 @@ class ReviewBody extends StatelessWidget {
     required this.onReply,
     required this.onEdit,
     required this.onDelete,
+    required this.onAuthorTap,
   });
 
   final Review review;
@@ -200,29 +212,34 @@ class ReviewBody extends StatelessWidget {
   final ReviewAction onReply;
   final ReviewAction onEdit;
   final ReviewAction onDelete;
+  final ReviewAction onAuthorTap;
 
   @override
   Widget build(BuildContext context) {
     final isReply = review.isReply;
+    final hasProfile = review.authorScreen != null;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(
-          radius: isReply ? 13 : 18,
-          backgroundColor: AppColors.chipBackground,
-          backgroundImage:
-              review.authorAvatarUrl != null ? NetworkImage(review.authorAvatarUrl!) : null,
-          child: review.authorAvatarUrl == null
-              ? Text(
-                  review.authorInitial,
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: isReply ? 11 : 14,
-                  ),
-                )
-              : null,
+        GestureDetector(
+          onTap: hasProfile ? () => onAuthorTap(review) : null,
+          child: CircleAvatar(
+            radius: isReply ? 13 : 18,
+            backgroundColor: AppColors.chipBackground,
+            backgroundImage:
+                review.authorAvatarUrl != null ? NetworkImage(review.authorAvatarUrl!) : null,
+            child: review.authorAvatarUrl == null
+                ? Text(
+                    review.authorInitial,
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: isReply ? 11 : 14,
+                    ),
+                  )
+                : null,
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -232,12 +249,18 @@ class ReviewBody extends StatelessWidget {
               Row(
                 children: [
                   Flexible(
-                    child: Text(
-                      review.authorName,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: isReply ? 12.5 : 14,
+                    child: GestureDetector(
+                      onTap: hasProfile ? () => onAuthorTap(review) : null,
+                      child: Text(
+                        review.authorName,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: isReply ? 12.5 : 14,
+                          color: hasProfile ? AppColors.primaryLight : AppColors.textDark,
+                          decoration: hasProfile ? TextDecoration.underline : TextDecoration.none,
+                          decorationColor: AppColors.primaryLight.withValues(alpha: 0.4),
+                        ),
                       ),
                     ),
                   ),

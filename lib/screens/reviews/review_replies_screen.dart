@@ -5,6 +5,7 @@ import '../../core/app_theme.dart';
 import '../../models/review.dart';
 import '../../services/review_service.dart';
 import '../../widgets/review_thread.dart';
+import '../chatbot/chat_destinations.dart';
 import 'reviews_section.dart' show replaceInTree, showEditReviewSheet;
 
 /// The full conversation under one review: the review itself at the top, the
@@ -128,6 +129,15 @@ class _ReviewRepliesScreenState extends State<ReviewRepliesScreen> {
       _notify(e.message);
       _load();
     }
+  }
+
+  void _openAuthorProfile(Review review) {
+    final screen = review.authorScreen;
+    if (screen == null) return;
+
+    final destination = chatDestinationFor(screen, review.authorScreenParams);
+    if (destination == null) return;
+    destination(context);
   }
 
   /// Aims the composer at [review] and seeds it with that person's @mention,
@@ -277,6 +287,7 @@ class _ReviewRepliesScreenState extends State<ReviewRepliesScreen> {
             review: _root!,
             onLike: _toggleLike,
             onReply: _startReply,
+            onAuthorTap: _openAuthorProfile,
             onEdit: _edit,
             onDelete: _delete,
           ),

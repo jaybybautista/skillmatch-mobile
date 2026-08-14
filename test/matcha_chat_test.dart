@@ -117,18 +117,14 @@ void main() {
         'resume_builder',
         'profile',
         'settings',
+        'requirements',
+        'roadmap',
       ]) {
         expect(chatDestinationFor(key), isNotNull, reason: '$key should navigate');
       }
     });
 
-    test('screens the app lacks resolve to nothing rather than the wrong place', () {
-      // Web-only, and the chat now says why rather than just failing.
-      expect(chatDestinationFor('roadmap'), isNull);
-      expect(unavailableReasonFor('roadmap'), isNotNull);
-      expect(chatDestinationFor('requirements'), isNull);
-      expect(unavailableReasonFor('requirements'), isNotNull);
-
+    test('junk destinations resolve to nothing rather than the wrong place', () {
       // Company capabilities and junk never resolve in the student app.
       expect(chatDestinationFor('company_analytics'), isNull);
       expect(chatDestinationFor(''), isNull);

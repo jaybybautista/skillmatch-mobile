@@ -82,15 +82,14 @@ void main() {
       }
     });
 
-    test('the two web-only screens are the only unresolved ones', () {
-      expect(unavailableDestinations.keys, containsAll(['roadmap', 'requirements']));
-      expect(chatDestinationFor('roadmap'), isNull);
-      expect(chatDestinationFor('requirements'), isNull);
+    test('every screen the web has, the app now navigates to as well', () {
+      expect(unavailableDestinations, isEmpty);
 
-      // Everything the app does have must actually navigate.
       expect(chatDestinationFor('notifications'), isNotNull);
       expect(chatDestinationFor('applications'), isNotNull);
       expect(chatDestinationFor('placement'), isNotNull);
+      expect(chatDestinationFor('requirements'), isNotNull);
+      expect(chatDestinationFor('roadmap'), isNotNull);
     });
 
     test('id-carrying destinations need their id', () {
@@ -126,7 +125,7 @@ void main() {
       expect(find.text('Search'), findsOneWidget);
     });
 
-    testWidgets('a web-only entry explains itself instead of navigating', (tester) async {
+    testWidgets('Skill Roadmap navigates to a real screen', (tester) async {
       await tester.pumpWidget(const MaterialApp(
         home: Scaffold(drawer: AppSidebar(current: SidebarItem.home), body: SizedBox()),
       ));
@@ -135,9 +134,13 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Skill Roadmap'));
-      await tester.pumpAndSettle();
+      // Bounded pumps only — the roadmap screen kicks off its own real
+      // network fetch, which this test has no need to wait out.
+      await tester.pump();
+      await tester.pump();
 
-      expect(find.textContaining('only on the SkillMatch website'), findsOneWidget);
+      expect(find.text('Skill Roadmap'), findsWidgets);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
   });
 }

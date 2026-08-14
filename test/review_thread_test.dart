@@ -122,6 +122,7 @@ void main() {
         onReply: (_) {},
         onEdit: (_) {},
         onDelete: (_) {},
+        onAuthorTap: (_) {},
       )));
 
       expect(find.byIcon(Icons.more_vert), findsNothing);
@@ -136,6 +137,7 @@ void main() {
         onReply: (_) {},
         onEdit: (_) {},
         onDelete: (_) {},
+        onAuthorTap: (_) {},
       )));
 
       await tester.tap(find.byIcon(Icons.more_vert));
@@ -161,6 +163,7 @@ void main() {
         onReply: (_) {},
         onEdit: (_) {},
         onDelete: (_) {},
+        onAuthorTap: (_) {},
       )));
 
       expect(find.text('hidden reply'), findsNothing);
@@ -189,6 +192,7 @@ void main() {
         onReply: (_) {},
         onEdit: (_) {},
         onDelete: (_) {},
+        onAuthorTap: (_) {},
       )));
 
       expect(find.text('root review'), findsOneWidget);
@@ -224,6 +228,7 @@ void main() {
         onReply: (_) {},
         onEdit: (_) {},
         onDelete: (_) {},
+        onAuthorTap: (_) {},
       )));
 
       final texts = tester.widgetList<RichText>(find.byType(RichText));
@@ -275,6 +280,44 @@ void main() {
       controller.dispose();
     });
 
+    testWidgets('tapping a name with a profile raises onAuthorTap', (tester) async {
+      Review? tapped;
+      final withScreen = Review.fromJson({
+        ..._json(id: 1, author: 'Ana Cruz'),
+        'author_screen': 'student_profile',
+        'author_screen_params': {'student_id': 9},
+      });
+
+      await tester.pumpWidget(wrap(ReviewTile(
+        review: withScreen,
+        onLike: (_) {},
+        onReply: (_) {},
+        onEdit: (_) {},
+        onDelete: (_) {},
+        onAuthorTap: (r) => tapped = r,
+      )));
+
+      await tester.tap(find.text('Ana Cruz'));
+      expect(tapped?.id, 1);
+    });
+
+    testWidgets('a name with no profile does not raise onAuthorTap', (tester) async {
+      var tapped = false;
+      final review = Review.fromJson(_json(id: 1, author: 'Ghost'));
+
+      await tester.pumpWidget(wrap(ReviewTile(
+        review: review,
+        onLike: (_) {},
+        onReply: (_) {},
+        onEdit: (_) {},
+        onDelete: (_) {},
+        onAuthorTap: (_) => tapped = true,
+      )));
+
+      await tester.tap(find.text('Ghost'));
+      expect(tapped, isFalse);
+    });
+
     testWidgets('tapping the like icon raises the action', (tester) async {
       Review? liked;
       final review = Review.fromJson(_json(id: 1));
@@ -285,6 +328,7 @@ void main() {
         onReply: (_) {},
         onEdit: (_) {},
         onDelete: (_) {},
+        onAuthorTap: (_) {},
       )));
 
       await tester.tap(find.byIcon(Icons.thumb_up_outlined));

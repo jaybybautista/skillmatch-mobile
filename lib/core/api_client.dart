@@ -55,6 +55,28 @@ class ApiClient {
     return _decode(response);
   }
 
+  /// Same as [get], but for an endpoint whose success response is a raw file
+  /// (a document preview or download) rather than JSON — the caller reads
+  /// [http.Response.bodyBytes] and `headers['content-type']` itself. A
+  /// non-2xx response is still decoded as JSON for its error message, exactly
+  /// like every other call here.
+  Future<http.Response> getBytes(String path, {bool authenticated = false}) async {
+    final headers = await _headers(authenticated: authenticated);
+    headers.remove('Content-Type');
+    headers['Accept'] = '*/*';
+
+    final response = await http
+        .get(Uri.parse('${ApiConfig.baseUrl}$path'), headers: headers)
+        .timeout(_longRequestTimeout, onTimeout: _throwTimeout);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response;
+    }
+
+    _decode(response);
+    throw ApiException('Something went wrong. Please try again.', statusCode: response.statusCode);
+  }
+
   Future<Map<String, dynamic>> post(
     String path,
     Map<String, dynamic> body, {

@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../screens/applications/applications_screen.dart';
 import '../screens/bookmarks/bookmarks_screen.dart';
-import '../screens/chatbot/chat_destinations.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/matches/internship_search_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/requirements/requirements_screen.dart';
 import '../screens/resume/resume_list_screen.dart';
+import '../screens/roadmap/skill_roadmap_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../services/notification_service.dart';
 
@@ -17,10 +18,6 @@ enum SidebarItem { home, notifications, applications, bookmarks, profile, resume
 
 /// The navigation drawer, mirroring the web sidebar: the same entries in the
 /// same order, the same ACCOUNT grouping, and the same destinations.
-///
-/// Skill Roadmap and Requirements are shown because the website has them, but
-/// the app has no screen for either yet — tapping them says so plainly rather
-/// than leading nowhere.
 class AppSidebar extends StatefulWidget {
   const AppSidebar({super.key, this.current = SidebarItem.none});
 
@@ -60,12 +57,6 @@ class _AppSidebarState extends State<AppSidebar> {
     }
 
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => build()));
-  }
-
-  void _unavailable(String screen) {
-    Navigator.of(context).pop();
-    final reason = unavailableReasonFor(screen) ?? 'That screen isn\'t in the app yet.';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(reason)));
   }
 
   @override
@@ -172,14 +163,14 @@ class _AppSidebarState extends State<AppSidebar> {
                   _SidebarTile(
                     icon: Icons.bolt_outlined,
                     label: 'Skill Roadmap',
-                    isAvailable: false,
-                    onTap: () => _unavailable('roadmap'),
+                    isActive: widget.current == SidebarItem.roadmap,
+                    onTap: () => _go(SidebarItem.roadmap, SkillRoadmapScreen.new),
                   ),
                   _SidebarTile(
                     icon: Icons.apartment_outlined,
                     label: 'Requirements',
-                    isAvailable: false,
-                    onTap: () => _unavailable('requirements'),
+                    isActive: widget.current == SidebarItem.requirements,
+                    onTap: () => _go(SidebarItem.requirements, RequirementsScreen.new),
                   ),
                   _SidebarTile(
                     icon: Icons.settings_outlined,
@@ -203,7 +194,6 @@ class _SidebarTile extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.isActive = false,
-    this.isAvailable = true,
     this.badge = 0,
   });
 
@@ -211,19 +201,11 @@ class _SidebarTile extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool isActive;
-
-  /// False for entries the website has but the app doesn't — shown muted so
-  /// the two sidebars still read the same, without pretending they work.
-  final bool isAvailable;
   final int badge;
 
   @override
   Widget build(BuildContext context) {
-    final color = !isAvailable
-        ? AppColors.textMuted.withValues(alpha: 0.55)
-        : isActive
-            ? AppColors.primary
-            : AppColors.primaryDark;
+    final color = isActive ? AppColors.primary : AppColors.primaryDark;
 
     return Material(
       color: isActive ? AppColors.chipBackground : Colors.transparent,

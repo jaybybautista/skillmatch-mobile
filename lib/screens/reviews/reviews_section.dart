@@ -5,6 +5,7 @@ import '../../core/app_theme.dart';
 import '../../models/review.dart';
 import '../../services/review_service.dart';
 import '../../widgets/review_thread.dart';
+import '../chatbot/chat_destinations.dart';
 import 'review_replies_screen.dart';
 
 /// Replaces [review] wherever it sits in a thread, keeping the rest intact.
@@ -125,6 +126,15 @@ class _ReviewsSectionState extends State<ReviewsSection> {
     );
     // Replies, likes or deletions may all have happened in there.
     if (mounted) _load();
+  }
+
+  void _openAuthorProfile(Review review) {
+    final screen = review.authorScreen;
+    if (screen == null) return;
+
+    final destination = chatDestinationFor(screen, review.authorScreenParams);
+    if (destination == null) return;
+    destination(context);
   }
 
   Future<void> _delete(Review review) async {
@@ -249,6 +259,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                 onOpenThread: _openThread,
                 onLike: _toggleLike,
                 onReply: _openThread,
+                onAuthorTap: _openAuthorProfile,
                 onEdit: _edit,
                 onDelete: _delete,
               ),
