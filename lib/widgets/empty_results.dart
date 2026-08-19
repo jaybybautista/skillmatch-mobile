@@ -47,7 +47,7 @@ class EmptyResults extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              style: AppFonts.title(fontSize: 18),
             ),
             const SizedBox(height: 8),
             Text(

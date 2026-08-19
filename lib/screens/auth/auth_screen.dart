@@ -19,9 +19,9 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   void _openRegistration() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const RolePickerScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const RolePickerScreen()));
   }
 
   @override
@@ -37,11 +37,10 @@ class _AuthScreenState extends State<AuthScreen> {
               Image.asset('assets/logo.png', height: 90),
               const SizedBox(height: 12),
               Image.asset('assets/letter-skillmatch.png', height: 40),
-              const SizedBox(height: 16),
               const Text(
                 'Hello there, login or register to continue',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textMuted, fontSize: 15),
+                style: TextStyle(color: AppColors.textMuted, fontSize: 16),
               ),
               const SizedBox(height: 24),
               _buildTabToggle(),
@@ -66,13 +65,23 @@ class _AuthScreenState extends State<AuthScreen> {
           // "Log in" stays selected: Sign Up pushes the role picker rather
           // than swapping this screen's body, so there is no second tab state.
           Expanded(child: _tabButton('Log in', selected: true, onTap: null)),
-          Expanded(child: _tabButton('Sign Up', selected: false, onTap: _openRegistration)),
+          Expanded(
+            child: _tabButton(
+              'Sign Up',
+              selected: false,
+              onTap: _openRegistration,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _tabButton(String label, {required bool selected, required VoidCallback? onTap}) {
+  Widget _tabButton(
+    String label, {
+    required bool selected,
+    required VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -82,7 +91,13 @@ class _AuthScreenState extends State<AuthScreen> {
           color: selected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           boxShadow: selected
-              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))]
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
               : null,
         ),
         child: Text(

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../applications/applications_screen.dart';
-import '../bookmarks/bookmarks_screen.dart';
-import '../home/home_screen.dart';
-import '../internship/internship_detail_screen.dart';
-import '../matches/internship_search_screen.dart';
-import '../matches/matches_list_screen.dart';
-import '../notifications/notifications_screen.dart';
-import '../placement/placement_screen.dart';
-import '../profile/profile_screen.dart';
-import '../resume/resume_list_screen.dart';
-import '../reviews/review_replies_screen.dart';
-import '../settings/settings_screen.dart';
+import '../student/applications/applications_screen.dart';
+import '../student/bookmarks/bookmarks_screen.dart';
+import '../student/home/home_screen.dart';
+import '../student/internship/internship_detail_screen.dart';
+import '../student/matches/internship_search_screen.dart';
+import '../student/matches/matches_list_screen.dart';
+import '../student/notifications/notifications_screen.dart';
+import '../student/placement/placement_screen.dart';
+import '../student/profile/profile_screen.dart';
+import '../student/resume/resume_list_screen.dart';
+import '../student/reviews/review_replies_screen.dart';
+import '../student/settings/settings_screen.dart';
 
 /// Turns a platform-neutral `screen` key into actual navigation.
 ///

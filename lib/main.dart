@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:skillmatch/screens/company/company_home_screen.dart';
 
 import 'core/api_client.dart';
 import 'core/app_routing.dart';
 import 'core/app_theme.dart';
 import 'screens/auth/auth_screen.dart';
-import 'screens/home/home_screen.dart';
-import 'screens/setup/setup_entry_screen.dart';
+import 'screens/student/home/home_screen.dart';
+import 'screens/student/setup/setup_entry_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'services/profile_setup_service.dart';
@@ -27,7 +28,8 @@ class SkillMatchApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         navigatorObservers: [routeObserver],
-        home: const _SessionGate(),
+        // home: const _SessionGate(),
+        home: const CompanyHomeScreen(),
       ),
     );
   }

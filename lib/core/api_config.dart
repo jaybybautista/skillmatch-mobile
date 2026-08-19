@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 ///irun mo ito:
 ///   php artisan serve --host=0.0.0.0 --port=8000
-/// para mafetch niya 
+/// para mafetch niya
 
 class ApiConfig {
   ApiConfig._();
@@ -20,7 +20,8 @@ class ApiConfig {
   static String get _host {
     if (kIsWeb) return 'localhost';
     if (Platform.isAndroid) return _useAndroidEmulator ? '10.0.2.2' : _lanHost;
-    if (Platform.isIOS) return _lanHost; // iOS physical devices need the LAN IP too.
+    if (Platform.isIOS)
+      return _lanHost; // iOS physical devices need the LAN IP too.
     return 'localhost';
   }
 

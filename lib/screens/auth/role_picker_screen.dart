@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../core/api_config.dart';
 import '../../core/app_theme.dart';
+import '../../widgets/circle_back_button.dart';
+import 'company_register_screen.dart';
 import 'register_screen.dart';
 
 /// The two account types the SkillMatch platform recognises at sign-up. These
@@ -19,11 +20,6 @@ enum SignUpRole {
 
 /// Shown every time the student opens registration, before any form: pick who
 /// you are, then continue.
-///
-/// Only [SignUpRole.student] continues into the app. The mobile app has no
-/// company screens at all — a company account created here would land on a
-/// student dashboard — so choosing Company explains that company sign-up is
-/// done on the website, which is the same place their dashboard lives.
 class RolePickerScreen extends StatefulWidget {
   const RolePickerScreen({super.key});
 
@@ -35,31 +31,11 @@ class _RolePickerScreenState extends State<RolePickerScreen> {
   SignUpRole _selected = SignUpRole.student;
 
   void _continue() {
-    if (_selected == SignUpRole.student) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const RegisterScreen()),
-      );
-      return;
-    }
+    final screen = _selected == SignUpRole.student
+        ? const RegisterScreen()
+        : const CompanyRegisterScreen();
 
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Company sign-up'),
-        content: Text(
-          'The SkillMatch app is built for students, so company accounts are '
-          'created on the website instead — that is also where you post '
-          'internships and review applicants.\n\nVisit ${ApiConfig.siteUrl}/register/company '
-          'on a browser to get started.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
-    );
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
@@ -71,9 +47,11 @@ class _RolePickerScreenState extends State<RolePickerScreen> {
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: BackButton(
-                color: AppColors.textDark,
-                onPressed: () => Navigator.of(context).maybePop(),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: CircleBackButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
               ),
             ),
             // The logo block takes whatever space the sheet leaves, so the
@@ -139,24 +117,11 @@ class _RoleSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 46,
-            height: 5,
-            decoration: BoxDecoration(
-              color: AppColors.border,
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
           const SizedBox(height: 24),
           const Icon(Icons.account_box, size: 44, color: AppColors.primary),
-          const SizedBox(height: 14),
-          const Text(
+          Text(
             'Describe Your Role',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
+            style: AppFonts.title(fontSize: 18, color: AppColors.textDark),
           ),
           const SizedBox(height: 22),
           Row(
@@ -182,7 +147,9 @@ class _RoleSheet extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               child: const Text(
                 'Continue',
@@ -197,7 +164,11 @@ class _RoleSheet extends StatelessWidget {
 }
 
 class _RoleCard extends StatelessWidget {
-  const _RoleCard({required this.role, required this.isSelected, required this.onTap});
+  const _RoleCard({
+    required this.role,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   final SignUpRole role;
   final bool isSelected;
@@ -237,7 +208,10 @@ class _RoleCard extends StatelessWidget {
                 const SizedBox(height: 14),
                 Text(
                   role.label,
-                  style: const TextStyle(fontSize: 17, color: AppColors.textDark),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    color: AppColors.textDark,
+                  ),
                 ),
               ],
             ),

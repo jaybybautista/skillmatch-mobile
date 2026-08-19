@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
 import '../models/internship.dart';
-import '../screens/internship/internship_detail_screen.dart';
+import '../screens/student/internship/internship_detail_screen.dart';
 import '../services/internship_service.dart';
 
 class MatchCard extends StatefulWidget {
@@ -123,7 +123,7 @@ class _MatchCardState extends State<MatchCard> {
               ],
             ),
             const SizedBox(height: 16),
-            Text(internship.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(internship.title, style: AppFonts.title(fontSize: 18)),
             const SizedBox(height: 4),
             Text(
               internship.slotsAvailable > 0 ? '${internship.slotsAvailable} slots left' : 'No slots left',
