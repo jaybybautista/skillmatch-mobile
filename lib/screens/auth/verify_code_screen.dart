@@ -109,14 +109,20 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
+                Image.asset('assets/logo.png', height: 90),
+                const SizedBox(height: 12),
+                Image.asset('assets/letter-skillmatch.png', height: 40),
+                const SizedBox(height: 20),
                 const Text(
                   'Enter Verification Code',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textDark),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'We sent a 6-digit code to ${widget.email}.',
+                  textAlign: TextAlign.center,
                   style: const TextStyle(color: AppColors.textMuted, fontSize: 15),
                 ),
                 const SizedBox(height: 28),

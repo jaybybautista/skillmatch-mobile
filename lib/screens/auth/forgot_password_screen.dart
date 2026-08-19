@@ -68,14 +68,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
+                Image.asset('assets/logo.png', height: 90),
+                const SizedBox(height: 12),
+                Image.asset('assets/letter-skillmatch.png', height: 40),
+                const SizedBox(height: 20),
                 const Text(
                   'Forgot Password?',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textDark),
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   "Enter the email linked to your account and we'll send you a 6-digit verification code.",
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textMuted, fontSize: 15),
                 ),
                 const SizedBox(height: 28),
