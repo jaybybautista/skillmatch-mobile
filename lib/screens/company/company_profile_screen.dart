@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
-import 'company_review.dart';
+import '../../models/company_profile.dart';
+import '../../models/review.dart';
+import '../../services/company_service.dart';
+import '../../widgets/company_sidebar.dart';
 
 const _starColor = Color(0xFFF5A623);
 
@@ -19,13 +23,70 @@ const _blueGap = 48.0;
 /// rounded sheet, rounded-square hero logo straddling the boundary, plain
 /// bold section titles above bordered white cards, the same star-rating
 /// breakdown bars) rather than reinventing the look, but with the company's
-/// own placeholder data since there is no company-profile/company-reviews
-/// backend yet.
-class CompanyProfileScreen extends StatelessWidget {
-  const CompanyProfileScreen({super.key});
+/// own data, read from GET /api/company/profile — the same `companies` row
+/// the website's company profile page shows.
+///
+/// The reviews below are the real thing too: GET /api/company/profile/reviews
+/// returns Company::allReviews() — feedback left on the company plus feedback
+/// left on any of its postings, merged newest-first — which is exactly what
+/// the web profile page renders.
+class CompanyProfileScreen extends StatefulWidget {
+  const CompanyProfileScreen({super.key, this.service});
 
-  static const companyName = 'Creatix Studio';
-  static const industry = 'Information Technology';
+  final CompanyService? service;
+
+  @override
+  State<CompanyProfileScreen> createState() => _CompanyProfileScreenState();
+}
+
+class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
+  late final CompanyService _service = widget.service ?? CompanyService();
+
+  bool _isLoading = true;
+  Object? _error;
+  CompanyProfile? _profile;
+  List<Review> _reviews = const [];
+  ReviewSummary _reviewSummary = ReviewSummary.empty();
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      // Fetched together so the profile and its feedback appear in one paint
+      // rather than the reviews popping in a moment later.
+      //
+      // Future.wait rather than two awaits in a row: awaiting them one after
+      // the other leaves the second future's error unobserved if the first
+      // one fails, which surfaces later as an unhandled async error rather
+      // than in the catch below.
+      final results = await Future.wait<Object>([
+        _service.fetchProfile(),
+        _service.fetchProfileReviews(),
+      ]);
+      if (!mounted) return;
+      final reviews = results[1] as ({List<Review> reviews, ReviewSummary summary});
+      setState(() {
+        _profile = results[0] as CompanyProfile;
+        _reviews = reviews.reviews;
+        _reviewSummary = reviews.summary;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _isLoading = false;
+      });
+    }
+  }
 
   void _comingSoon(BuildContext context, String what) {
     ScaffoldMessenger.of(
@@ -33,9 +94,61 @@ class CompanyProfileScreen extends StatelessWidget {
     ).showSnackBar(SnackBar(content: Text('$what is coming soon.')));
   }
 
+  /// Shown in place of a value the company hasn't filled in yet, rather than
+  /// an empty gap that reads as a rendering bug.
+  static const _notSet = 'Not set yet';
+
+  /// Up to two letters from the company name, for when there's no logo.
+  static String _initialsFor(String name) {
+    final words = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.isEmpty) return '—';
+    if (words.length == 1) return words.first.characters.first.toUpperCase();
+    return (words.first.characters.first + words[1].characters.first).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.primaryDark,
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
+
+    if (_error != null || _profile == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.primaryDark,
+          foregroundColor: Colors.white,
+          title: const Text('Company Profile', style: TextStyle(color: Colors.white)),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _error is ApiException
+                      ? (_error as ApiException).message
+                      : 'Could not load your company profile.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 12),
+                TextButton(onPressed: _load, child: const Text('Retry')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final profile = _profile!;
+
     return Scaffold(
+      drawer: const CompanySidebar(current: CompanySidebarItem.profile),
       // Navy so a top overscroll bounce keeps showing header colour.
       backgroundColor: AppColors.primaryDark,
       body: SingleChildScrollView(
@@ -59,7 +172,7 @@ class CompanyProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-            _sheet(context),
+            _sheet(context, profile),
           ],
         ),
       ),
@@ -88,7 +201,7 @@ class CompanyProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _sheet(BuildContext context) {
+  Widget _sheet(BuildContext context, CompanyProfile profile) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -114,12 +227,13 @@ class CompanyProfileScreen extends StatelessWidget {
             children: [
               const _SectionTitle('Professional Summary'),
               const SizedBox(height: 10),
-              const _Card(
+              _Card(
                 child: Text(
-                  'Creatix Studio partners with universities to give students hands-on product, design, and '
-                  'engineering experience. We run small, mentor-led teams so every intern ships real work — '
-                  'not busywork — before they graduate.',
-                  style: TextStyle(
+                  (profile.description ?? '').trim().isEmpty
+                      ? 'No summary yet. Add one on the website so students '
+                          'know what an internship with you is like.'
+                      : profile.description!,
+                  style: const TextStyle(
                     color: AppColors.textDark,
                     fontSize: 13.5,
                     height: 1.5,
@@ -129,35 +243,64 @@ class CompanyProfileScreen extends StatelessWidget {
               const SizedBox(height: 24),
               const _SectionTitle('Company Details'),
               const SizedBox(height: 10),
-              const _Card(
+              _Card(
                 child: Column(
                   children: [
-                    _LabelValueRow(label: 'Company Name', value: companyName),
-                    SizedBox(height: 14),
+                    _LabelValueRow(label: 'Company Name', value: profile.companyName),
+                    const SizedBox(height: 14),
+                    _LabelValueRow(label: 'Industry', value: profile.industry ?? _notSet),
+                    const SizedBox(height: 14),
+                    _LabelValueRow(label: 'Address', value: profile.address ?? _notSet),
+                    const SizedBox(height: 14),
                     _LabelValueRow(
-                      label: 'Address',
-                      value: 'Zone 6, Capandanan, Santa Maria, Pangasinan',
+                      label: 'Contact Email',
+                      value: profile.contactEmail ?? _notSet,
                     ),
-                    SizedBox(height: 14),
+                    const SizedBox(height: 14),
                     _LabelValueRow(
-                      label: 'Website URL',
-                      value: 'https://samplelang.com',
+                      label: 'Contact Number',
+                      value: profile.contactNumber ?? _notSet,
                     ),
+                    const SizedBox(height: 14),
+                    _LabelValueRow(label: 'Website URL', value: profile.website ?? _notSet),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              const _SectionTitle('At a Glance'),
+              const SizedBox(height: 10),
+              _Card(
+                child: Row(
+                  children: [
+                    _StatCell(label: 'POSTINGS', value: profile.stats.internshipCount),
+                    _StatCell(label: 'OPEN SLOTS', value: profile.stats.openSlots),
+                    _StatCell(label: 'APPLICANTS', value: profile.stats.applicantCount),
+                    _StatCell(label: 'PLACED', value: profile.stats.placementCount),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
               const _SectionTitle('Reviews & Feedback'),
               const SizedBox(height: 10),
-              const _RatingSummaryCard(summary: placeholderReviewSummary),
+              _RatingSummaryCard(summary: _reviewSummary),
               const SizedBox(height: 12),
-              for (var i = 0; i < placeholderCompanyReviews.length; i++)
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: i == placeholderCompanyReviews.length - 1 ? 0 : 12,
+              if (_reviews.isEmpty)
+                const _Card(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    child: Text(
+                      'No reviews yet.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                    ),
                   ),
-                  child: _ReviewCard(review: placeholderCompanyReviews[i]),
-                ),
+                )
+              else
+                for (var i = 0; i < _reviews.length; i++)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: i == _reviews.length - 1 ? 0 : 12),
+                    child: _ReviewCard(review: _reviews[i]),
+                  ),
             ],
           ),
         ),
@@ -168,7 +311,10 @@ class CompanyProfileScreen extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const _CompanyLogo(),
+              _CompanyLogo(
+                logoUrl: profile.logoUrl,
+                initials: _initialsFor(profile.companyName),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Padding(
@@ -177,21 +323,25 @@ class CompanyProfileScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        companyName,
+                        profile.companyName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppFonts.title(),
                       ),
                       const SizedBox(height: 2),
-                      const Text(
-                        industry,
+                      Text(
+                        profile.industry ?? 'Industry not set',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 13,
                         ),
                       ),
+                      if (!profile.isVerified) ...[
+                        const SizedBox(height: 6),
+                        _VerificationChip(status: profile.verificationStatus),
+                      ],
                     ],
                   ),
                 ),
@@ -232,8 +382,94 @@ const _logoInnerRadius = BorderRadius.only(
   bottomRight: Radius.circular(3),
 );
 
+/// The logo's stand-in when a company hasn't uploaded one.
+class _InitialsBadge extends StatelessWidget {
+  const _InitialsBadge({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.chipBackground,
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: 26,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One figure in the "At a Glance" row.
+class _StatCell extends StatelessWidget {
+  const _StatCell({required this.label, required this.value});
+
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value.toString(), style: AppFonts.title(fontSize: 20)),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Says where an unapproved company stands, since it changes what they can do
+/// — the website shows the same state on their profile.
+class _VerificationChip extends StatelessWidget {
+  const _VerificationChip({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final isRejected = status == 'rejected';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: isRejected ? const Color(0xFFFFF1F1) : const Color(0xFFFFF4E5),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        isRejected ? 'Verification rejected' : 'Pending verification',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: isRejected ? AppColors.danger : const Color(0xFFB87700),
+        ),
+      ),
+    );
+  }
+}
+
 class _CompanyLogo extends StatelessWidget {
-  const _CompanyLogo();
+  const _CompanyLogo({this.logoUrl, this.initials = '—'});
+
+  final String? logoUrl;
+  final String initials;
 
   @override
   Widget build(BuildContext context) {
@@ -253,19 +489,15 @@ class _CompanyLogo extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: _logoInnerRadius,
-        child: const ColoredBox(
-          color: AppColors.chipBackground,
-          child: Center(
-            child: Text(
-              'CS',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 26,
-              ),
-            ),
-          ),
-        ),
+        child: logoUrl != null
+            ? Image.network(
+                logoUrl!,
+                fit: BoxFit.cover,
+                // A broken or unreachable logo falls back to initials rather
+                // than Flutter's grey broken-image glyph.
+                errorBuilder: (_, _, _) => _InitialsBadge(initials: initials),
+              )
+            : _InitialsBadge(initials: initials),
       ),
     );
   }
@@ -339,7 +571,7 @@ class _LabelValueRow extends StatelessWidget {
 class _RatingSummaryCard extends StatelessWidget {
   const _RatingSummaryCard({required this.summary});
 
-  final CompanyReviewSummary summary;
+  final ReviewSummary summary;
 
   @override
   Widget build(BuildContext context) {
@@ -374,7 +606,7 @@ class _RatingSummaryCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Based on ${summary.total} reviews',
+                'Based on ${summary.total} review${summary.total == 1 ? '' : 's'}',
                 style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.textMuted,
@@ -442,10 +674,13 @@ class _RatingSummaryCard extends StatelessWidget {
 class _ReviewCard extends StatelessWidget {
   const _ReviewCard({required this.review});
 
-  final CompanyReview review;
+  final Review review;
 
   @override
   Widget build(BuildContext context) {
+    final avatarUrl = review.authorAvatarUrl;
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,14 +690,17 @@ class _ReviewCard extends StatelessWidget {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: AppColors.chipBackground,
-                child: Text(
-                  review.initials,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
+                backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+                child: hasAvatar
+                    ? null
+                    : Text(
+                        review.authorInitial,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -470,7 +708,7 @@ class _ReviewCard extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        review.reviewerName,
+                        review.authorName,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
@@ -480,7 +718,7 @@ class _ReviewCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      ' · ${review.timeAgo}',
+                      ' \u00b7 ${review.createdAtHuman}',
                       style: const TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 11.5,
@@ -491,34 +729,70 @@ class _ReviewCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              for (var i = 1; i <= 5; i++)
-                Icon(
-                  i <= review.rating ? Icons.star : Icons.star_border,
-                  size: 14,
-                  color: _starColor,
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            review.tag,
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+          // A reply carries no rating, so the stars only render for a review.
+          if (review.rating != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                for (var i = 1; i <= 5; i++)
+                  Icon(
+                    i <= review.rating! ? Icons.star : Icons.star_border,
+                    size: 14,
+                    color: _starColor,
+                  ),
+              ],
             ),
-          ),
+          ],
+          // "On internship: X" — only present when the feedback was left on a
+          // posting rather than on the company itself.
+          if (review.reviewableContext != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              review.reviewableContext!,
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          if (review.title != null && review.title!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              review.title!,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
-            review.body,
+            review.content,
             style: const TextStyle(
               fontSize: 13.5,
               height: 1.4,
               color: AppColors.textDark,
             ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.thumb_up_outlined, size: 13, color: AppColors.textMuted),
+              const SizedBox(width: 4),
+              Text(
+                '${review.likeCount}',
+                style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+              ),
+              const SizedBox(width: 14),
+              const Icon(Icons.mode_comment_outlined, size: 13, color: AppColors.textMuted),
+              const SizedBox(width: 4),
+              Text(
+                '${review.replyCount} ${review.replyCount == 1 ? 'reply' : 'replies'}',
+                style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+              ),
+            ],
           ),
         ],
       ),

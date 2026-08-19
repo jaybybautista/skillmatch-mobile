@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
 import '../../widgets/company_screen_header.dart';
 import '../../widgets/empty_results.dart';
-import 'assign_competency_screen.dart';
 import 'company_posting.dart';
 import 'posting_applicant.dart';
 
@@ -43,10 +42,13 @@ class _PostingApplicantsScreenState extends State<PostingApplicantsScreen> {
     super.dispose();
   }
 
+  /// This roster is still placeholder data, so there is no real application
+  /// to assign against. Assigning for real lives on the Applications screen,
+  /// which is backed by the same `applications` rows the website manages.
   void _assignAssessment(PostingApplicant applicant) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AssignCompetencyScreen(applicant: applicant),
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Assign an assessment from the Applications screen.'),
       ),
     );
   }

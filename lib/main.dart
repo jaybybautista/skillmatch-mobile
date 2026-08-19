@@ -28,8 +28,7 @@ class SkillMatchApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         navigatorObservers: [routeObserver],
-        // home: const _SessionGate(),
-        home: const CompanyHomeScreen(),
+        home: const _SessionGate(),
       ),
     );
   }
@@ -107,6 +106,13 @@ class _SessionGateState extends State<_SessionGate> {
         _resolvedForLoggedIn = false;
       }
       return const AuthScreen();
+    }
+
+    // A company lands on its own home. The setup check below asks a
+    // student-only endpoint, so running it for a company would both fail and
+    // route them into the student app.
+    if (auth.currentUser?.role == 'company') {
+      return const CompanyHomeScreen();
     }
 
     if (_needsSetup == null) {

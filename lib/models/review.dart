@@ -24,6 +24,7 @@ class Review {
     required this.canDelete,
     required this.replyCount,
     required this.replies,
+    this.reviewableContext,
   });
 
   final int id;
@@ -62,6 +63,12 @@ class Review {
   final int replyCount;
   final List<Review> replies;
 
+  /// "On internship: Backend Intern" when this review was left on a posting
+  /// rather than on the company itself. Null otherwise, and only rendered by
+  /// lists that mix the two — the company's own profile does, an individual
+  /// posting's review tab does not.
+  final String? reviewableContext;
+
   bool get isReply => parentId != null;
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -90,6 +97,7 @@ class Review {
       replies: (json['replies'] as List? ?? [])
           .map((e) => Review.fromJson(e as Map<String, dynamic>))
           .toList(),
+      reviewableContext: json['reviewable_context'] as String?,
     );
   }
 
@@ -124,6 +132,7 @@ class Review {
       canDelete: canDelete,
       replyCount: replyCount ?? this.replyCount,
       replies: replies ?? this.replies,
+      reviewableContext: reviewableContext,
     );
   }
 }

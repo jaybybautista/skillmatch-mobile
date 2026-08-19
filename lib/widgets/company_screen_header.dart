@@ -12,12 +12,24 @@ import '../core/app_theme.dart';
 /// up with different heights, title sizes, and even solid-vs-gradient
 /// backgrounds).
 class CompanyScreenHeader extends StatelessWidget {
-  const CompanyScreenHeader({super.key, required this.title, this.subtitle, this.onBack, this.trailing});
+  const CompanyScreenHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.onBack,
+    this.trailing,
+    this.showMenuButton = false,
+  });
 
   final String title;
   final String? subtitle;
   final VoidCallback? onBack;
   final Widget? trailing;
+
+  /// Shows the hamburger that opens [CompanySidebar]. Only the top-level
+  /// screens set this — a pushed screen keeps its back arrow instead, the
+  /// same rule the student side follows.
+  final bool showMenuButton;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +42,7 @@ class CompanyScreenHeader extends StatelessWidget {
           height: 90,
           child: Padding(
             padding: EdgeInsets.fromLTRB(
-              onBack == null ? 24 : 12,
+              (onBack == null && !showMenuButton) ? 24 : 12,
               0,
               trailing == null ? 24 : 12,
               12,
@@ -42,6 +54,19 @@ class CompanyScreenHeader extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    if (showMenuButton) ...[
+                      // Builder so openDrawer() sees the Scaffold above it.
+                      Builder(
+                        builder: (context) => IconButton(
+                          icon: const Icon(Icons.menu, color: Colors.white),
+                          onPressed: Scaffold.of(context).openDrawer,
+                          tooltip: 'Menu',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     if (onBack != null) ...[
                       InkWell(
                         onTap: onBack,

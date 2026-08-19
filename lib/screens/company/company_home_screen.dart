@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_theme.dart';
 import '../../core/company_navigation.dart';
+import '../../models/company_profile.dart';
+import '../../services/company_service.dart';
 import '../../widgets/company_bottom_nav.dart';
+import '../../widgets/company_sidebar.dart';
 import '../../widgets/draggable_chatbot_button.dart';
 import '../chatbot/matcha_chat_screen.dart';
 import 'company_posting.dart';
@@ -15,8 +18,48 @@ import 'posting_applicants_screen.dart';
 /// [HomeScreen]'s layout (header + search, rounded white body, floating
 /// chatbot) with company-specific content: active postings and a shortcut
 /// into creating an assessment.
-class CompanyHomeScreen extends StatelessWidget {
-  const CompanyHomeScreen({super.key});
+///
+/// The greeting and the postings carousel both read the signed-in company's
+/// own data from /api/company/*, the same rows the website shows.
+class CompanyHomeScreen extends StatefulWidget {
+  const CompanyHomeScreen({super.key, this.service});
+
+  final CompanyService? service;
+
+  @override
+  State<CompanyHomeScreen> createState() => _CompanyHomeScreenState();
+}
+
+class _CompanyHomeScreenState extends State<CompanyHomeScreen> {
+  late final CompanyService _service = widget.service ?? CompanyService();
+
+  CompanyProfile? _profile;
+  List<CompanyPosting> _postings = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  /// The header and carousel each degrade to a neutral state on failure, so a
+  /// blip offline leaves the dashboard usable rather than blocking it behind
+  /// an error page.
+  Future<void> _load() async {
+    try {
+      final results = await Future.wait([
+        _service.fetchProfile(),
+        _service.fetchPostings(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _profile = results[0] as CompanyProfile;
+        _postings = results[1] as List<CompanyPosting>;
+      });
+    } catch (_) {
+      // Leave whatever is already on screen; pull-to-refresh can retry.
+    }
+  }
 
   void _comingSoon(BuildContext context, String what) {
     ScaffoldMessenger.of(
@@ -32,6 +75,7 @@ class CompanyHomeScreen extends StatelessWidget {
         : (hour < 17 ? 'Good Afternoon' : 'Good Evening');
 
     return Scaffold(
+      drawer: const CompanySidebar(current: CompanySidebarItem.home),
       backgroundColor: AppGradients.companyHeaderEnd,
       body: Stack(
         children: [
@@ -52,6 +96,20 @@ class CompanyHomeScreen extends StatelessWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            // Builder so openDrawer() sees the Scaffold above it.
+                            Builder(
+                              builder: (context) => IconButton(
+                                icon: const Icon(Icons.menu, color: Colors.white),
+                                onPressed: Scaffold.of(context).openDrawer,
+                                tooltip: 'Menu',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,9 +122,7 @@ class CompanyHomeScreen extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    // TODO: read the signed-in company's name instead
-                                    // once a company profile endpoint exists.
-                                    'Creatix Studio',
+                                    _profile?.companyName ?? 'Your company',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppFonts.title(
@@ -163,17 +219,32 @@ class CompanyHomeScreen extends StatelessWidget {
                         // narrower screens.
                         builder: (context, constraints) {
                           final cardWidth = constraints.maxWidth - 20;
+
+                          if (_postings.isEmpty) {
+                            return const SizedBox(
+                              height: 180,
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(0, 40, 20, 0),
+                                child: Text(
+                                  'No active postings yet. Create one from the '
+                                  'Internship tab and it will show up here.',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
                           return SizedBox(
                             height: 180,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
-                              itemCount: placeholderCompanyPostings.length,
+                              itemCount: _postings.length,
                               itemBuilder: (context, index) {
-                                final posting =
-                                    placeholderCompanyPostings[index];
-                                final isLast =
-                                    index ==
-                                    placeholderCompanyPostings.length - 1;
+                                final posting = _postings[index];
+                                final isLast = index == _postings.length - 1;
                                 return Padding(
                                   padding: EdgeInsets.only(
                                     right: isLast ? 20 : 14,

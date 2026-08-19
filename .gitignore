@@ -39,5 +39,10 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/
+# Android Studio will place build artifacts here. Only the build output is
+# ignored — ignoring all of /android/ untracks the Android project itself
+# (AndroidManifest.xml, MainActivity.kt, the Gradle files), which makes
+# `flutter run` fail with "use of deleted Android v1 embedding".
+/android/app/debug
+/android/app/profile
+/android/app/release

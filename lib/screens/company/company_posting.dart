@@ -5,38 +5,56 @@ import '../../core/app_theme.dart';
 /// A single posting on the company side — shared by [CompanyHomeScreen]'s
 /// "Active Postings" carousel and [CompanyPostingsScreen]'s full list.
 ///
-/// TODO: static placeholder data — there is no company-postings endpoint on
-/// the backend yet (companies can't post internships until an admin approves
-/// their account; see CompanySetupReviewScreen). Swap for a real fetch once
-/// `Api\CompanyInternshipController` (or equivalent) exists.
+/// Backed by GET /api/company/postings, which reads the same `internships`
+/// rows (plus their responsibility and skill rows) the website's "My
+/// Postings" page manages — so a posting created on either platform shows up
+/// on the other.
 class CompanyPosting {
   const CompanyPosting({
+    required this.id,
     required this.title,
     required this.location,
     required this.applicants,
     required this.openSlots,
+    this.slotsFilled = 0,
+    this.status = 'open',
+    this.description,
+    this.responsibilities = const [],
+    this.skills = const [],
+    this.postedAtHuman,
   });
 
+  final int id;
   final String title;
   final String location;
   final int applicants;
   final int openSlots;
-}
+  final int slotsFilled;
+  final String status;
+  final String? description;
+  final List<String> responsibilities;
+  final List<String> skills;
+  final String? postedAtHuman;
 
-const placeholderCompanyPostings = [
-  CompanyPosting(
-    title: 'Product Design Intern',
-    location: 'California, USA',
-    applicants: 8,
-    openSlots: 8,
-  ),
-  CompanyPosting(
-    title: 'Backend Engineering Intern',
-    location: 'Cebu, Philippines',
-    applicants: 5,
-    openSlots: 3,
-  ),
-];
+  bool get isOpen => status == 'open';
+
+  factory CompanyPosting.fromJson(Map<String, dynamic> json) {
+    return CompanyPosting(
+      id: (json['id'] as num).toInt(),
+      title: json['title'] as String? ?? 'Untitled posting',
+      location: json['location'] as String? ?? '',
+      applicants: (json['application_count'] as num?)?.toInt() ?? 0,
+      openSlots: (json['slots_available'] as num?)?.toInt() ?? 0,
+      slotsFilled: (json['slots_filled'] as num?)?.toInt() ?? 0,
+      status: json['status'] as String? ?? 'open',
+      description: json['description'] as String?,
+      responsibilities:
+          (json['responsibilities'] as List? ?? const []).map((e) => e.toString()).toList(),
+      skills: (json['skills'] as List? ?? const []).map((e) => e.toString()).toList(),
+      postedAtHuman: json['posted_at_human'] as String?,
+    );
+  }
+}
 
 /// The "APPLICANTS" / "OPEN SLOTS" stat chip shown on a posting card —
 /// shared by the home carousel card and the full "My Postings" list card.
