@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_theme.dart';
+import '../../widgets/circle_back_button.dart';
 import 'widgets/register_form.dart';
 
 /// The student sign-up form on its own screen, reached from
@@ -19,7 +20,8 @@ class RegisterScreen extends StatelessWidget {
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textDark,
         elevation: 0,
-        title: const Text('Create your account', style: TextStyle(fontWeight: FontWeight.bold)),
+        leading: const Center(child: CircleBackButton()),
+        title: Text('Create your account', style: AppFonts.title()),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

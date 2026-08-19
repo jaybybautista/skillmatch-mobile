@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skillmatch/models/internship.dart';
-import 'package:skillmatch/screens/matches/internship_search_screen.dart';
+import 'package:skillmatch/screens/student/matches/internship_search_screen.dart';
 import 'package:skillmatch/services/internship_service.dart';
 
 class _FakeInternshipService extends InternshipService {

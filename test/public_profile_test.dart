@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skillmatch/models/public_profile.dart';
-import 'package:skillmatch/screens/profile/company_public_profile_screen.dart';
-import 'package:skillmatch/screens/profile/coordinator_public_profile_screen.dart';
-import 'package:skillmatch/screens/profile/profile_screen.dart';
-import 'package:skillmatch/screens/profile/student_public_profile_screen.dart';
+import 'package:skillmatch/screens/student/profile/company_public_profile_screen.dart';
+import 'package:skillmatch/screens/student/profile/coordinator_public_profile_screen.dart';
+import 'package:skillmatch/screens/student/profile/profile_screen.dart';
+import 'package:skillmatch/screens/student/profile/student_public_profile_screen.dart';
 import 'package:skillmatch/services/public_profile_service.dart';
 
 class _FakeProfileService extends PublicProfileService {

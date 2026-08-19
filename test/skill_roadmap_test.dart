@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:skillmatch/models/skill_roadmap.dart';
-import 'package:skillmatch/screens/roadmap/skill_roadmap_screen.dart';
+import 'package:skillmatch/screens/student/roadmap/skill_roadmap_screen.dart';
 import 'package:skillmatch/services/skill_roadmap_service.dart';
 
 class _FakeSkillRoadmapService extends SkillRoadmapService {

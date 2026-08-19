@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:skillmatch/models/review.dart';
-import 'package:skillmatch/screens/reviews/reviews_section.dart';
+import 'package:skillmatch/screens/student/reviews/reviews_section.dart';
 import 'package:skillmatch/widgets/review_thread.dart';
 
 Map<String, dynamic> _json({

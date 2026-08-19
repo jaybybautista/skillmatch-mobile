@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:skillmatch/screens/auth/auth_screen.dart';
+import 'package:skillmatch/screens/auth/company_register_screen.dart';
 import 'package:skillmatch/screens/auth/register_screen.dart';
 import 'package:skillmatch/screens/auth/role_picker_screen.dart';
 import 'package:skillmatch/services/auth_service.dart';
@@ -58,7 +59,7 @@ void main() {
     expect(find.text('Signing up as a Student'), findsOneWidget);
   });
 
-  testWidgets('Company explains that sign-up happens on the website', (tester) async {
+  testWidgets('Company opens the in-app company sign-up form', (tester) async {
     await tester.pumpWidget(_wrap(const RolePickerScreen()));
     await tester.pump();
 
@@ -67,12 +68,9 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(CompanyRegisterScreen), findsOneWidget);
     expect(find.byType(RegisterScreen), findsNothing);
-    expect(
-      find.textContaining('created on the website'),
-      findsOneWidget,
-    );
+    expect(find.text('Signing up as a Company'), findsOneWidget);
   });
 
   testWidgets('Student is preselected and selection follows the tap', (tester) async {

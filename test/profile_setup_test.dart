@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skillmatch/models/profile_setup.dart';
-import 'package:skillmatch/screens/setup/setup_wizard_screen.dart';
+import 'package:skillmatch/screens/student/setup/setup_wizard_screen.dart';
 
 /// The exact shape GeminiAiService::parseResumeText promises.
 Map<String, dynamic> _aiResponse() => {

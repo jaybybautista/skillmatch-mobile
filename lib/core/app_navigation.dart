@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../screens/applications/applications_screen.dart';
-import '../screens/home/home_screen.dart';
-import '../screens/requirements/requirements_screen.dart';
-import '../screens/resume/resume_list_screen.dart';
+import '../screens/student/applications/applications_screen.dart';
+import '../screens/student/home/home_screen.dart';
+import '../screens/student/requirements/requirements_screen.dart';
+import '../screens/student/resume/resume_list_screen.dart';
 import '../widgets/app_bottom_nav.dart';
 
 /// Shared handler for [AppBottomNav] taps across every top-level screen.

@@ -73,10 +73,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 const SizedBox(height: 12),
                 Image.asset('assets/letter-skillmatch.png', height: 40),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Forgot Password?',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  style: AppFonts.title(fontSize: 24, color: AppColors.textDark),
                 ),
                 const SizedBox(height: 8),
                 const Text(

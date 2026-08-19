@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skillmatch/core/api_client.dart';
 import 'package:skillmatch/models/assessment.dart';
-import 'package:skillmatch/screens/assessments/assessment_quiz_screen.dart';
+import 'package:skillmatch/screens/student/assessments/assessment_quiz_screen.dart';
 import 'package:skillmatch/services/assessment_service.dart';
 
 /// Drives the quiz screen without a server so the cross-device lock can be

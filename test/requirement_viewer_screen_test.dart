@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:printing/printing.dart';
 
 import 'package:skillmatch/models/requirement.dart';
-import 'package:skillmatch/screens/requirements/requirement_viewer_screen.dart';
+import 'package:skillmatch/screens/student/requirements/requirement_viewer_screen.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: child);
 

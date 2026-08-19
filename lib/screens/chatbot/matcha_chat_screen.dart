@@ -223,10 +223,10 @@ class _Welcome extends StatelessWidget {
           children: [
             Image.asset('assets/ai_chatbot_logo.png', width: 96, height: 96),
             const SizedBox(height: 22),
-            const Text(
+            Text(
               'Hello, I am Matcha!',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+              style: AppFonts.title(color: Colors.white, fontSize: 22),
             ),
             const SizedBox(height: 12),
             Text(

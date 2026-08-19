@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.12.2
+  sdk: ^3.11.5
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -60,6 +60,7 @@ dependencies:
   # across app restarts, the same way the web quiz uses localStorage.
   shared_preferences: ^2.3.2
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -92,6 +93,7 @@ flutter:
     - assets/google-logo.png
     - assets/ai_chatbot_logo.png
     - assets/banner-picture.png
+    - assets/banner_company.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -118,3 +120,27 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  # Bundled locally (not fetched from fonts.gstatic.com at runtime) so the
+  # app's type system works offline. Each entry below points at the same
+  # variable font file with a different "weight" — Flutter/Skia resolves the
+  # matching named instance from the variable axes.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 700
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 800
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 900
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope-Variable.ttf
+          weight: 700

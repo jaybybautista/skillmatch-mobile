@@ -89,13 +89,13 @@ Future<bool?> showAiSuggestionSheet(BuildContext context, {required String origi
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.auto_fix_high, size: 18, color: AppColors.primary),
-                  SizedBox(width: 8),
+                  const Icon(Icons.auto_fix_high, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
                   Text(
                     'AI Suggestion',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    style: AppFonts.title(fontSize: 16, color: AppColors.primary),
                   ),
                 ],
               ),

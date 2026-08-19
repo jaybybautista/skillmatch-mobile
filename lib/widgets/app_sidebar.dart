@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
-import '../screens/applications/applications_screen.dart';
-import '../screens/bookmarks/bookmarks_screen.dart';
-import '../screens/home/home_screen.dart';
-import '../screens/matches/internship_search_screen.dart';
-import '../screens/notifications/notifications_screen.dart';
-import '../screens/profile/profile_screen.dart';
-import '../screens/requirements/requirements_screen.dart';
-import '../screens/resume/resume_list_screen.dart';
-import '../screens/roadmap/skill_roadmap_screen.dart';
-import '../screens/settings/settings_screen.dart';
+import '../screens/student/applications/applications_screen.dart';
+import '../screens/student/bookmarks/bookmarks_screen.dart';
+import '../screens/student/home/home_screen.dart';
+import '../screens/student/matches/internship_search_screen.dart';
+import '../screens/student/notifications/notifications_screen.dart';
+import '../screens/student/profile/profile_screen.dart';
+import '../screens/student/requirements/requirements_screen.dart';
+import '../screens/student/resume/resume_list_screen.dart';
+import '../screens/student/roadmap/skill_roadmap_screen.dart';
+import '../screens/student/settings/settings_screen.dart';
 import '../services/notification_service.dart';
 
 /// Which sidebar entry the current screen is, so it can be highlighted.

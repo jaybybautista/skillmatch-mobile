@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:skillmatch/models/requirement.dart';
-import 'package:skillmatch/screens/requirements/requirement_viewer_screen.dart';
-import 'package:skillmatch/screens/requirements/requirements_screen.dart';
+import 'package:skillmatch/screens/student/requirements/requirement_viewer_screen.dart';
+import 'package:skillmatch/screens/student/requirements/requirements_screen.dart';
 import 'package:skillmatch/services/requirement_service.dart';
 
 class _FakeRequirementService extends RequirementService {
