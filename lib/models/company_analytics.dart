@@ -6,6 +6,8 @@
 /// on top and can never disagree with the web page.
 library;
 
+import '../core/json_parse.dart';
+
 /// The dashboard's headline counters.
 class CompanyDashboardStats {
   const CompanyDashboardStats({
@@ -43,7 +45,7 @@ class CompanyDashboardStats {
   final int activePlacements;
 
   factory CompanyDashboardStats.fromJson(Map<String, dynamic> json) {
-    int at(String key) => (json[key] as num?)?.toInt() ?? 0;
+    int at(String key) => asInt(json[key]);
 
     return CompanyDashboardStats(
       totalPostings: at('total_postings'),
@@ -85,12 +87,13 @@ class DashboardPosting {
 
   bool get isOpen => status == 'open';
 
-  factory DashboardPosting.fromJson(Map<String, dynamic> json) => DashboardPosting(
-        id: (json['id'] as num).toInt(),
+  factory DashboardPosting.fromJson(Map<String, dynamic> json) =>
+      DashboardPosting(
+        id: asInt(json['id']),
         title: json['title'] as String? ?? 'Untitled posting',
         status: json['status'] as String? ?? 'open',
-        slotsAvailable: (json['slots_available'] as num?)?.toInt() ?? 0,
-        applicationsCount: (json['applications_count'] as num?)?.toInt() ?? 0,
+        slotsAvailable: asInt(json['slots_available']),
+        applicationsCount: asInt(json['applications_count']),
         createdAtHuman: json['created_at_human'] as String? ?? '',
       );
 }
@@ -115,10 +118,11 @@ class DashboardApplication {
   final String? internshipTitle;
   final String appliedAtHuman;
 
-  factory DashboardApplication.fromJson(Map<String, dynamic> json) => DashboardApplication(
-        id: (json['id'] as num).toInt(),
+  factory DashboardApplication.fromJson(Map<String, dynamic> json) =>
+      DashboardApplication(
+        id: asInt(json['id']),
         status: json['status'] as String? ?? 'pending',
-        studentId: (json['student_id'] as num?)?.toInt(),
+        studentId: asIntOrNull(json['student_id']),
         studentName: json['student_name'] as String? ?? 'Unknown',
         studentAvatarUrl: json['student_avatar_url'] as String?,
         internshipTitle: json['internship_title'] as String?,
@@ -144,13 +148,14 @@ class DashboardCandidate {
   final String? internshipTitle;
   final int matchScore;
 
-  factory DashboardCandidate.fromJson(Map<String, dynamic> json) => DashboardCandidate(
-        studentId: (json['student_id'] as num?)?.toInt(),
+  factory DashboardCandidate.fromJson(Map<String, dynamic> json) =>
+      DashboardCandidate(
+        studentId: asIntOrNull(json['student_id']),
         studentName: json['student_name'] as String? ?? 'Unknown',
         studentAvatarUrl: json['student_avatar_url'] as String?,
         course: json['course'] as String?,
         internshipTitle: json['internship_title'] as String?,
-        matchScore: (json['match_score'] as num?)?.toInt() ?? 0,
+        matchScore: asInt(json['match_score']),
       );
 }
 
@@ -170,7 +175,8 @@ class CompanyDashboard {
   final List<DashboardApplication> recentApplications;
   final List<DashboardCandidate> topCandidates;
 
-  factory CompanyDashboard.fromJson(Map<String, dynamic> json) => CompanyDashboard(
+  factory CompanyDashboard.fromJson(Map<String, dynamic> json) =>
+      CompanyDashboard(
         greeting: json['greeting'] as String? ?? 'Welcome',
         stats: CompanyDashboardStats.fromJson(
           json['stats'] as Map<String, dynamic>? ?? const {},
@@ -179,7 +185,9 @@ class CompanyDashboard {
             .map((e) => DashboardPosting.fromJson(e as Map<String, dynamic>))
             .toList(),
         recentApplications: (json['recent_applications'] as List? ?? const [])
-            .map((e) => DashboardApplication.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) => DashboardApplication.fromJson(e as Map<String, dynamic>),
+            )
             .toList(),
         topCandidates: (json['top_candidates'] as List? ?? const [])
             .map((e) => DashboardCandidate.fromJson(e as Map<String, dynamic>))
@@ -202,11 +210,11 @@ class PipelineStage {
   final int percentage;
 
   factory PipelineStage.fromJson(Map<String, dynamic> json) => PipelineStage(
-        status: json['status'] as String? ?? '',
-        label: json['label'] as String? ?? '',
-        count: (json['count'] as num?)?.toInt() ?? 0,
-        percentage: (json['percentage'] as num?)?.toInt() ?? 0,
-      );
+    status: json['status'] as String? ?? '',
+    label: json['label'] as String? ?? '',
+    count: asInt(json['count']),
+    percentage: asInt(json['percentage']),
+  );
 }
 
 /// A posting the pipeline can be narrowed to — the web page's dropdown.
@@ -217,24 +225,28 @@ class PostingOption {
   final String title;
 
   factory PostingOption.fromJson(Map<String, dynamic> json) => PostingOption(
-        id: (json['id'] as num).toInt(),
-        title: json['title'] as String? ?? 'Untitled',
-      );
+    id: asInt(json['id']),
+    title: json['title'] as String? ?? 'Untitled',
+  );
 }
 
 /// A row of the assessment participation table.
 class AssessmentRow {
-  const AssessmentRow({required this.id, required this.title, required this.questionsCount});
+  const AssessmentRow({
+    required this.id,
+    required this.title,
+    required this.questionsCount,
+  });
 
   final int id;
   final String title;
   final int questionsCount;
 
   factory AssessmentRow.fromJson(Map<String, dynamic> json) => AssessmentRow(
-        id: (json['id'] as num).toInt(),
-        title: json['title'] as String? ?? 'Untitled assessment',
-        questionsCount: (json['questions_count'] as num?)?.toInt() ?? 0,
-      );
+    id: asInt(json['id']),
+    title: json['title'] as String? ?? 'Untitled assessment',
+    questionsCount: asInt(json['questions_count']),
+  );
 }
 
 /// A row of the recruitment activity feed.
@@ -256,13 +268,13 @@ class ActivityRow {
   final String updatedAtHuman;
 
   factory ActivityRow.fromJson(Map<String, dynamic> json) => ActivityRow(
-        id: (json['id'] as num).toInt(),
-        studentName: json['student_name'] as String? ?? 'Unknown Student',
-        internshipTitle: json['internship_title'] as String?,
-        status: json['status'] as String? ?? '',
-        assignedAssessment: json['assigned_assessment'] as String?,
-        updatedAtHuman: json['updated_at_human'] as String? ?? '',
-      );
+    id: asInt(json['id']),
+    studentName: json['student_name'] as String? ?? 'Unknown Student',
+    internshipTitle: json['internship_title'] as String?,
+    status: json['status'] as String? ?? '',
+    assignedAssessment: json['assigned_assessment'] as String?,
+    updatedAtHuman: json['updated_at_human'] as String? ?? '',
+  );
 }
 
 /// The analytics screen's whole payload.
@@ -323,7 +335,8 @@ class CompanyAnalytics {
     Map<String, dynamic> section(String key) =>
         json[key] as Map<String, dynamic>? ?? const {};
 
-    int from(String key, String field) => (section(key)[field] as num?)?.toInt() ?? 0;
+    int from(String key, String field) =>
+        asInt(section(key)[field]);
 
     final pipeline = section('pipeline');
 
@@ -335,7 +348,7 @@ class CompanyAnalytics {
       slotsFilled: from('postings', 'slots_filled'),
       applicantCounts: {
         for (final entry in section('applicants').entries)
-          entry.key: (entry.value as num?)?.toInt() ?? 0,
+          entry.key: asInt(entry.value),
       },
       avgMatchScore: from('matching', 'average_score'),
       highMatchCount: from('matching', 'high_match_count'),
@@ -344,11 +357,11 @@ class CompanyAnalytics {
       avgQuizScore: from('assessments', 'average_score'),
       totalPlacements: from('placements', 'total'),
       activePlacements: from('placements', 'active'),
-      pipelineTotal: (pipeline['total'] as num?)?.toInt() ?? 0,
+      pipelineTotal: asInt(pipeline['total']),
       pipelineStages: (pipeline['stages'] as List? ?? const [])
           .map((e) => PipelineStage.fromJson(e as Map<String, dynamic>))
           .toList(),
-      pipelineFilter: (json['pipeline_filter'] as num?)?.toInt(),
+      pipelineFilter: asIntOrNull(json['pipeline_filter']),
       postingOptions: (json['posting_options'] as List? ?? const [])
           .map((e) => PostingOption.fromJson(e as Map<String, dynamic>))
           .toList(),

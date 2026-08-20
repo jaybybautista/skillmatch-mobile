@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/json_parse.dart';
 
 /// A single posting on the company side — shared by [CompanyHomeScreen]'s
 /// "Active Postings" carousel and [CompanyPostingsScreen]'s full list.
@@ -48,15 +49,52 @@ class CompanyPosting {
       slotsFilled: (json['slots_filled'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'open',
       description: json['description'] as String?,
-      responsibilities:
-          (json['responsibilities'] as List? ?? const []).map((e) => e.toString()).toList(),
-      skills: (json['skills'] as List? ?? const []).map((e) => e.toString()).toList(),
+      responsibilities: (json['responsibilities'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      skills: (json['skills'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
       postedAtHuman: json['posted_at_human'] as String?,
     );
   }
 }
 
-/// The "APPLICANTS" / "OPEN SLOTS" stat chip shown on a posting card —
+/// The six application buckets behind a posting, as counted by
+/// GET /api/company/postings/{id}.
+///
+/// The names are the web's (`hired`, `shortlisted`) rather than the database's
+/// (`accepted`, `interview`) because both platforms read the same serialized
+/// keys - renaming them here would only make the two disagree.
+class PostingStatusCounts {
+  const PostingStatusCounts({
+    this.pending = 0,
+    this.reviewing = 0,
+    this.shortlisted = 0,
+    this.hired = 0,
+    this.rejected = 0,
+    this.withdrawn = 0,
+  });
+
+  final int pending;
+  final int reviewing;
+  final int shortlisted;
+  final int hired;
+  final int rejected;
+  final int withdrawn;
+
+  factory PostingStatusCounts.fromJson(Map<String, dynamic> json) =>
+      PostingStatusCounts(
+        pending: asInt(json['pending']),
+        reviewing: asInt(json['reviewing']),
+        shortlisted: asInt(json['shortlisted']),
+        hired: asInt(json['hired']),
+        rejected: asInt(json['rejected']),
+        withdrawn: asInt(json['withdrawn']),
+      );
+}
+
+/// The "APPLICANTS" / "OPEN SLOTS" stat chip shown on a posting card -
 /// shared by the home carousel card and the full "My Postings" list card.
 class PostingStatTile extends StatelessWidget {
   const PostingStatTile({super.key, required this.label, required this.value});

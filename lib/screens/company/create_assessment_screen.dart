@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../core/error_message.dart';
 import '../../models/assessment.dart';
 import '../../models/company_assessment.dart';
 import '../../services/company_assessment_service.dart';
@@ -48,7 +48,8 @@ class CreateAssessmentScreen extends StatefulWidget {
 class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
   static const _totalSteps = 2;
 
-  late final CompanyAssessmentService _service = widget.service ?? CompanyAssessmentService();
+  late final CompanyAssessmentService _service =
+      widget.service ?? CompanyAssessmentService();
 
   int _step = 1;
   bool _isSaving = false;
@@ -82,7 +83,9 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
 
     _preselectSinglePosting();
 
-    if (widget.postings == null) _loadPostings();
+    if (widget.postings == null) {
+      _loadPostings();
+    }
 
     if (_isEditing) {
       // The library card carries no questions, so the paper is fetched in
@@ -119,9 +122,14 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
         _postings = library.postingOptions;
         _preselectSinglePosting();
       });
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
-      _notify(e.message);
+      _notify(
+        messageForError(
+          e,
+          'Could not reach the server. Check your connection and try again.',
+        ),
+      );
     }
   }
 
@@ -138,9 +146,14 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
           ..addAll(full.questions.map(DraftQuestion.fromExisting));
         if (_questions.isEmpty) _questions.add(DraftQuestion());
       });
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
-      _notify(e.message);
+      _notify(
+        messageForError(
+          e,
+          'Could not reach the server. Check your connection and try again.',
+        ),
+      );
       setState(() {
         if (_questions.isEmpty) _questions.add(DraftQuestion());
       });
@@ -149,7 +162,9 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
 
   void _notify(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _addQuestion() => setState(() => _questions.add(DraftQuestion()));
@@ -169,7 +184,9 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
     setState(() {
       question.options.remove(option);
       question.correctOptionIds.remove(option.id);
-      if (question.correctOptionId == option.id) question.correctOptionId = null;
+      if (question.correctOptionId == option.id) {
+        question.correctOptionId = null;
+      }
       option.dispose();
     });
   }
@@ -229,7 +246,8 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
 
     final rawLimit = _timeLimitController.text.trim();
     final timeLimit = rawLimit.isEmpty ? null : int.tryParse(rawLimit);
-    if (rawLimit.isNotEmpty && (timeLimit == null || timeLimit < 1 || timeLimit > 480)) {
+    if (rawLimit.isNotEmpty &&
+        (timeLimit == null || timeLimit < 1 || timeLimit > 480)) {
       // Mirrors the server's own bounds so the user is told here rather than
       // after a round trip.
       _notify('A time limit must be between 1 and 480 minutes.');
@@ -260,10 +278,15 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
         _step = 2;
         _isSaving = false;
       });
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      _notify(e.message);
+      _notify(
+        messageForError(
+          e,
+          'Could not reach the server. Check your connection and try again.',
+        ),
+      );
     }
   }
 
@@ -285,12 +308,17 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
       if (!mounted) return;
       _notify('Assessment saved successfully.');
       Navigator.of(context).pop(true);
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
       // The server names the offending question ("Question 2 needs at least
       // 2 non-empty answer options"), so its message is shown as-is.
-      _notify(e.message);
+      _notify(
+        messageForError(
+          e,
+          'Could not reach the server. Check your connection and try again.',
+        ),
+      );
     }
   }
 
@@ -312,7 +340,8 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
         children: [
           CompanyScreenHeader(
             title: _isEditing ? 'Edit Assessment' : 'Create Assessment',
-            subtitle: 'Step $_step of $_totalSteps · ${_step == 1 ? 'Details' : 'Questions'}',
+            subtitle:
+                'Step $_step of $_totalSteps · ${_step == 1 ? 'Details' : 'Questions'}',
             onBack: _back,
             trailing: _step == 2
                 ? IconButton(
@@ -330,7 +359,8 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
                   _DetailsStep(
                     postings: _postings,
                     internshipId: _internshipId,
-                    onPostingChanged: (id) => setState(() => _internshipId = id),
+                    onPostingChanged: (id) =>
+                        setState(() => _internshipId = id),
                     titleController: _titleController,
                     descriptionController: _descriptionController,
                     timeLimitController: _timeLimitController,
@@ -354,7 +384,9 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
           _CreateAssessmentFooter(
             onNext: _isSaving
                 ? null
-                : (_step == _totalSteps ? _saveQuestions : _saveDetailsAndContinue),
+                : (_step == _totalSteps
+                      ? _saveQuestions
+                      : _saveDetailsAndContinue),
             isSaving: _isSaving,
             nextLabel: _step == _totalSteps ? 'Save' : 'Next',
           ),
@@ -385,13 +417,18 @@ class _CreateAssessmentFooter extends StatelessWidget {
           onPressed: onNext,
           style: ElevatedButton.styleFrom(
             minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: isSaving
               ? const SizedBox(
                   height: 20,
                   width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : Text(nextLabel),
         ),
@@ -434,7 +471,10 @@ class _DetailsStep extends StatelessWidget {
               filled: true,
               fillColor: Color(0xFFEEF1F5),
               border: OutlineInputBorder(borderSide: BorderSide.none),
-              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 14,
+              ),
               hintText: 'Select a posting',
             ),
             items: [
@@ -460,7 +500,8 @@ class _DetailsStep extends StatelessWidget {
           label: 'DESCRIPTION',
           child: _GreyTextField(
             controller: descriptionController,
-            hintText: 'Outline the goals of this assessment, required skills, and what the candidate can expect…',
+            hintText:
+                'Outline the goals of this assessment, required skills, and what the candidate can expect…',
             minLines: 3,
             maxLines: 6,
           ),
@@ -469,7 +510,11 @@ class _DetailsStep extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.timer_outlined, color: AppColors.primary, size: 22),
+            const Icon(
+              Icons.timer_outlined,
+              color: AppColors.primary,
+              size: 22,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -479,7 +524,11 @@ class _DetailsStep extends StatelessWidget {
                   const SizedBox(height: 2),
                   const Text(
                     'Define how time pressure is applied to your candidates to ensure fair and accurate results.',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 12.5, height: 1.4),
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.5,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
@@ -496,7 +545,10 @@ class _DetailsStep extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFEEF1F5),
                   borderRadius: BorderRadius.circular(10),
@@ -570,11 +622,13 @@ class _QuestionsStep extends StatelessWidget {
   final void Function(int index) onRemove;
   final void Function(DraftQuestion question, QuestionType type) onSetType;
   final void Function(DraftQuestion question, int optionId) onSetCorrectOption;
-  final void Function(DraftQuestion question, int optionId) onToggleCorrectOption;
+  final void Function(DraftQuestion question, int optionId)
+  onToggleCorrectOption;
   final void Function(DraftQuestion question) onPickImage;
   final void Function(DraftQuestion question) onClearImage;
   final void Function(DraftQuestion question) onAddOption;
-  final void Function(DraftQuestion question, DraftOption option) onRemoveOption;
+  final void Function(DraftQuestion question, DraftOption option)
+  onRemoveOption;
 
   @override
   Widget build(BuildContext context) {
@@ -583,15 +637,19 @@ class _QuestionsStep extends StatelessWidget {
       children: [
         for (var i = 0; i < questions.length; i++)
           Padding(
-            padding: EdgeInsets.only(bottom: i == questions.length - 1 ? 0 : 16),
+            padding: EdgeInsets.only(
+              bottom: i == questions.length - 1 ? 0 : 16,
+            ),
             child: _QuestionCard(
               index: i,
               question: questions[i],
               onToggleExpanded: () => onToggleExpanded(i),
               onRemove: questions.length > 1 ? () => onRemove(i) : null,
               onSetType: (type) => onSetType(questions[i], type),
-              onSetCorrectOption: (optionId) => onSetCorrectOption(questions[i], optionId),
-              onToggleCorrectOption: (optionId) => onToggleCorrectOption(questions[i], optionId),
+              onSetCorrectOption: (optionId) =>
+                  onSetCorrectOption(questions[i], optionId),
+              onToggleCorrectOption: (optionId) =>
+                  onToggleCorrectOption(questions[i], optionId),
               onPickImage: () => onPickImage(questions[i]),
               onClearImage: () => onClearImage(questions[i]),
               onAddOption: () => onAddOption(questions[i]),
@@ -649,7 +707,9 @@ class _QuestionCard extends StatelessWidget {
                 onTap: onToggleExpanded,
                 borderRadius: BorderRadius.circular(6),
                 child: Icon(
-                  question.expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  question.expanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
                   color: AppColors.textMuted,
                 ),
               ),
@@ -658,7 +718,10 @@ class _QuestionCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Question ${index + 1}', style: AppFonts.title(fontSize: 15)),
+                    Text(
+                      'Question ${index + 1}',
+                      style: AppFonts.title(fontSize: 15),
+                    ),
                     const SizedBox(height: 2),
                     PopupMenuButton<QuestionType>(
                       padding: EdgeInsets.zero,
@@ -711,7 +774,11 @@ class _QuestionCard extends StatelessWidget {
                               letterSpacing: 0.4,
                             ),
                           ),
-                          const Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textMuted),
+                          const Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 16,
+                            color: AppColors.textMuted,
+                          ),
                         ],
                       ),
                     ),
@@ -721,7 +788,10 @@ class _QuestionCard extends StatelessWidget {
               if (onRemove != null)
                 InkWell(
                   onTap: onRemove,
-                  child: const Icon(Icons.delete_outline, color: AppColors.textMuted),
+                  child: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.textMuted,
+                  ),
                 ),
             ],
           ),
@@ -746,10 +816,16 @@ class _QuestionCard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.image_outlined, size: 16, color: AppColors.primary),
+                  const Icon(
+                    Icons.image_outlined,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(width: 6),
                   Text(
-                    question.hasImage ? 'Change Inline Image' : 'Add Inline Image',
+                    question.hasImage
+                        ? 'Change Inline Image'
+                        : 'Add Inline Image',
                     style: const TextStyle(
                       color: AppColors.primary,
                       fontSize: 13,
@@ -788,8 +864,11 @@ class _QuestionCard extends StatelessWidget {
             if (question.type == QuestionType.checkbox)
               for (final option in question.options) ...[
                 _OptionLabelRow(
-                  label: 'Option ${_letterFor(question.options.indexOf(option))}',
-                  onRemove: question.options.length > 2 ? () => onRemoveOption(option) : null,
+                  label:
+                      'Option ${_letterFor(question.options.indexOf(option))}',
+                  onRemove: question.options.length > 2
+                      ? () => onRemoveOption(option)
+                      : null,
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -818,14 +897,19 @@ class _QuestionCard extends StatelessWidget {
                   children: [
                     for (final option in question.options) ...[
                       _OptionLabelRow(
-                        label: 'Option ${_letterFor(question.options.indexOf(option))}',
-                        onRemove:
-                            question.options.length > 2 ? () => onRemoveOption(option) : null,
+                        label:
+                            'Option ${_letterFor(question.options.indexOf(option))}',
+                        onRemove: question.options.length > 2
+                            ? () => onRemoveOption(option)
+                            : null,
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Radio<int>(value: option.id, activeColor: AppColors.primary),
+                          Radio<int>(
+                            value: option.id,
+                            activeColor: AppColors.primary,
+                          ),
                           Expanded(
                             child: _GreyTextField(
                               controller: option.controller,
@@ -884,7 +968,12 @@ class _QuestionImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final path = question.imagePath;
     if (path != null) {
-      return Image.file(File(path), height: 120, width: double.infinity, fit: BoxFit.cover);
+      return Image.file(
+        File(path),
+        height: 120,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
     }
 
     return Image.network(
@@ -950,11 +1039,7 @@ class _FieldCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _FieldLabel(label),
-          const SizedBox(height: 8),
-          child,
-        ],
+        children: [_FieldLabel(label), const SizedBox(height: 8), child],
       ),
     );
   }
@@ -1006,7 +1091,10 @@ class _GreyTextField extends StatelessWidget {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hintText,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 14,
+          ),
         ),
       ),
     );

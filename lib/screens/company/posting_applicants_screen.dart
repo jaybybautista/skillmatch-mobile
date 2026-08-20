@@ -1,30 +1,39 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/error_message.dart';
+import '../../models/company_application.dart';
+import '../../services/company_service.dart';
 import '../../widgets/company_screen_header.dart';
 import '../../widgets/empty_results.dart';
+import 'candidate_detail_screen.dart';
 import 'company_posting.dart';
-import 'posting_applicant.dart';
 
 enum _ApplicantView {
-  allApplicants('All Applicants'),
-  topMatches('Top Matches');
+  topMatches('Top Matches'),
+  allApplicants('All Applicants');
 
   const _ApplicantView(this.label);
 
   final String label;
 }
 
-/// Shown when a company taps one of its postings — lists everyone who
-/// applied, either as a plain roster ("All Applicants") or ranked by AI
-/// match score with a "why this match" explanation ("Top Matches"),
-/// switchable via the filter icon in the header.
+/// Everyone who applied to one posting — the real `applications` rows for it,
+/// read from /api/company/applications?internship_id=…, the same rows the
+/// Applications screen and the website manage.
 ///
-/// TODO: static placeholder data — see [PostingApplicant].
+/// "Top Matches" ranks them by the AI match score for this exact posting
+/// (the same `internship_matches` rows Browse candidates sorts by); "All
+/// Applicants" keeps them newest-first.
 class PostingApplicantsScreen extends StatefulWidget {
-  const PostingApplicantsScreen({super.key, required this.posting});
+  const PostingApplicantsScreen({
+    super.key,
+    required this.posting,
+    this.service,
+  });
 
   final CompanyPosting posting;
+  final CompanyService? service;
 
   @override
   State<PostingApplicantsScreen> createState() =>
@@ -32,9 +41,19 @@ class PostingApplicantsScreen extends StatefulWidget {
 }
 
 class _PostingApplicantsScreenState extends State<PostingApplicantsScreen> {
-  var _view = _ApplicantView.topMatches;
+  late final CompanyService _service = widget.service ?? CompanyService();
   final _searchController = TextEditingController();
-  final _applicants = placeholderApplicants();
+
+  var _view = _ApplicantView.topMatches;
+  bool _isLoading = true;
+  Object? _error;
+  List<CompanyApplication> _applications = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
 
   @override
   void dispose() {
@@ -42,98 +61,142 @@ class _PostingApplicantsScreenState extends State<PostingApplicantsScreen> {
     super.dispose();
   }
 
-  /// This roster is still placeholder data, so there is no real application
-  /// to assign against. Assigning for real lives on the Applications screen,
-  /// which is backed by the same `applications` rows the website manages.
-  void _assignAssessment(PostingApplicant applicant) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Assign an assessment from the Applications screen.'),
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final result = await _service.fetchApplications(
+        internshipId: widget.posting.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _applications = result.applications;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _isLoading = false;
+      });
+    }
+  }
+
+  /// Filtered and ordered for the current view. Done locally: the list is one
+  /// posting's applicants, so it is short enough that a round trip per
+  /// keystroke would be the slower option.
+  List<CompanyApplication> get _visible {
+    final query = _searchController.text.trim().toLowerCase();
+
+    final results = query.isEmpty
+        ? List<CompanyApplication>.of(_applications)
+        : _applications
+              .where((a) => a.student.name.toLowerCase().contains(query))
+              .toList();
+
+    if (_view == _ApplicantView.topMatches) {
+      // Applicants with no computed match sort last rather than as zero, so a
+      // posting whose matches haven't run yet doesn't look like a wall of
+      // bad candidates.
+      results.sort(
+        (a, b) => (b.matchScore ?? -1).compareTo(a.matchScore ?? -1),
+      );
+    }
+
+    return results;
+  }
+
+  void _openCandidate(CompanyApplication application) {
+    final studentId = application.student.id;
+    if (studentId == null) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CandidateDetailScreen(
+          studentId: studentId,
+          initialName: application.student.name,
+          service: widget.service,
+        ),
       ),
     );
   }
 
-  List<PostingApplicant> get _visibleApplicants {
-    final query = _searchController.text.trim().toLowerCase();
-    final results = query.isEmpty
-        ? List<PostingApplicant>.of(_applicants)
-        : _applicants
-              .where((a) => a.name.toLowerCase().contains(query))
-              .toList();
-    if (_view == _ApplicantView.topMatches) {
-      results.sort((a, b) => b.matchPercent.compareTo(a.matchPercent));
-    }
-    return results;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final applicants = _visibleApplicants;
     return Scaffold(
       backgroundColor: AppGradients.companyHeaderEnd,
       body: Column(
         children: [
           CompanyScreenHeader(
             title: widget.posting.title,
-            subtitle: _view == _ApplicantView.topMatches
-                ? 'Top Matches For You'
-                : 'Applicants (${widget.posting.applicants})',
+            subtitle: _isLoading
+                ? 'Applicants'
+                : '${_applications.length} '
+                      'applicant${_applications.length == 1 ? '' : 's'}',
             onBack: () => Navigator.of(context).maybePop(),
-            trailing: PopupMenuButton<_ApplicantView>(
-              icon: const Icon(Icons.filter_list_rounded, color: Colors.white),
-              onSelected: (view) => setState(() => _view = view),
-              itemBuilder: (context) => [
-                for (final view in _ApplicantView.values)
-                  PopupMenuItem(
-                    value: view,
-                    child: Text(
-                      view.label,
-                      style: TextStyle(
-                        fontWeight: view == _view
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: view == _view
-                            ? AppColors.primary
-                            : AppColors.textDark,
-                      ),
-                    ),
-                  ),
-              ],
+            trailing: IconButton(
+              tooltip: 'Switch view',
+              icon: const Icon(Icons.tune, color: Colors.white),
+              onPressed: () => setState(
+                () => _view = _view == _ApplicantView.topMatches
+                    ? _ApplicantView.allApplicants
+                    : _ApplicantView.topMatches,
+              ),
             ),
           ),
           Expanded(
             child: ColoredBox(
               color: AppColors.background,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+              child: Column(
                 children: [
-                  _SearchField(
-                    controller: _searchController,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 16),
-                  if (applicants.isEmpty)
-                    const EmptyResults(
-                      title: 'No applicants found',
-                      hint: 'Try a different search.',
-                      icon: Icons.people_outline,
-                    )
-                  else
-                    for (var i = 0; i < applicants.length; i++)
-                      Padding(
-                        padding: EdgeInsets.only(
-                          bottom: i == applicants.length - 1 ? 0 : 16,
-                        ),
-                        child: _ApplicantCard(
-                          applicant: applicants[i],
-                          showMatch: _view == _ApplicantView.topMatches,
-                          onAssign: () => _assignAssessment(applicants[i]),
-                          onToggleBookmark: () => setState(
-                            () => applicants[i].bookmarked =
-                                !applicants[i].bookmarked,
-                          ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        hintText: 'Search applicants...',
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: AppColors.textMuted,
                         ),
                       ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                    child: Row(
+                      children: [
+                        for (final view in _ApplicantView.values)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(view.label),
+                              selected: _view == view,
+                              onSelected: (_) => setState(() => _view = view),
+                              labelStyle: TextStyle(
+                                fontSize: 12.5,
+                                color: _view == view
+                                    ? Colors.white
+                                    : AppColors.textDark,
+                              ),
+                              selectedColor: AppColors.primary,
+                              backgroundColor: Colors.white,
+                              showCheckmark: false,
+                              side: const BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _load,
+                      child: _buildBody(),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -142,253 +205,230 @@ class _PostingApplicantsScreenState extends State<PostingApplicantsScreen> {
       ),
     );
   }
-}
 
-class _SearchField extends StatelessWidget {
-  const _SearchField({required this.controller, required this.onChanged});
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-  final TextEditingController controller;
-  final void Function(String) onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 6, 6, 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
+    if (_error != null) {
+      return ListView(
+        padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
         children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              onChanged: onChanged,
-              style: const TextStyle(color: AppColors.textDark, fontSize: 15),
-              decoration: const InputDecoration(
-                isDense: true,
-                isCollapsed: true,
-                filled: false,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                hintText: 'Search internships...',
-                hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 15),
-              ),
-            ),
+          Text(
+            messageForError(_error!, 'Could not load the applicants.'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textMuted),
           ),
-          const SizedBox(width: 8),
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.chipBackground,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(Icons.search, color: AppColors.primary, size: 20),
+          const SizedBox(height: 12),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
           ),
         ],
+      );
+    }
+
+    final applicants = _visible;
+
+    if (applicants.isEmpty) {
+      return ListView(
+        children: [
+          const SizedBox(height: 40),
+          EmptyResults(
+            title: _searchController.text.trim().isEmpty
+                ? 'No applicants yet'
+                : 'No matching applicants',
+            hint: _searchController.text.trim().isEmpty
+                ? 'Students who apply to this posting will appear here.'
+                : 'No one on this posting matches that name.',
+            icon: Icons.people_outline,
+          ),
+        ],
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+      itemCount: applicants.length,
+      itemBuilder: (_, index) => Padding(
+        padding: EdgeInsets.only(
+          bottom: index == applicants.length - 1 ? 0 : 14,
+        ),
+        child: _ApplicantCard(
+          application: applicants[index],
+          onTap: () => _openCandidate(applicants[index]),
+        ),
       ),
     );
   }
 }
 
 class _ApplicantCard extends StatelessWidget {
-  const _ApplicantCard({
-    required this.applicant,
-    required this.showMatch,
-    required this.onAssign,
-    required this.onToggleBookmark,
-  });
+  const _ApplicantCard({required this.application, required this.onTap});
 
-  final PostingApplicant applicant;
-  final bool showMatch;
-  final VoidCallback onAssign;
-  final VoidCallback onToggleBookmark;
+  final CompanyApplication application;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    final student = application.student;
+    final statusColors = applicationStatusColors(application.status);
+    final avatarUrl = student.avatarUrl;
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: AppColors.chipBackground,
-                child: Text(
-                  applicant.initials,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: AppColors.chipBackground,
+                    backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+                    child: hasAvatar
+                        ? null
+                        : Text(
+                            student.initials,
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(applicant.name, style: AppFonts.title(fontSize: 16)),
-                    const SizedBox(height: 2),
-                    Row(
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          size: 14,
-                          color: AppColors.textMuted,
-                        ),
-                        const SizedBox(width: 3),
                         Text(
-                          applicant.location,
+                          student.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppFonts.title(fontSize: 16),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          [
+                            student.course,
+                            student.campus,
+                          ].whereType<String>().join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppColors.textMuted,
                             fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColors.background,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      application.statusLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: statusColors.text,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // Only shown once the matcher has actually run for this pair —
+              // an absent score is not a zero score.
+              if (application.matchScore != null) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(
+                      '${application.matchScore}% match',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: application.matchScore! / 100,
+                          minHeight: 6,
+                          backgroundColor: AppColors.background,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              if (showMatch) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryMidBlue,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${applicant.matchPercent}% Match',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                    ),
+              ],
+              if (application.matchedSkills.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final skill in application.matchedSkills.take(6))
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.chipBackground,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          skill,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+              if (application.appliedAtHuman != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Applied ${application.appliedAtHuman}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.textMuted,
                   ),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final skill in applicant.skills)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.chipBackground,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    skill.toUpperCase(),
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          if (showMatch) ...[
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F6FB),
-                borderRadius: BorderRadius.circular(10),
-                border: const Border(
-                  left: BorderSide(color: AppColors.blueLeft, width: 3),
-                ),
-              ),
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: 'Why this match? ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontStyle: FontStyle.normal,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    TextSpan(text: applicant.matchReason),
-                  ],
-                ),
-                style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 12.5,
-                  height: 1.4,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: onAssign,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(46),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Assign Assessment'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              InkWell(
-                onTap: onToggleBookmark,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  width: 46,
-                  height: 46,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    applicant.bookmarked
-                        ? Icons.bookmark
-                        : Icons.bookmark_border,
-                    color: applicant.bookmarked
-                        ? AppColors.primary
-                        : AppColors.textMuted,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

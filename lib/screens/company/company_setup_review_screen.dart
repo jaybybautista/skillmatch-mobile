@@ -74,12 +74,18 @@ class CompanySetupReviewScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Review your profile',
-                            style: AppFonts.title(fontSize: 19, color: Colors.white),
+                            style: AppFonts.title(
+                              fontSize: 19,
+                              color: Colors.white,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           const Text(
                             'Check the details before saving.',
-                            style: TextStyle(color: Colors.white70, fontSize: 12.5),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12.5,
+                            ),
                           ),
                         ],
                       ),
@@ -101,7 +107,9 @@ class CompanySetupReviewScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.5,
-                      color: description.isEmpty ? AppColors.textMuted : AppColors.textDark,
+                      color: description.isEmpty
+                          ? AppColors.textMuted
+                          : AppColors.textDark,
                     ),
                   ),
                 ),
@@ -135,7 +143,9 @@ class CompanySetupReviewScreen extends StatelessWidget {
                 onPressed: () => _save(context),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(54),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: const Text('Save and Continue'),
               ),
@@ -173,7 +183,11 @@ class _SubmittedForReviewDialog extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.warningBorder, width: 1.5),
               ),
-              child: const Icon(Icons.pending_actions_rounded, color: AppColors.warning, size: 30),
+              child: const Icon(
+                Icons.pending_actions_rounded,
+                color: AppColors.warning,
+                size: 30,
+              ),
             ),
             const SizedBox(height: 18),
             Text(
@@ -186,7 +200,11 @@ class _SubmittedForReviewDialog extends StatelessWidget {
               "Company accounts are reviewed before going live. You'll be able to post "
               'internships once a coordinator approves your account.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13.5, height: 1.5, color: AppColors.textMuted),
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.5,
+                color: AppColors.textMuted,
+              ),
             ),
             const SizedBox(height: 22),
             SizedBox(
@@ -195,7 +213,9 @@ class _SubmittedForReviewDialog extends StatelessWidget {
                 onPressed: onDone,
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: const Text('Done'),
               ),
@@ -230,15 +250,16 @@ class _Card extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: AppFonts.title(fontSize: 15),
-              ),
+              Text(title, style: AppFonts.title(fontSize: 15)),
               InkWell(
                 onTap: onEdit,
                 child: const Padding(
                   padding: EdgeInsets.all(4),
-                  child: Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                  child: Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ],
@@ -252,7 +273,11 @@ class _Card extends StatelessWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.onEdit, required this.rows});
+  const _Section({
+    required this.title,
+    required this.onEdit,
+    required this.rows,
+  });
 
   final String title;
   final VoidCallback onEdit;
@@ -266,7 +291,10 @@ class _Section extends StatelessWidget {
       title: title,
       onEdit: onEdit,
       child: present.isEmpty
-          ? const Text('Not provided', style: TextStyle(fontSize: 13, color: AppColors.textMuted))
+          ? const Text(
+              'Not provided',
+              style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+            )
           : Column(
               children: [
                 for (final row in present)
@@ -279,7 +307,10 @@ class _Section extends StatelessWidget {
                           width: 110,
                           child: Text(
                             row.$1,
-                            style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ),
                         Expanded(

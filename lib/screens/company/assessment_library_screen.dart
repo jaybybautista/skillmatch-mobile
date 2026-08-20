@@ -5,6 +5,7 @@ import '../../core/app_theme.dart';
 import '../../core/company_navigation.dart';
 import '../../models/company_assessment.dart';
 import '../../services/company_assessment_service.dart';
+import '../../widgets/matcha_launcher.dart';
 import '../../widgets/company_bottom_nav.dart';
 import '../../widgets/company_screen_header.dart';
 import '../../widgets/company_sidebar.dart';
@@ -25,11 +26,13 @@ class AssessmentLibraryScreen extends StatefulWidget {
   final CompanyAssessmentService? service;
 
   @override
-  State<AssessmentLibraryScreen> createState() => _AssessmentLibraryScreenState();
+  State<AssessmentLibraryScreen> createState() =>
+      _AssessmentLibraryScreenState();
 }
 
 class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
-  late final CompanyAssessmentService _service = widget.service ?? CompanyAssessmentService();
+  late final CompanyAssessmentService _service =
+      widget.service ?? CompanyAssessmentService();
 
   bool _isLoading = true;
   Object? _error;
@@ -66,7 +69,9 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
 
   void _notify(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _createAssessment() async {
@@ -134,8 +139,8 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
               // Deleting cascades to the results, so a company about to lose
               // real attempts should be told before it happens.
               ? '"${assessment.title}" has ${assessment.submissionCount} '
-                  'submission${assessment.submissionCount == 1 ? '' : 's'}. '
-                  'Deleting it removes those results too.'
+                    'submission${assessment.submissionCount == 1 ? '' : 's'}. '
+                    'Deleting it removes those results too.'
               : '"${assessment.title}" will be removed for good.',
         ),
         actions: [
@@ -145,7 +150,10 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -167,24 +175,33 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
     return Scaffold(
       drawer: const CompanySidebar(current: CompanySidebarItem.assessments),
       backgroundColor: AppColors.primaryDark,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
         children: [
-          CompanyScreenHeader(
-            title: 'Assessment Library',
-            showMenuButton: true,
-            trailing: IconButton(
-              onPressed: _createAssessment,
-              icon: const Icon(Icons.add, color: Colors.white, size: 26),
-              tooltip: 'New assessment',
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CompanyScreenHeader(
+                title: 'Assessment Library',
+                showMenuButton: true,
+                trailing: IconButton(
+                  onPressed: _createAssessment,
+                  icon: const Icon(Icons.add, color: Colors.white, size: 26),
+                  tooltip: 'New assessment',
+                ),
+              ),
+              Expanded(
+                child: ColoredBox(
+                  color: AppColors.background,
+                  child: RefreshIndicator(
+                    onRefresh: _load,
+                    child: _buildBody(),
+                  ),
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: ColoredBox(
-              color: AppColors.background,
-              child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
-            ),
-          ),
+          // Same launcher the web keeps on every page.
+          const MatchaLauncher(),
         ],
       ),
       // Kept alongside the drawer: this screen is also the bottom bar's third
@@ -213,7 +230,9 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
@@ -237,7 +256,9 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
       itemBuilder: (_, index) {
         final assessment = _assessments[index];
         return Padding(
-          padding: EdgeInsets.only(bottom: index == _assessments.length - 1 ? 0 : 16),
+          padding: EdgeInsets.only(
+            bottom: index == _assessments.length - 1 ? 0 : 16,
+          ),
           child: _AssessmentCard(
             assessment: assessment,
             onTap: () => _preview(assessment),
@@ -289,11 +310,24 @@ class _AssessmentCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Text(assessment.title, style: AppFonts.title(fontSize: 17))),
+                  Expanded(
+                    child: Text(
+                      assessment.title,
+                      style: AppFonts.title(fontSize: 17),
+                    ),
+                  ),
                   const SizedBox(width: 8),
-                  _IconAction(icon: Icons.edit_outlined, onTap: onEdit, tooltip: 'Edit'),
+                  _IconAction(
+                    icon: Icons.edit_outlined,
+                    onTap: onEdit,
+                    tooltip: 'Edit',
+                  ),
                   const SizedBox(width: 8),
-                  _IconAction(icon: Icons.delete_outline, onTap: onDelete, tooltip: 'Delete'),
+                  _IconAction(
+                    icon: Icons.delete_outline,
+                    onTap: onDelete,
+                    tooltip: 'Delete',
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
@@ -302,18 +336,28 @@ class _AssessmentCard extends StatelessWidget {
               if (assessment.internshipTitle != null)
                 Row(
                   children: [
-                    const Icon(Icons.work_outline, size: 14, color: AppColors.textMuted),
+                    const Icon(
+                      Icons.work_outline,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
                     const SizedBox(width: 5),
                     Expanded(
                       child: Text(
                         assessment.internshipTitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12.5),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12.5,
+                        ),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: statusColors.background,
                         borderRadius: BorderRadius.circular(6),
@@ -329,7 +373,8 @@ class _AssessmentCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              if (assessment.description != null && assessment.description!.isNotEmpty) ...[
+              if (assessment.description != null &&
+                  assessment.description!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   assessment.description!,
@@ -347,20 +392,34 @@ class _AssessmentCard extends StatelessWidget {
               const SizedBox(height: 14),
               Row(
                 children: [
-                  const Icon(Icons.quiz_outlined, size: 17, color: AppColors.textMuted),
+                  const Icon(
+                    Icons.quiz_outlined,
+                    size: 17,
+                    color: AppColors.textMuted,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '${assessment.questionCount} '
                     'Question${assessment.questionCount == 1 ? '' : 's'}',
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                    ),
                   ),
                   if (assessment.timeLimitMinutes != null) ...[
                     const SizedBox(width: 16),
-                    const Icon(Icons.access_time_rounded, size: 17, color: AppColors.textMuted),
+                    const Icon(
+                      Icons.access_time_rounded,
+                      size: 17,
+                      color: AppColors.textMuted,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       '${assessment.timeLimitMinutes} Mins',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                   const Spacer(),
@@ -388,7 +447,11 @@ class _AssessmentCard extends StatelessWidget {
 }
 
 class _IconAction extends StatelessWidget {
-  const _IconAction({required this.icon, required this.onTap, required this.tooltip});
+  const _IconAction({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
 
   final IconData icon;
   final VoidCallback onTap;

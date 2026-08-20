@@ -6,7 +6,23 @@ import '../screens/student/internship/internship_detail_screen.dart';
 import '../services/internship_service.dart';
 
 class MatchCard extends StatefulWidget {
-  const MatchCard({super.key, required this.internship, this.onBookmarkChanged, this.onReturned});
+  const MatchCard({
+    super.key,
+    required this.internship,
+    this.onBookmarkChanged,
+    this.onReturned,
+    this.onOpen,
+    this.showBookmark = true,
+  });
+
+  /// Where a tap goes, when the caller needs somewhere other than the
+  /// student's internship detail screen - a company searching its own
+  /// postings, for instance, belongs on the posting page.
+  final VoidCallback? onOpen;
+
+  /// Bookmarking an internship is a student action, so the button is hidden
+  /// for anyone else rather than left there to fail.
+  final bool showBookmark;
 
   final Internship internship;
 
@@ -39,7 +55,9 @@ class _MatchCardState extends State<MatchCard> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not update bookmark. Please try again.')),
+          const SnackBar(
+            content: Text('Could not update bookmark. Please try again.'),
+          ),
         );
       }
     } finally {
@@ -48,8 +66,17 @@ class _MatchCardState extends State<MatchCard> {
   }
 
   Future<void> _openDetail() async {
+    final onOpen = widget.onOpen;
+    if (onOpen != null) {
+      onOpen();
+      return;
+    }
+
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => InternshipDetailScreen(internshipId: widget.internship.id)),
+      MaterialPageRoute(
+        builder: (_) =>
+            InternshipDetailScreen(internshipId: widget.internship.id),
+      ),
     );
     widget.onReturned?.call();
   }
@@ -79,27 +106,43 @@ class _MatchCardState extends State<MatchCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(internship.companyName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text(
+                        internship.companyName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
                       if (internship.location != null)
                         Text(
                           internship.location!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                          ),
                         ),
                     ],
                   ),
                 ),
                 if (internship.matchScore != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primaryDark,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       '${internship.matchScore}% Match',
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 const SizedBox(width: 4),
@@ -112,11 +155,18 @@ class _MatchCardState extends State<MatchCard> {
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.textMuted,
+                            ),
                           )
                         : Icon(
-                            _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                            color: _isBookmarked ? AppColors.primary : AppColors.textMuted,
+                            _isBookmarked
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            color: _isBookmarked
+                                ? AppColors.primary
+                                : AppColors.textMuted,
                           ),
                   ),
                 ),
@@ -126,15 +176,26 @@ class _MatchCardState extends State<MatchCard> {
             Text(internship.title, style: AppFonts.title(fontSize: 18)),
             const SizedBox(height: 4),
             Text(
-              internship.slotsAvailable > 0 ? '${internship.slotsAvailable} slots left' : 'No slots left',
-              style: TextStyle(color: internship.slotsAvailable > 0 ? AppColors.danger : AppColors.textMuted, fontSize: 13),
+              internship.slotsAvailable > 0
+                  ? '${internship.slotsAvailable} slots left'
+                  : 'No slots left',
+              style: TextStyle(
+                color: internship.slotsAvailable > 0
+                    ? AppColors.danger
+                    : AppColors.textMuted,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 14),
             const Divider(height: 1),
             const SizedBox(height: 14),
             Text(
               internship.displayDescription,
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.4),
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 14,
+                height: 1.4,
+              ),
             ),
             if (internship.skills.isNotEmpty) ...[
               const SizedBox(height: 14),
@@ -144,14 +205,21 @@ class _MatchCardState extends State<MatchCard> {
                 children: [
                   for (final tag in internship.skills.toSet().take(4))
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.chipBackground,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         tag.toUpperCase(),
-                        style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                 ],
@@ -208,7 +276,10 @@ class _CompanyLogo extends StatelessWidget {
   Widget _initials() {
     return Text(
       internship.companyInitials,
-      style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        color: AppColors.primary,
+      ),
     );
   }
 }

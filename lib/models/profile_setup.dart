@@ -17,15 +17,23 @@ class SetupState {
   final PersonalDetails prefill;
 
   factory SetupState.fromJson(Map<String, dynamic> json) => SetupState(
-        needsSetup: json['needs_setup'] as bool? ?? false,
-        setupComplete: json['setup_complete'] as bool? ?? false,
-        setupSkipped: json['setup_skipped'] as bool? ?? false,
-        prefill: PersonalDetails.fromJson(json['prefill'] as Map<String, dynamic>? ?? const {}),
-      );
+    needsSetup: json['needs_setup'] as bool? ?? false,
+    setupComplete: json['setup_complete'] as bool? ?? false,
+    setupSkipped: json['setup_skipped'] as bool? ?? false,
+    prefill: PersonalDetails.fromJson(
+      json['prefill'] as Map<String, dynamic>? ?? const {},
+    ),
+  );
 }
 
 class PersonalDetails {
-  PersonalDetails({this.name, this.email, this.phoneNumber, this.address, this.zipCode});
+  PersonalDetails({
+    this.name,
+    this.email,
+    this.phoneNumber,
+    this.address,
+    this.zipCode,
+  });
 
   final String? name;
   final String? email;
@@ -33,14 +41,16 @@ class PersonalDetails {
   final String? address;
   final String? zipCode;
 
-  factory PersonalDetails.fromJson(Map<String, dynamic> json) => PersonalDetails(
-        // The API's prefill uses `name`; the AI's resume parse uses `full_name`.
-        name: (json['name'] ?? json['full_name']) as String?,
-        email: json['email'] as String?,
-        phoneNumber: json['phone_number'] as String?,
-        address: json['address'] as String?,
-        zipCode: json['zip_code'] as String?,
-      );
+  factory PersonalDetails.fromJson(
+    Map<String, dynamic> json,
+  ) => PersonalDetails(
+    // The API's prefill uses `name`; the AI's resume parse uses `full_name`.
+    name: (json['name'] ?? json['full_name']) as String?,
+    email: json['email'] as String?,
+    phoneNumber: json['phone_number'] as String?,
+    address: json['address'] as String?,
+    zipCode: json['zip_code'] as String?,
+  );
 }
 
 /// What the AI made of an uploaded resume.
@@ -73,11 +83,15 @@ class ParsedResume {
     final parsed = json['parsed'] as Map<String, dynamic>? ?? json;
     final skills = parsed['skills'] as Map<String, dynamic>? ?? const {};
 
-    List<String> stringList(Object? raw) =>
-        (raw as List? ?? const []).map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+    List<String> stringList(Object? raw) => (raw as List? ?? const [])
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
 
     return ParsedResume(
-      basicInfo: PersonalDetails.fromJson(parsed['basic_info'] as Map<String, dynamic>? ?? const {}),
+      basicInfo: PersonalDetails.fromJson(
+        parsed['basic_info'] as Map<String, dynamic>? ?? const {},
+      ),
       education: (parsed['education'] as List? ?? const [])
           .map((e) => ParsedEducation.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -95,13 +109,13 @@ class ParsedResume {
   }
 
   static ParsedResume empty() => ParsedResume(
-        basicInfo: PersonalDetails(),
-        education: const [],
-        experience: const [],
-        technicalSkills: const [],
-        softSkills: const [],
-        certifications: const [],
-      );
+    basicInfo: PersonalDetails(),
+    education: const [],
+    experience: const [],
+    technicalSkills: const [],
+    softSkills: const [],
+    certifications: const [],
+  );
 }
 
 class ParsedEducation {
@@ -112,7 +126,8 @@ class ParsedEducation {
   final String? startDate;
   final String? endDate;
 
-  factory ParsedEducation.fromJson(Map<String, dynamic> json) => ParsedEducation(
+  factory ParsedEducation.fromJson(Map<String, dynamic> json) =>
+      ParsedEducation(
         degree: json['degree'] as String?,
         schoolName: json['school_name'] as String?,
         startDate: json['start_date'] as String?,
@@ -135,7 +150,8 @@ class ParsedExperience {
   final String? periodStart;
   final String? periodEnd;
 
-  factory ParsedExperience.fromJson(Map<String, dynamic> json) => ParsedExperience(
+  factory ParsedExperience.fromJson(Map<String, dynamic> json) =>
+      ParsedExperience(
         jobTitle: json['job_title'] as String? ?? '',
         company: json['company'] as String? ?? '',
         responsibilities: json['responsibilities'] as String?,
@@ -151,7 +167,8 @@ class ParsedCertification {
   final String? category;
   final String? dateText;
 
-  factory ParsedCertification.fromJson(Map<String, dynamic> json) => ParsedCertification(
+  factory ParsedCertification.fromJson(Map<String, dynamic> json) =>
+      ParsedCertification(
         title: (json['title'] as String? ?? '').trim(),
         category: json['category'] as String?,
         dateText: json['date_text'] as String?,
@@ -160,7 +177,12 @@ class ParsedCertification {
 
 /// A saved certification row (`student_certifications`).
 class Certification {
-  Certification({required this.id, required this.title, this.issuingOrganization, this.issueDate});
+  Certification({
+    required this.id,
+    required this.title,
+    this.issuingOrganization,
+    this.issueDate,
+  });
 
   final int id;
   final String title;
@@ -168,16 +190,17 @@ class Certification {
   final String? issueDate;
 
   String get subtitle => [
-        if (issuingOrganization != null && issuingOrganization!.isNotEmpty) issuingOrganization,
-        if (issueDate != null && issueDate!.isNotEmpty) issueDate,
-      ].join(' • ');
+    if (issuingOrganization != null && issuingOrganization!.isNotEmpty)
+      issuingOrganization,
+    if (issueDate != null && issueDate!.isNotEmpty) issueDate,
+  ].join(' • ');
 
   factory Certification.fromJson(Map<String, dynamic> json) => Certification(
-        id: (json['id'] as num).toInt(),
-        title: json['title'] as String? ?? '',
-        issuingOrganization: json['issuing_organization'] as String?,
-        issueDate: json['issue_date'] as String?,
-      );
+    id: (json['id'] as num).toInt(),
+    title: json['title'] as String? ?? '',
+    issuingOrganization: json['issuing_organization'] as String?,
+    issueDate: json['issue_date'] as String?,
+  );
 }
 
 /// A saved experience row (`student_experiences`).
@@ -208,13 +231,13 @@ class Experience {
   }
 
   factory Experience.fromJson(Map<String, dynamic> json) => Experience(
-        id: (json['id'] as num).toInt(),
-        position: json['position'] as String? ?? '',
-        organization: json['organization'] as String? ?? '',
-        startDate: json['start_date'] as String?,
-        endDate: json['end_date'] as String?,
-        description: json['description'] as String?,
-      );
+    id: (json['id'] as num).toInt(),
+    position: json['position'] as String? ?? '',
+    organization: json['organization'] as String? ?? '',
+    startDate: json['start_date'] as String?,
+    endDate: json['end_date'] as String?,
+    description: json['description'] as String?,
+  );
 }
 
 /// Everything the review screen shows before saving.
@@ -244,11 +267,15 @@ class SetupReview {
     final resume = json['resume'] as Map<String, dynamic>? ?? const {};
 
     return SetupReview(
-      personal: PersonalDetails.fromJson(json['personal'] as Map<String, dynamic>? ?? const {}),
+      personal: PersonalDetails.fromJson(
+        json['personal'] as Map<String, dynamic>? ?? const {},
+      ),
       school: education['school'] as String?,
       degree: education['degree'] as String?,
       major: education['major'] as String?,
-      skills: (json['skills'] as List? ?? const []).map((e) => e.toString()).toList(),
+      skills: (json['skills'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
       certifications: (json['certifications'] as List? ?? const [])
           .map((e) => Certification.fromJson(e as Map<String, dynamic>))
           .toList(),

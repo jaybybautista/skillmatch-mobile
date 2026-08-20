@@ -12,18 +12,33 @@ import '../reviews/reviews_section.dart';
 /// real logo, Work Description / Company / Reviews tabs, and a sticky Apply
 /// Now button.
 class InternshipDetailScreen extends StatefulWidget {
-  const InternshipDetailScreen({super.key, required this.internshipId});
+  const InternshipDetailScreen({
+    super.key,
+    required this.internshipId,
+    this.canApply = true,
+  });
 
   final int internshipId;
+
+  /// False when the viewer isn't a student - a company looking at a posting
+  /// from search, say. Applying and bookmarking both need a student row, so
+  /// the controls are hidden rather than left there to fail.
+  final bool canApply;
 
   @override
   State<InternshipDetailScreen> createState() => _InternshipDetailScreenState();
 }
 
-class _InternshipDetailScreenState extends State<InternshipDetailScreen> with SingleTickerProviderStateMixin {
+class _InternshipDetailScreenState extends State<InternshipDetailScreen>
+    with SingleTickerProviderStateMixin {
   final _service = InternshipService();
-  late Future<InternshipDetail> _future = _service.fetchDetail(widget.internshipId);
-  late final TabController _tabController = TabController(length: 3, vsync: this)..addListener(_onTabChanged);
+  late Future<InternshipDetail> _future = _service.fetchDetail(
+    widget.internshipId,
+  );
+  late final TabController _tabController = TabController(
+    length: 3,
+    vsync: this,
+  )..addListener(_onTabChanged);
 
   bool? _bookmarkOverride;
   bool? _appliedOverride;
@@ -45,7 +60,9 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen> with Si
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not update bookmark. Please try again.')),
+        const SnackBar(
+          content: Text('Could not update bookmark. Please try again.'),
+        ),
       );
     }
   }
@@ -56,15 +73,23 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen> with Si
       await _service.apply(widget.internshipId);
       if (!mounted) return;
       setState(() => _appliedOverride = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application submitted!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Application submitted!')));
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not submit your application. Please try again.')),
+          const SnackBar(
+            content: Text(
+              'Could not submit your application. Please try again.',
+            ),
+          ),
         );
       }
     } finally {
@@ -84,8 +109,9 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen> with Si
             }
 
             if (snapshot.hasError || !snapshot.hasData) {
-              final message =
-                  snapshot.error is ApiException ? (snapshot.error as ApiException).message : 'Could not load this posting.';
+              final message = snapshot.error is ApiException
+                  ? (snapshot.error as ApiException).message
+                  : 'Could not load this posting.';
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -95,7 +121,11 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen> with Si
                       Text(message, textAlign: TextAlign.center),
                       const SizedBox(height: 16),
                       OutlinedButton(
-                        onPressed: () => setState(() => _future = _service.fetchDetail(widget.internshipId)),
+                        onPressed: () => setState(
+                          () => _future = _service.fetchDetail(
+                            widget.internshipId,
+                          ),
+                        ),
                         child: const Text('Retry'),
                       ),
                     ],
@@ -110,7 +140,12 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen> with Si
 
             return Column(
               children: [
-                _HeroHeader(detail: detail, isBookmarked: isBookmarked, onBookmarkTap: _toggleBookmark),
+                _HeroHeader(
+                  detail: detail,
+                  isBookmarked: isBookmarked,
+                  onBookmarkTap: _toggleBookmark,
+                  showBookmark: widget.canApply,
+                ),
                 const SizedBox(height: 44),
                 _InfoHeader(detail: detail),
                 const SizedBox(height: 12),
@@ -119,7 +154,10 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen> with Si
                   labelColor: AppColors.primary,
                   unselectedLabelColor: AppColors.textMuted,
                   indicatorColor: AppColors.primary,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                   tabs: const [
                     Tab(text: 'Work Description'),
                     Tab(text: 'Company'),
@@ -139,13 +177,14 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen> with Si
                     ],
                   ),
                 ),
-                _StickyFooter(
-                  showWriteReview: _tabController.index == 2,
-                  isApplied: isApplied,
-                  isApplying: _isApplying,
-                  hasSlots: detail.slotsAvailable > 0,
-                  onApply: _apply,
-                ),
+                if (widget.canApply)
+                  _StickyFooter(
+                    showWriteReview: _tabController.index == 2,
+                    isApplied: isApplied,
+                    isApplying: _isApplying,
+                    hasSlots: detail.slotsAvailable > 0,
+                    onApply: _apply,
+                  ),
               ],
             );
           },
@@ -156,7 +195,14 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen> with Si
 }
 
 class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({required this.detail, required this.isBookmarked, required this.onBookmarkTap});
+  const _HeroHeader({
+    required this.detail,
+    required this.isBookmarked,
+    required this.onBookmarkTap,
+    this.showBookmark = true,
+  });
+
+  final bool showBookmark;
 
   final InternshipDetail detail;
   final bool isBookmarked;
@@ -182,12 +228,18 @@ class _HeroHeader extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _CircleIconButton(icon: Icons.arrow_back, onTap: () => Navigator.of(context).pop()),
                 _CircleIconButton(
-                  icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                  iconColor: isBookmarked ? AppColors.primary : AppColors.textDark,
-                  onTap: onBookmarkTap,
+                  icon: Icons.arrow_back,
+                  onTap: () => Navigator.of(context).pop(),
                 ),
+                if (showBookmark)
+                  _CircleIconButton(
+                    icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                    iconColor: isBookmarked
+                        ? AppColors.primary
+                        : AppColors.textDark,
+                    onTap: onBookmarkTap,
+                  ),
               ],
             ),
           ),
@@ -203,7 +255,12 @@ class _HeroHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 10,
+                    ),
+                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
@@ -211,7 +268,8 @@ class _HeroHeader extends StatelessWidget {
                       ? Image.network(
                           detail.companyLogoUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => _initials(),
+                          errorBuilder: (context, error, stackTrace) =>
+                              _initials(),
                         )
                       : _initials(),
                 ),
@@ -229,14 +287,22 @@ class _HeroHeader extends StatelessWidget {
       color: AppColors.chipBackground,
       child: Text(
         detail.companyInitials,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: AppColors.primary),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 22,
+          color: AppColors.primary,
+        ),
       ),
     );
   }
 }
 
 class _CircleIconButton extends StatelessWidget {
-  const _CircleIconButton({required this.icon, required this.onTap, this.iconColor});
+  const _CircleIconButton({
+    required this.icon,
+    required this.onTap,
+    this.iconColor,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
@@ -251,7 +317,10 @@ class _CircleIconButton extends StatelessWidget {
         width: 36,
         height: 36,
         alignment: Alignment.center,
-        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
         child: Icon(icon, size: 18, color: iconColor ?? AppColors.textDark),
       ),
     );
@@ -276,7 +345,10 @@ class _InfoHeader extends StatelessWidget {
           ),
           if (detail.location != null && detail.location!.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(detail.location!, style: const TextStyle(color: AppColors.textMuted, fontSize: 14)),
+            Text(
+              detail.location!,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+            ),
           ],
           const SizedBox(height: 10),
           Wrap(
@@ -284,12 +356,18 @@ class _InfoHeader extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: [
               _Badge(
-                text: detail.slotsAvailable > 0 ? '${detail.slotsAvailable} slots left' : 'No slots left',
+                text: detail.slotsAvailable > 0
+                    ? '${detail.slotsAvailable} slots left'
+                    : 'No slots left',
                 background: const Color(0xFFFFF4E5),
                 foreground: const Color(0xFFE56B00),
               ),
               if (detail.matchScore != null)
-                _Badge(text: '${detail.matchScore}% Match', background: AppColors.primary, foreground: Colors.white),
+                _Badge(
+                  text: '${detail.matchScore}% Match',
+                  background: AppColors.primary,
+                  foreground: Colors.white,
+                ),
             ],
           ),
         ],
@@ -299,7 +377,11 @@ class _InfoHeader extends StatelessWidget {
 }
 
 class _Badge extends StatelessWidget {
-  const _Badge({required this.text, required this.background, required this.foreground});
+  const _Badge({
+    required this.text,
+    required this.background,
+    required this.foreground,
+  });
 
   final String text;
   final Color background;
@@ -309,14 +391,28 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(8)),
-      child: Text(text, style: TextStyle(color: foreground, fontSize: 12, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }
 
 class _SectionBox extends StatelessWidget {
-  const _SectionBox({required this.title, required this.child, this.background = Colors.white});
+  const _SectionBox({
+    required this.title,
+    required this.child,
+    this.background = Colors.white,
+  });
 
   final String title;
   final Widget child;
@@ -335,7 +431,10 @@ class _SectionBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppFonts.title(fontSize: 15, color: AppColors.textDark)),
+          Text(
+            title,
+            style: AppFonts.title(fontSize: 15, color: AppColors.textDark),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -368,11 +467,18 @@ class _WorkDescriptionTab extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('•  ', style: TextStyle(color: AppColors.textMuted)),
+                            const Text(
+                              '•  ',
+                              style: TextStyle(color: AppColors.textMuted),
+                            ),
                             Expanded(
                               child: Text(
                                 item,
-                                style: const TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.5),
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 14,
+                                  height: 1.5,
+                                ),
                               ),
                             ),
                           ],
@@ -381,8 +487,14 @@ class _WorkDescriptionTab extends StatelessWidget {
                   ],
                 )
               : Text(
-                  detail.description.isEmpty ? 'No description provided.' : detail.description,
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.5),
+                  detail.description.isEmpty
+                      ? 'No description provided.'
+                      : detail.description,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
                 ),
         ),
         const SizedBox(height: 16),
@@ -390,14 +502,20 @@ class _WorkDescriptionTab extends StatelessWidget {
           title: 'Skills Needed',
           background: AppColors.background,
           child: detail.skills.isEmpty
-              ? const Text('Not specified', style: TextStyle(color: AppColors.textMuted, fontSize: 13))
+              ? const Text(
+                  'Not specified',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                )
               : Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
                     for (final skill in detail.skills)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           border: Border.all(color: AppColors.border),
@@ -405,7 +523,11 @@ class _WorkDescriptionTab extends StatelessWidget {
                         ),
                         child: Text(
                           skill,
-                          style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                   ],
@@ -432,7 +554,11 @@ class _CompanyTab extends StatelessWidget {
             (detail.companyAbout == null || detail.companyAbout!.isEmpty)
                 ? 'No description available for this company.'
                 : detail.companyAbout!,
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.5),
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 14,
+              height: 1.5,
+            ),
           ),
         ),
       ],
@@ -469,22 +595,36 @@ class _StickyFooter extends StatelessWidget {
         child: showWriteReview
             ? ElevatedButton(
                 onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Writing reviews is coming soon.')),
+                  const SnackBar(
+                    content: Text('Writing reviews is coming soon.'),
+                  ),
                 ),
                 child: const Text('Write Review'),
               )
             : ElevatedButton(
-                onPressed: (isApplied || !hasSlots || isApplying) ? null : onApply,
+                onPressed: (isApplied || !hasSlots || isApplying)
+                    ? null
+                    : onApply,
                 style: (isApplied || !hasSlots)
-                    ? ElevatedButton.styleFrom(backgroundColor: AppColors.border, foregroundColor: AppColors.textMuted)
+                    ? ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.border,
+                        foregroundColor: AppColors.textMuted,
+                      )
                     : null,
                 child: isApplying
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: Colors.white,
+                        ),
                       )
-                    : Text(isApplied ? 'Already Applied' : (hasSlots ? 'Apply Now' : 'No Slots Left')),
+                    : Text(
+                        isApplied
+                            ? 'Already Applied'
+                            : (hasSlots ? 'Apply Now' : 'No Slots Left'),
+                      ),
               ),
       ),
     );

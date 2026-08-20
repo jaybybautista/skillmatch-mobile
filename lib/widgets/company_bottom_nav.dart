@@ -14,7 +14,11 @@ const List<({IconData icon, String label})> companyNavItems = [
 /// the two never share a bar because a signed-in account is one role or the
 /// other, never both.
 class CompanyBottomNav extends StatelessWidget {
-  const CompanyBottomNav({super.key, required this.currentIndex, required this.onSelect});
+  const CompanyBottomNav({
+    super.key,
+    required this.currentIndex,
+    required this.onSelect,
+  });
 
   final int currentIndex;
   final void Function(int index) onSelect;
@@ -40,7 +44,9 @@ class CompanyBottomNav extends StatelessWidget {
                       children: [
                         Icon(
                           companyNavItems[i].icon,
-                          color: i == currentIndex ? AppColors.primary : AppColors.textMuted,
+                          color: i == currentIndex
+                              ? AppColors.primary
+                              : AppColors.textMuted,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -48,8 +54,12 @@ class CompanyBottomNav extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 11,
-                            color: i == currentIndex ? AppColors.primary : AppColors.textMuted,
-                            fontWeight: i == currentIndex ? FontWeight.w600 : FontWeight.normal,
+                            color: i == currentIndex
+                                ? AppColors.primary
+                                : AppColors.textMuted,
+                            fontWeight: i == currentIndex
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                       ],

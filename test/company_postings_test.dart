@@ -10,6 +10,7 @@ import 'package:skillmatch/screens/company/company_posting.dart';
 import 'package:skillmatch/screens/company/company_postings_screen.dart';
 import 'package:skillmatch/screens/company/company_profile_screen.dart';
 import 'package:skillmatch/services/company_service.dart';
+import 'package:skillmatch/services/review_service.dart';
 import 'package:skillmatch/widgets/company_sidebar.dart';
 
 class _FakeCompanyService extends CompanyService {
@@ -51,13 +52,54 @@ class _FakeCompanyService extends CompanyService {
   /// the fake has to answer this too — otherwise the screen falls through to
   /// the real HTTP client and never finishes loading.
   @override
-  Future<({List<Review> reviews, ReviewSummary summary})> fetchProfileReviews() async {
+  Future<({List<Review> reviews, ReviewSummary summary})>
+  fetchProfileReviews() async {
     calls.add('fetchProfileReviews');
     if (error != null) throw error!;
     return (reviews: reviews, summary: summary);
   }
 
   CompanyProfile? profile;
+}
+
+/// A stand-in for the review endpoints, so the profile's like button can be
+/// exercised without a backend.
+class _FakeReviewService extends ReviewService {
+  _FakeReviewService({this.error});
+
+  final Object? error;
+  final calls = <String>[];
+  bool nextLiked = true;
+  int nextCount = 1;
+
+  @override
+  Future<({bool liked, int likeCount})> toggleLike(int reviewId) async {
+    calls.add('like:$reviewId');
+    if (error != null) throw error!;
+    return (liked: nextLiked, likeCount: nextCount);
+  }
+}
+
+Review _review({
+  int id = 1,
+  String author = 'Jayby Bautista',
+  int likeCount = 0,
+  bool hasLiked = false,
+  int replyCount = 0,
+  String? context,
+}) {
+  return Review.fromJson({
+    'id': id,
+    'content': 'Good exposure to real product work.',
+    'rating': 4,
+    'created_at_human': '2 days ago',
+    'author_name': author,
+    'author_initial': author[0],
+    'like_count': likeCount,
+    'has_liked': hasLiked,
+    'reply_count': replyCount,
+    'reviewable_context': context,
+  });
 }
 
 CompanyProfile _profileFixture({
@@ -165,26 +207,45 @@ void main() {
 
     test('setup is complete only when all three wizard fields are filled', () {
       expect(CompanyProfile.fromJson(json()).isSetupComplete, isTrue);
-      expect(CompanyProfile.fromJson(json(description: null)).isSetupComplete, isFalse);
-      expect(CompanyProfile.fromJson(json(address: '  ')).isSetupComplete, isFalse);
-      expect(CompanyProfile.fromJson(json(contactNumber: null)).isSetupComplete, isFalse);
+      expect(
+        CompanyProfile.fromJson(json(description: null)).isSetupComplete,
+        isFalse,
+      );
+      expect(
+        CompanyProfile.fromJson(json(address: '  ')).isSetupComplete,
+        isFalse,
+      );
+      expect(
+        CompanyProfile.fromJson(json(contactNumber: null)).isSetupComplete,
+        isFalse,
+      );
     });
 
     test('pending and rejected are distinguishable', () {
-      expect(CompanyProfile.fromJson(json(status: 'pending')).isPending, isTrue);
-      expect(CompanyProfile.fromJson(json(status: 'rejected')).isRejected, isTrue);
+      expect(
+        CompanyProfile.fromJson(json(status: 'pending')).isPending,
+        isTrue,
+      );
+      expect(
+        CompanyProfile.fromJson(json(status: 'rejected')).isRejected,
+        isTrue,
+      );
       expect(CompanyProfile.fromJson(json()).isPending, isFalse);
     });
   });
 
   group('CompanyPostingsScreen', () {
     testWidgets('lists postings fetched from the service', (tester) async {
-      final service = _FakeCompanyService(postings: [
-        _posting(id: 1, title: 'Backend Intern'),
-        _posting(id: 2, title: 'Design Intern'),
-      ]);
+      final service = _FakeCompanyService(
+        postings: [
+          _posting(id: 1, title: 'Backend Intern'),
+          _posting(id: 2, title: 'Design Intern'),
+        ],
+      );
 
-      await tester.pumpWidget(MaterialApp(home: CompanyPostingsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyPostingsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(service.calls, contains('fetchPostings'));
@@ -195,7 +256,9 @@ void main() {
     testWidgets('an empty list explains what to do next', (tester) async {
       final service = _FakeCompanyService(postings: const []);
 
-      await tester.pumpWidget(MaterialApp(home: CompanyPostingsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyPostingsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       // Same wording as the website's empty "My postings" page.
@@ -206,36 +269,49 @@ void main() {
     testWidgets('a load failure is retryable', (tester) async {
       final service = _FakeCompanyService(error: Exception('offline'));
 
-      await tester.pumpWidget(MaterialApp(home: CompanyPostingsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyPostingsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Retry'), findsOneWidget);
     });
 
-    testWidgets('deleting asks for confirmation first, and warns about applicants', (tester) async {
-      final service = _FakeCompanyService(postings: [_posting(id: 9, applicants: 3)]);
+    testWidgets(
+      'deleting asks for confirmation first, and warns about applicants',
+      (tester) async {
+        final service = _FakeCompanyService(
+          postings: [_posting(id: 9, applicants: 3)],
+        );
 
-      await tester.pumpWidget(MaterialApp(home: CompanyPostingsScreen(service: service)));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          MaterialApp(home: CompanyPostingsScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.delete_outline));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.delete_outline));
+        await tester.pumpAndSettle();
 
-      // Nothing deleted until confirmed.
-      expect(service.calls, isNot(contains('delete:9')));
-      expect(find.text('Remove posting?'), findsOneWidget);
-      expect(find.textContaining('3 applicants'), findsOneWidget);
+        // Nothing deleted until confirmed.
+        expect(service.calls, isNot(contains('delete:9')));
+        expect(find.text('Remove posting?'), findsOneWidget);
+        expect(find.textContaining('3 applicants'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(TextButton, 'Remove'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(TextButton, 'Remove'));
+        await tester.pumpAndSettle();
 
-      expect(service.calls, contains('delete:9'));
-    });
+        expect(service.calls, contains('delete:9'));
+      },
+    );
 
-    testWidgets('cancelling the delete dialog leaves the posting alone', (tester) async {
+    testWidgets('cancelling the delete dialog leaves the posting alone', (
+      tester,
+    ) async {
       final service = _FakeCompanyService(postings: [_posting(id: 9)]);
 
-      await tester.pumpWidget(MaterialApp(home: CompanyPostingsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyPostingsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.delete_outline));
@@ -247,11 +323,152 @@ void main() {
     });
   });
 
+  group('CompanyProfileScreen reviews', () {
+    testWidgets('a review offers a reply affordance and a like', (
+      tester,
+    ) async {
+      final service = _FakeCompanyService()
+        ..reviews = [_review(replyCount: 0, likeCount: 2)];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CompanyProfileScreen(
+            service: service,
+            reviewService: _FakeReviewService(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Reply'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reply'), findsOneWidget);
+      expect(find.text('2'), findsWidgets);
+    });
+
+    testWidgets('an existing reply count is shown instead of "Reply"', (
+      tester,
+    ) async {
+      final service = _FakeCompanyService()..reviews = [_review(replyCount: 3)];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CompanyProfileScreen(
+            service: service,
+            reviewService: _FakeReviewService(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('3 replies'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('3 replies'), findsOneWidget);
+    });
+
+    testWidgets('liking a review calls through and updates the count', (
+      tester,
+    ) async {
+      final service = _FakeCompanyService()..reviews = [_review(likeCount: 0)];
+      final reviews = _FakeReviewService()
+        ..nextLiked = true
+        ..nextCount = 1;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CompanyProfileScreen(service: service, reviewService: reviews),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final like = find.byIcon(Icons.thumb_up_outlined);
+      await tester.scrollUntilVisible(
+        like,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(like);
+      await tester.pumpAndSettle();
+
+      expect(reviews.calls, contains('like:1'));
+      expect(find.byIcon(Icons.thumb_up), findsOneWidget);
+      expect(find.text('1'), findsWidgets);
+    });
+
+    testWidgets('a failed like is put back rather than left wrong', (
+      tester,
+    ) async {
+      final service = _FakeCompanyService()..reviews = [_review(likeCount: 0)];
+      final reviews = _FakeReviewService(error: Exception('offline'));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CompanyProfileScreen(service: service, reviewService: reviews),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final like = find.byIcon(Icons.thumb_up_outlined);
+      await tester.scrollUntilVisible(
+        like,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(like);
+      await tester.pumpAndSettle();
+
+      // Optimistic update rolled back, and the failure was surfaced.
+      expect(find.byIcon(Icons.thumb_up_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.thumb_up), findsNothing);
+      expect(find.textContaining('Could not save that'), findsOneWidget);
+    });
+
+    testWidgets('feedback left on a posting carries its context badge', (
+      tester,
+    ) async {
+      final service = _FakeCompanyService()
+        ..reviews = [_review(context: 'On internship: Laravel Developer')];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CompanyProfileScreen(
+            service: service,
+            reviewService: _FakeReviewService(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('On internship: Laravel Developer'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('On internship: Laravel Developer'), findsOneWidget);
+    });
+  });
+
   group('CompanyProfileScreen', () {
     testWidgets('shows the signed-in company\'s real details', (tester) async {
       final service = _FakeCompanyService()..profile = _profileFixture();
 
-      await tester.pumpWidget(MaterialApp(home: CompanyProfileScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyProfileScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(service.calls, contains('fetchProfile'));
@@ -264,27 +481,40 @@ void main() {
     testWidgets('renders the At a Glance figures', (tester) async {
       final service = _FakeCompanyService()..profile = _profileFixture();
 
-      await tester.pumpWidget(MaterialApp(home: CompanyProfileScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyProfileScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('POSTINGS'), findsOneWidget);
       expect(find.text('12'), findsOneWidget); // open slots
-      expect(find.text('7'), findsOneWidget);  // applicants
+      expect(find.text('7'), findsOneWidget); // applicants
     });
 
-    testWidgets('an empty summary explains what to do instead of showing a blank', (tester) async {
-      final service = _FakeCompanyService()..profile = _profileFixture(description: null);
+    testWidgets(
+      'an empty summary explains what to do instead of showing a blank',
+      (tester) async {
+        final service = _FakeCompanyService()
+          ..profile = _profileFixture(description: null);
 
-      await tester.pumpWidget(MaterialApp(home: CompanyProfileScreen(service: service)));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          MaterialApp(home: CompanyProfileScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.textContaining('No summary yet'), findsOneWidget);
-    });
+        expect(find.textContaining('No summary yet'), findsOneWidget);
+      },
+    );
 
-    testWidgets('an unverified company is told where it stands', (tester) async {
-      final service = _FakeCompanyService()..profile = _profileFixture(status: 'pending');
+    testWidgets('an unverified company is told where it stands', (
+      tester,
+    ) async {
+      final service = _FakeCompanyService()
+        ..profile = _profileFixture(status: 'pending');
 
-      await tester.pumpWidget(MaterialApp(home: CompanyProfileScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyProfileScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Pending verification'), findsOneWidget);
@@ -293,7 +523,9 @@ void main() {
     testWidgets('a load failure is retryable', (tester) async {
       final service = _FakeCompanyService(error: Exception('offline'));
 
-      await tester.pumpWidget(MaterialApp(home: CompanyProfileScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyProfileScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Retry'), findsOneWidget);
@@ -301,10 +533,14 @@ void main() {
   });
 
   group('CompanySidebar', () {
-    testWidgets('lists the same entries as the web company sidebar, in order', (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(drawer: CompanySidebar(), body: SizedBox()),
-      ));
+    testWidgets('lists the same entries as the web company sidebar, in order', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(drawer: CompanySidebar(), body: SizedBox()),
+        ),
+      );
 
       tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
       await tester.pumpAndSettle();
@@ -331,18 +567,35 @@ void main() {
       }
     });
 
-    testWidgets('a web-only entry explains itself instead of navigating', (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(drawer: CompanySidebar(), body: SizedBox()),
-      ));
+    testWidgets('every entry now leads somewhere real', (tester) async {
+      // This used to assert that some entries explained they were web-only.
+      // They all have screens now, so the check is that none of them still
+      // says so.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(drawer: CompanySidebar(), body: SizedBox()),
+        ),
+      );
 
       tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Records and reports'));
-      await tester.pumpAndSettle();
+      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.text('Records and reports'), findsOneWidget);
 
-      expect(find.textContaining('only on the SkillMatch website'), findsOneWidget);
+      // Settings sits below the drawer's fold on an 800x600 viewport.
+      await tester.scrollUntilVisible(
+        find.text('Settings'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Settings'), findsOneWidget);
+
+      expect(
+        find.textContaining('only on the SkillMatch website'),
+        findsNothing,
+      );
     });
 
     testWidgets('offers a way to sign out', (tester) async {

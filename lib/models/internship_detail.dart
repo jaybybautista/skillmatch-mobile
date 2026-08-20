@@ -82,9 +82,13 @@ class InternshipDetail {
       isBookmarked: json['is_bookmarked'] as bool? ?? false,
       isApplied: json['is_applied'] as bool? ?? false,
       description: json['description'] as String? ?? '',
-      responsibilities: (json['responsibilities'] as List?)?.map((e) => e.toString()).toList(),
+      responsibilities: (json['responsibilities'] as List?)
+          ?.map((e) => e.toString())
+          .toList(),
       skills: (json['skills'] as List? ?? []).map((e) => e.toString()).toList(),
-      reviews: (json['reviews'] as List? ?? []).map((e) => InternshipReview.fromJson(e as Map<String, dynamic>)).toList(),
+      reviews: (json['reviews'] as List? ?? [])
+          .map((e) => InternshipReview.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

@@ -16,7 +16,13 @@ class ResumeSummary {
 }
 
 class ResumeBasicInfo {
-  ResumeBasicInfo({this.fullName, this.address, this.zipCode, this.phoneNumber, this.email});
+  ResumeBasicInfo({
+    this.fullName,
+    this.address,
+    this.zipCode,
+    this.phoneNumber,
+    this.email,
+  });
 
   final String? fullName;
   final String? address;
@@ -100,7 +106,12 @@ class ResumeAchievementEntry {
 }
 
 class ResumeProjectEntry {
-  ResumeProjectEntry({required this.id, required this.sectionId, this.title, this.description});
+  ResumeProjectEntry({
+    required this.id,
+    required this.sectionId,
+    this.title,
+    this.description,
+  });
 
   final int id;
   final int sectionId;
@@ -153,7 +164,10 @@ class ResumeSkillEntry {
   final String skillName;
 
   factory ResumeSkillEntry.fromJson(Map<String, dynamic> json) {
-    return ResumeSkillEntry(id: json['id'] as int, skillName: json['skill_name'] as String);
+    return ResumeSkillEntry(
+      id: json['id'] as int,
+      skillName: json['skill_name'] as String,
+    );
   }
 }
 
@@ -205,17 +219,29 @@ class ResumeSection {
       inputType: json['input_type'] as String?,
       order: json['order'] as int? ?? 0,
       content: json['content'] as String?,
-      basicInfo: json['basic_info'] != null ? ResumeBasicInfo.fromJson(json['basic_info'] as Map<String, dynamic>) : null,
-      experiences:
-          (json['experiences'] as List? ?? []).map((e) => ResumeExperienceEntry.fromJson(e as Map<String, dynamic>)).toList(),
-      achievements: (json['achievements'] as List? ?? [])
-          .map((e) => ResumeAchievementEntry.fromJson(e as Map<String, dynamic>))
+      basicInfo: json['basic_info'] != null
+          ? ResumeBasicInfo.fromJson(json['basic_info'] as Map<String, dynamic>)
+          : null,
+      experiences: (json['experiences'] as List? ?? [])
+          .map((e) => ResumeExperienceEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
-      projects: (json['projects'] as List? ?? []).map((e) => ResumeProjectEntry.fromJson(e as Map<String, dynamic>)).toList(),
-      education: (json['education'] as List? ?? []).map((e) => ResumeEducationEntry.fromJson(e as Map<String, dynamic>)).toList(),
-      technicalSkills:
-          (skills['technical'] as List? ?? []).map((e) => ResumeSkillEntry.fromJson(e as Map<String, dynamic>)).toList(),
-      softSkills: (skills['soft'] as List? ?? []).map((e) => ResumeSkillEntry.fromJson(e as Map<String, dynamic>)).toList(),
+      achievements: (json['achievements'] as List? ?? [])
+          .map(
+            (e) => ResumeAchievementEntry.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
+      projects: (json['projects'] as List? ?? [])
+          .map((e) => ResumeProjectEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      education: (json['education'] as List? ?? [])
+          .map((e) => ResumeEducationEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      technicalSkills: (skills['technical'] as List? ?? [])
+          .map((e) => ResumeSkillEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      softSkills: (skills['soft'] as List? ?? [])
+          .map((e) => ResumeSkillEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -231,7 +257,9 @@ class Resume {
     return Resume(
       id: json['id'] as int,
       title: json['title'] as String,
-      sections: (json['sections'] as List? ?? []).map((e) => ResumeSection.fromJson(e as Map<String, dynamic>)).toList(),
+      sections: (json['sections'] as List? ?? [])
+          .map((e) => ResumeSection.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

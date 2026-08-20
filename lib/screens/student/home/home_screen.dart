@@ -7,12 +7,11 @@ import '../../../core/app_theme.dart';
 import '../../../models/internship.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/internship_service.dart';
+import '../../../widgets/matcha_launcher.dart';
 import '../../../widgets/app_bottom_nav.dart';
 import '../../../widgets/app_sidebar.dart';
-import '../../../widgets/draggable_chatbot_button.dart';
 import '../../../widgets/match_card.dart';
 import '../bookmarks/bookmarks_screen.dart';
-import '../../chatbot/matcha_chat_screen.dart';
 import '../matches/internship_search_screen.dart';
 import '../matches/matches_list_screen.dart';
 import '../profile/profile_screen.dart';
@@ -28,7 +27,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _internshipService = InternshipService();
-  late Future<List<Internship>> _recommendationsFuture = _internshipService.fetchRecommendations(limit: 5);
+  late Future<List<Internship>> _recommendationsFuture = _internshipService
+      .fetchRecommendations(limit: 5);
 
   Future<void> _refresh() async {
     final future = _internshipService.fetchRecommendations(limit: 5);
@@ -40,7 +40,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final user = context.watch<AuthService>().currentUser;
     final hour = DateTime.now().hour;
-    final greeting = hour < 12 ? 'Good Morning' : (hour < 17 ? 'Good Afternoon' : 'Good Evening');
+    final greeting = hour < 12
+        ? 'Good Morning'
+        : (hour < 17 ? 'Good Afternoon' : 'Good Evening');
 
     return Scaffold(
       backgroundColor: AppColors.primaryDark,
@@ -73,13 +75,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: [
                                 Text(
                                   '$greeting,',
-                                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 16,
+                                  ),
                                 ),
                                 Text(
                                   user?.name ?? 'Student',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: AppFonts.title(color: Colors.white, fontSize: 24),
+                                  style: AppFonts.title(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                  ),
                                 ),
                               ],
                             ),
@@ -87,14 +95,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           _HeaderIconButton(
                             icon: Icons.bookmark,
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const BookmarksScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const BookmarksScreen(),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),
                           _HeaderIconButton(
                             icon: Icons.person,
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const ProfileScreen(),
+                              ),
                             ),
                           ),
                         ],
@@ -105,13 +117,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Tapping opens a dedicated search screen rather than
                         // typing into the dashboard.
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const InternshipSearchScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const InternshipSearchScreen(),
+                          ),
                         ),
                         decoration: InputDecoration(
                           hintText: 'Search internships...',
                           filled: true,
                           fillColor: Colors.white,
-                          prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: AppColors.textMuted,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide.none,
@@ -127,7 +144,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: double.infinity,
                   decoration: const BoxDecoration(
                     color: AppColors.background,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
                   ),
                   child: RefreshIndicator(
                     onRefresh: _refresh,
@@ -141,13 +160,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               'Top Matches For You',
-                              style: AppFonts.title(fontSize: 19, color: AppColors.textDark),
+                              style: AppFonts.title(
+                                fontSize: 19,
+                                color: AppColors.textDark,
+                              ),
                             ),
                             GestureDetector(
                               onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const MatchesListScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const MatchesListScreen(),
+                                ),
                               ),
-                              child: const Text('View All', style: TextStyle(color: AppColors.textMuted)),
+                              child: const Text(
+                                'View All',
+                                style: TextStyle(color: AppColors.textMuted),
+                              ),
                             ),
                           ],
                         ),
@@ -155,10 +182,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         FutureBuilder<List<Internship>>(
                           future: _recommendationsFuture,
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState != ConnectionState.done) {
+                            if (snapshot.connectionState !=
+                                ConnectionState.done) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 40),
-                                child: Center(child: CircularProgressIndicator()),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                               );
                             }
 
@@ -166,12 +196,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               final message = snapshot.error is ApiException
                                   ? (snapshot.error as ApiException).message
                                   : 'Could not load internship matches.';
-                              return _InlineMessage(text: message, onRetry: _refresh);
+                              return _InlineMessage(
+                                text: message,
+                                onRetry: _refresh,
+                              );
                             }
 
                             final items = snapshot.data!;
                             if (items.isEmpty) {
-                              return const _InlineMessage(text: 'No internship postings yet. Check back soon!');
+                              return const _InlineMessage(
+                                text:
+                                    'No internship postings yet. Check back soon!',
+                              );
                             }
 
                             return Column(
@@ -191,17 +227,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          DraggableChatbotButton(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                fullscreenDialog: true,
-                builder: (_) => const MatchaChatScreen(),
-              ),
-            ),
-          ),
+          const MatchaLauncher(),
         ],
       ),
-      bottomNavigationBar: AppBottomNav(currentIndex: 0, onSelect: (i) => handleAppNavTap(context, i)),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 0,
+        onSelect: (i) => handleAppNavTap(context, i),
+      ),
     );
   }
 }
@@ -218,7 +250,11 @@ class _InlineMessage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
-          Text(text, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textMuted),
+          ),
           if (onRetry != null) ...[
             const SizedBox(height: 12),
             TextButton(onPressed: onRetry, child: const Text('Retry')),
@@ -287,18 +323,30 @@ class _PromoBanner extends StatelessWidget {
                     children: [
                       Text(
                         'Start your OJT journey\nthe right way!',
-                        style: AppFonts.title(color: Colors.white, fontSize: 16, height: 1.35),
+                        style: AppFonts.title(
+                          color: Colors.white,
+                          fontSize: 16,
+                          height: 1.35,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       const Text(
                         'Find the right internship for your career',
-                        style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.35),
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12.5,
+                          height: 1.35,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                Image.asset('assets/banner-picture.png', height: 96, fit: BoxFit.contain),
+                Image.asset(
+                  'assets/banner-picture.png',
+                  height: 96,
+                  fit: BoxFit.contain,
+                ),
               ],
             ),
           ),

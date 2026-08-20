@@ -4,10 +4,15 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../core/company_navigation.dart';
+import '../../core/error_message.dart';
 import '../../models/company_application.dart';
 import '../../services/company_service.dart';
+import '../../widgets/matcha_launcher.dart';
+import '../../widgets/company_bottom_nav.dart';
 import '../../widgets/company_screen_header.dart';
 import '../../widgets/company_sidebar.dart';
+import '../student/profile/student_public_profile_screen.dart';
 import 'assign_assessment_screen.dart';
 
 /// The status filters the web Applications page offers, in the same order.
@@ -30,7 +35,8 @@ class CompanyApplicationsScreen extends StatefulWidget {
   final CompanyService? service;
 
   @override
-  State<CompanyApplicationsScreen> createState() => _CompanyApplicationsScreenState();
+  State<CompanyApplicationsScreen> createState() =>
+      _CompanyApplicationsScreenState();
 }
 
 class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
@@ -89,7 +95,9 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
 
   void _notify(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _setStatus(CompanyApplication application, String status) async {
@@ -109,8 +117,13 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
       );
       _notify('${application.student.name} moved to ${_labelFor(status)}.');
       await _load();
-    } on ApiException catch (e) {
-      _notify(e.message);
+    } catch (e) {
+      _notify(
+        messageForError(
+          e,
+          'Could not reach the server. Check your connection and try again.',
+        ),
+      );
     }
   }
 
@@ -118,6 +131,24 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
     return showDialog<String?>(
       context: context,
       builder: (_) => _RejectionDialog(application: application),
+    );
+  }
+
+  /// Opens the applicant's profile — the course, campus, skills, education,
+  /// certifications and experience the website's application detail page
+  /// shows about them, read from the same /students/{id}/profile endpoint.
+  void _viewProfile(CompanyApplication application) {
+    final studentId = application.student.id;
+    if (studentId == null) {
+      // Nothing to open: the application has no student record behind it.
+      _notify('This applicant has no profile on record.');
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StudentPublicProfileScreen(studentId: studentId),
+      ),
     );
   }
 
@@ -141,16 +172,23 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
       final updated = await _service.undoApplicationStatus(application.id);
       _notify('Reverted to ${updated.statusLabel}.');
       await _load();
-    } on ApiException catch (e) {
-      _notify(e.message);
+    } catch (e) {
+      _notify(
+        messageForError(
+          e,
+          'Could not reach the server. Check your connection and try again.',
+        ),
+      );
     }
   }
 
   static String _labelFor(String status) {
-    return _statusFilters.firstWhere(
-      (f) => f.key == status,
-      orElse: () => (key: status, label: status),
-    ).label;
+    return _statusFilters
+        .firstWhere(
+          (f) => f.key == status,
+          orElse: () => (key: status, label: status),
+        )
+        .label;
   }
 
   Future<void> _showActions(CompanyApplication application) async {
@@ -182,13 +220,43 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
                 child: Text(
                   application.internshipTitle,
-                  style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ),
+              // First in the sheet: looking at who someone is comes before
+              // deciding what to do about them.
+              ListTile(
+                leading: const Icon(
+                  Icons.person_outline,
+                  color: AppColors.textDark,
+                ),
+                title: const Text('View profile'),
+                subtitle: const Text('Skills, education, and experience'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _viewProfile(application);
+                },
+              ),
+              const Divider(height: 1),
               for (final option in const [
-                (key: 'under_review', label: 'Move to Under review', icon: Icons.visibility_outlined),
-                (key: 'interview', label: 'Invite to Interview', icon: Icons.event_outlined),
-                (key: 'accepted', label: 'Accept', icon: Icons.check_circle_outline),
+                (
+                  key: 'under_review',
+                  label: 'Move to Under review',
+                  icon: Icons.visibility_outlined,
+                ),
+                (
+                  key: 'interview',
+                  label: 'Invite to Interview',
+                  icon: Icons.event_outlined,
+                ),
+                (
+                  key: 'accepted',
+                  label: 'Accept',
+                  icon: Icons.check_circle_outline,
+                ),
               ])
                 if (application.status != option.key)
                   ListTile(
@@ -200,7 +268,10 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
                     },
                   ),
               ListTile(
-                leading: const Icon(Icons.fact_check_outlined, color: AppColors.textDark),
+                leading: const Icon(
+                  Icons.fact_check_outlined,
+                  color: AppColors.textDark,
+                ),
                 title: Text(
                   application.assignedAssessmentId == null
                       ? 'Assign assessment'
@@ -216,8 +287,14 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
               ),
               if (application.status != 'rejected')
                 ListTile(
-                  leading: const Icon(Icons.cancel_outlined, color: AppColors.danger),
-                  title: const Text('Reject', style: TextStyle(color: AppColors.danger)),
+                  leading: const Icon(
+                    Icons.cancel_outlined,
+                    color: AppColors.danger,
+                  ),
+                  title: const Text(
+                    'Reject',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     _setStatus(application, 'rejected');
@@ -227,7 +304,9 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
                 ListTile(
                   leading: const Icon(Icons.undo, color: AppColors.primary),
                   title: const Text('Undo last change'),
-                  subtitle: Text('Back to ${_labelFor(application.previousStatus ?? '')}'),
+                  subtitle: Text(
+                    'Back to ${_labelFor(application.previousStatus ?? '')}',
+                  ),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     _undo(application);
@@ -244,70 +323,100 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Every top-level company screen carries the bar, so navigation
+      // doesn't change shape depending on how you arrived. This screen is
+      // not one of its four tabs, hence no highlight.
+      bottomNavigationBar: CompanyBottomNav(
+        currentIndex: -1,
+        onSelect: (i) => handleCompanyNavTap(context, i),
+      ),
       drawer: const CompanySidebar(current: CompanySidebarItem.applications),
       backgroundColor: AppColors.primaryDark,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
         children: [
-          const CompanyScreenHeader(title: 'Applications', showMenuButton: true),
-          Expanded(
-            child: ColoredBox(
-              color: AppColors.background,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
-                      decoration: const InputDecoration(
-                        hintText: 'Search applicants...',
-                        prefixIcon: Icon(Icons.search, color: AppColors.textMuted),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 44,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      children: [
-                        for (final filter in _statusFilters)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(
-                                filter.key.isEmpty
-                                    ? '${filter.label} (${_counts['all']})'
-                                    : '${filter.label} (${_counts[filter.key]})',
-                              ),
-                              selected: _status == filter.key,
-                              onSelected: (_) {
-                                setState(() => _status = filter.key);
-                                _load();
-                              },
-                              labelStyle: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight:
-                                    _status == filter.key ? FontWeight.bold : FontWeight.normal,
-                                color: _status == filter.key ? Colors.white : AppColors.textDark,
-                              ),
-                              selectedColor: AppColors.primary,
-                              backgroundColor: Colors.white,
-                              showCheckmark: false,
-                              side: const BorderSide(color: AppColors.border),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CompanyScreenHeader(
+                title: 'Applications',
+                showMenuButton: true,
+              ),
+              Expanded(
+                child: ColoredBox(
+                  color: AppColors.background,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          decoration: const InputDecoration(
+                            hintText: 'Search applicants...',
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: AppColors.textMuted,
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                      ),
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          children: [
+                            for (final filter in _statusFilters)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: Text(
+                                    filter.key.isEmpty
+                                        ? '${filter.label} (${_counts['all']})'
+                                        : '${filter.label} (${_counts[filter.key]})',
+                                  ),
+                                  selected: _status == filter.key,
+                                  onSelected: (_) {
+                                    setState(() => _status = filter.key);
+                                    _load();
+                                  },
+                                  labelStyle: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: _status == filter.key
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: _status == filter.key
+                                        ? Colors.white
+                                        : AppColors.textDark,
+                                  ),
+                                  selectedColor: AppColors.primary,
+                                  backgroundColor: Colors.white,
+                                  showCheckmark: false,
+                                  side: const BorderSide(
+                                    color: AppColors.border,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: _load,
+                          child: _buildBody(),
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
+          // Same launcher the web keeps on every page.
+          const MatchaLauncher(),
         ],
       ),
     );
@@ -330,7 +439,9 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
@@ -342,7 +453,11 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
             padding: EdgeInsets.fromLTRB(32, 60, 32, 0),
             child: Column(
               children: [
-                Icon(Icons.inbox_outlined, size: 40, color: AppColors.textMuted),
+                Icon(
+                  Icons.inbox_outlined,
+                  size: 40,
+                  color: AppColors.textMuted,
+                ),
                 SizedBox(height: 14),
                 Text(
                   'No applications here yet',
@@ -414,7 +529,11 @@ class _RejectionDialogState extends State<_RejectionDialog> {
           Text(
             '${widget.application.student.name} will be told their application for '
             '"${widget.application.internshipTitle}" was not successful.',
-            style: const TextStyle(fontSize: 13.5, color: AppColors.textMuted, height: 1.4),
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: AppColors.textMuted,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -435,7 +554,10 @@ class _RejectionDialogState extends State<_RejectionDialog> {
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('Reject', style: TextStyle(color: AppColors.danger)),
+          child: const Text(
+            'Reject',
+            style: TextStyle(color: AppColors.danger),
+          ),
         ),
       ],
     );
@@ -474,8 +596,9 @@ class _ApplicationCard extends StatelessWidget {
                   CircleAvatar(
                     radius: 22,
                     backgroundColor: AppColors.chipBackground,
-                    backgroundImage:
-                        student.avatarUrl != null ? NetworkImage(student.avatarUrl!) : null,
+                    backgroundImage: student.avatarUrl != null
+                        ? NetworkImage(student.avatarUrl!)
+                        : null,
                     child: student.avatarUrl == null
                         ? Text(
                             student.initials,
@@ -506,12 +629,18 @@ class _ApplicationCard extends StatelessWidget {
                           application.internshipTitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                         if (application.appliedAtHuman != null)
                           Text(
                             'Applied ${application.appliedAtHuman}',
-                            style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                       ],
                     ),
@@ -523,7 +652,10 @@ class _ApplicationCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: colors.background,
                       borderRadius: BorderRadius.circular(999),
@@ -539,11 +671,18 @@ class _ApplicationCard extends StatelessWidget {
                   ),
                   if (application.canUndo) ...[
                     const SizedBox(width: 8),
-                    const Icon(Icons.undo, size: 14, color: AppColors.textMuted),
+                    const Icon(
+                      Icons.undo,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
                     const SizedBox(width: 3),
                     const Text(
                       'undoable',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ],
@@ -553,7 +692,11 @@ class _ApplicationCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   'Reason: ${application.rejectionReason}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.4),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ],

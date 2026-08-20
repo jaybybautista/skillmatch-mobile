@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +12,10 @@ import '../screens/company/company_home_screen.dart';
 import '../screens/company/company_placements_screen.dart';
 import '../screens/company/company_postings_screen.dart';
 import '../screens/company/company_profile_screen.dart';
+import '../screens/company/company_records_screen.dart';
+import '../screens/company/company_settings_screen.dart';
+import '../screens/student/notifications/notifications_screen.dart';
+import '../services/notification_service.dart';
 import '../services/auth_service.dart';
 
 /// Which company sidebar entry the current screen is, so it can be
@@ -35,9 +40,7 @@ enum CompanySidebarItem {
 /// grouping as the website's company sidebar, drawn in the student drawer's
 /// style so both sides of the app look like one product.
 ///
-/// Several entries exist on the website but have no app screen yet. They are
-/// still listed (so the two sidebars read the same) but shown muted, and
-/// tapping one says so plainly rather than leading nowhere.
+/// Every entry the website has now leads to a real screen here too.
 class CompanySidebar extends StatelessWidget {
   const CompanySidebar({super.key, this.current = CompanySidebarItem.none});
 
@@ -45,7 +48,11 @@ class CompanySidebar extends StatelessWidget {
 
   /// Replaces the current screen rather than stacking another copy on top,
   /// so the drawer can't build a pile of half-visited pages behind it.
-  void _go(BuildContext context, CompanySidebarItem item, Widget Function() build) {
+  void _go(
+    BuildContext context,
+    CompanySidebarItem item,
+    Widget Function() build,
+  ) {
     Navigator.of(context).pop();
     if (item == current) return;
 
@@ -58,13 +65,6 @@ class CompanySidebar extends StatelessWidget {
     }
 
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => build()));
-  }
-
-  void _unavailable(BuildContext context, String label) {
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label is only on the SkillMatch website for now.')),
-    );
   }
 
   /// Signs out and returns to the login screen, clearing the whole stack so
@@ -83,7 +83,9 @@ class CompanySidebar extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Log out?'),
-        content: const Text('You will need to sign in again to manage your postings.'),
+        content: const Text(
+          'You will need to sign in again to manage your postings.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -91,7 +93,10 @@ class CompanySidebar extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Log Out', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Log Out',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -134,7 +139,11 @@ class CompanySidebar extends StatelessWidget {
                     icon: Icons.home_outlined,
                     label: 'Home',
                     isActive: current == CompanySidebarItem.home,
-                    onTap: () => _go(context, CompanySidebarItem.home, CompanyHomeScreen.new),
+                    onTap: () => _go(
+                      context,
+                      CompanySidebarItem.home,
+                      CompanyHomeScreen.new,
+                    ),
                   ),
                   _CompanySidebarTile(
                     icon: Icons.insert_chart_outlined,
@@ -150,7 +159,11 @@ class CompanySidebar extends StatelessWidget {
                     icon: Icons.work_outline,
                     label: 'My postings',
                     isActive: current == CompanySidebarItem.postings,
-                    onTap: () => _go(context, CompanySidebarItem.postings, CompanyPostingsScreen.new),
+                    onTap: () => _go(
+                      context,
+                      CompanySidebarItem.postings,
+                      CompanyPostingsScreen.new,
+                    ),
                   ),
                   _CompanySidebarTile(
                     icon: Icons.description_outlined,
@@ -166,7 +179,11 @@ class CompanySidebar extends StatelessWidget {
                     icon: Icons.fact_check_outlined,
                     label: 'Assessments',
                     isActive: current == CompanySidebarItem.assessments,
-                    onTap: () => _go(context, CompanySidebarItem.assessments, AssessmentLibraryScreen.new),
+                    onTap: () => _go(
+                      context,
+                      CompanySidebarItem.assessments,
+                      AssessmentLibraryScreen.new,
+                    ),
                   ),
                   _CompanySidebarTile(
                     icon: Icons.groups_outlined,
@@ -201,14 +218,26 @@ class CompanySidebar extends StatelessWidget {
                   _CompanySidebarTile(
                     icon: Icons.archive_outlined,
                     label: 'Records and reports',
-                    isAvailable: false,
-                    onTap: () => _unavailable(context, 'Records and reports'),
+                    isActive: current == CompanySidebarItem.records,
+                    onTap: () => _go(
+                      context,
+                      CompanySidebarItem.records,
+                      CompanyRecordsScreen.new,
+                    ),
                   ),
                   _CompanySidebarTile(
                     icon: Icons.notifications_none,
                     label: 'Notifications',
-                    isAvailable: false,
-                    onTap: () => _unavailable(context, 'Notifications'),
+                    isActive: current == CompanySidebarItem.notifications,
+                    // The count comes from the shared 15-second poll, so it
+                    // moves whether the notification arrived here or on the
+                    // website.
+                    badge: NotificationService.instance.unreadCount,
+                    onTap: () => _go(
+                      context,
+                      CompanySidebarItem.notifications,
+                      NotificationsScreen.new,
+                    ),
                   ),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
@@ -226,15 +255,28 @@ class CompanySidebar extends StatelessWidget {
                     icon: Icons.apartment_outlined,
                     label: 'Company profile',
                     isActive: current == CompanySidebarItem.profile,
-                    onTap: () => _go(context, CompanySidebarItem.profile, CompanyProfileScreen.new),
+                    onTap: () => _go(
+                      context,
+                      CompanySidebarItem.profile,
+                      CompanyProfileScreen.new,
+                    ),
                   ),
                   _CompanySidebarTile(
                     icon: Icons.settings_outlined,
                     label: 'Settings',
-                    isAvailable: false,
-                    onTap: () => _unavailable(context, 'Settings'),
+                    isActive: current == CompanySidebarItem.settings,
+                    onTap: () => _go(
+                      context,
+                      CompanySidebarItem.settings,
+                      CompanySettingsScreen.new,
+                    ),
                   ),
-                  const Divider(height: 20, indent: 20, endIndent: 20, color: AppColors.border),
+                  const Divider(
+                    height: 20,
+                    indent: 20,
+                    endIndent: 20,
+                    color: AppColors.border,
+                  ),
                   _CompanySidebarTile(
                     icon: Icons.logout,
                     label: 'Log Out',
@@ -257,18 +299,19 @@ class _CompanySidebarTile extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.isActive = false,
-    this.isAvailable = true,
     this.tint,
+    this.badge,
   });
+
+  /// A live count shown as a pill on the right of the row. Listened to rather
+  /// than passed as a number so the badge updates without the drawer being
+  /// rebuilt by its parent.
+  final ValueListenable<int>? badge;
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final bool isActive;
-
-  /// False for entries the website has but the app doesn't — shown muted so
-  /// the two sidebars still read the same, without pretending they work.
-  final bool isAvailable;
 
   /// Overrides the usual colour, for an entry that needs to read differently
   /// from ordinary navigation (Log Out).
@@ -276,12 +319,8 @@ class _CompanySidebarTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = tint ??
-        (!isAvailable
-            ? AppColors.textMuted.withValues(alpha: 0.55)
-            : isActive
-                ? AppColors.primary
-                : AppColors.primaryDark);
+    final color =
+        tint ?? (isActive ? AppColors.primary : AppColors.primaryDark);
 
     return Material(
       color: isActive ? AppColors.chipBackground : Colors.transparent,
@@ -305,6 +344,31 @@ class _CompanySidebarTile extends StatelessWidget {
                   ),
                 ),
               ),
+              if (badge != null)
+                ValueListenableBuilder<int>(
+                  valueListenable: badge!,
+                  builder: (context, count, _) {
+                    if (count == 0) return const SizedBox.shrink();
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        count > 99 ? '99+' : '$count',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ),

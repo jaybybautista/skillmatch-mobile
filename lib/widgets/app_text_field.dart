@@ -38,7 +38,11 @@ class _AppTextFieldState extends State<AppTextField> {
       children: [
         Text(
           widget.label,
-          style: const TextStyle(fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppColors.textDark,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 8),
         TextFormField(
@@ -52,7 +56,9 @@ class _AppTextFieldState extends State<AppTextField> {
             suffixIcon: widget.obscureText
                 ? IconButton(
                     icon: Icon(
-                      _obscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      _obscured
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       color: AppColors.textMuted,
                     ),
                     onPressed: () => setState(() => _obscured = !_obscured),
@@ -93,19 +99,28 @@ class AppDropdownField<T> extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppColors.textDark,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
           initialValue: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: AppColors.textMuted,
+          ),
           hint: hint != null ? Text(hint!) : null,
           items: items
-              .map((item) => DropdownMenuItem<T>(
-                    value: item,
-                    child: Text(itemLabel(item), overflow: TextOverflow.ellipsis),
-                  ))
+              .map(
+                (item) => DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(itemLabel(item), overflow: TextOverflow.ellipsis),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
           validator: validator,

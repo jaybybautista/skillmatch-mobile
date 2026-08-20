@@ -15,22 +15,44 @@ class ApiConfig {
   ///gawin mo siyang true teh if want mo gumamit ng emulator
   static const bool _useAndroidEmulator = false;
 
+  /// Serve through XAMPP's Apache rather than `php artisan serve`.
+  ///
+  /// On Windows the artisan dev server is always single-threaded — PHP needs
+  /// fork() for its workers and Windows has none, so `--no-reload` just prints
+  /// "forking is not supported on this platform". One slow request (the AI
+  /// matching service timing out, say) therefore blocks every other request,
+  /// and the app starts timing out on unrelated screens. Apache is
+  /// multi-process and doesn't have that problem.
+  ///
+  /// Set this to false to go back to `php artisan serve --host=0.0.0.0`.
+  static const bool _useApache = true;
+
+  /// Where XAMPP serves the project from, relative to the web root.
+  static const String _apachePath = '/SkillMatch/SkillMatch/public';
+
   static const int port = 8000;
 
   static String get _host {
     if (kIsWeb) return 'localhost';
     if (Platform.isAndroid) return _useAndroidEmulator ? '10.0.2.2' : _lanHost;
-    if (Platform.isIOS)
-      return _lanHost; // iOS physical devices need the LAN IP too.
+    // iOS physical devices need the LAN IP too.
+    if (Platform.isIOS) {
+      return _lanHost;
+    }
     return 'localhost';
   }
 
-  static String get baseUrl => 'http://$_host:$port/api';
+  /// Apache listens on port 80 and serves the project from a sub-path;
+  /// artisan serve owns its port and serves from the root.
+  static String get _origin =>
+      _useApache ? 'http://$_host$_apachePath' : 'http://$_host:$port';
+
+  static String get baseUrl => '$_origin/api';
 
   /// The SkillMatch website itself (not the API). Shown to anyone the app has
   /// to turn away — company sign-ups and coordinator/admin sign-ins both live
   /// on the web, since the app only has student screens.
-  static String get siteUrl => 'http://$_host:$port';
+  static String get siteUrl => _origin;
 
   /// The same "Web application" OAuth client ID the Laravel backend already
   /// uses for Socialite (GOOGLE_CLIENT_ID in the web .env). Passing this as

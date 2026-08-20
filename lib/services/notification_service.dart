@@ -49,7 +49,10 @@ class NotificationService extends ChangeNotifier {
 
   Future<void> refreshUnreadCount() async {
     try {
-      final response = await _client.get('/notifications/unread-count', authenticated: true);
+      final response = await _client.get(
+        '/notifications/unread-count',
+        authenticated: true,
+      );
       unreadCount.value = (response['unread_count'] as num?)?.toInt() ?? 0;
     } catch (_) {
       // A failed poll is not worth surfacing — the next tick tries again.
@@ -69,15 +72,29 @@ class NotificationService extends ChangeNotifier {
 
   /// Marks read and returns the notification with its destination.
   Future<AppNotification> tap(int id) async {
-    final response = await _client.post('/notifications/$id/tap', {}, authenticated: true);
-    unreadCount.value = (response['unread_count'] as num?)?.toInt() ?? unreadCount.value;
-    return AppNotification.fromJson(response['notification'] as Map<String, dynamic>);
+    final response = await _client.post(
+      '/notifications/$id/tap',
+      {},
+      authenticated: true,
+    );
+    unreadCount.value =
+        (response['unread_count'] as num?)?.toInt() ?? unreadCount.value;
+    return AppNotification.fromJson(
+      response['notification'] as Map<String, dynamic>,
+    );
   }
 
   Future<AppNotification> toggleRead(int id) async {
-    final response = await _client.post('/notifications/$id/toggle-read', {}, authenticated: true);
-    unreadCount.value = (response['unread_count'] as num?)?.toInt() ?? unreadCount.value;
-    return AppNotification.fromJson(response['notification'] as Map<String, dynamic>);
+    final response = await _client.post(
+      '/notifications/$id/toggle-read',
+      {},
+      authenticated: true,
+    );
+    unreadCount.value =
+        (response['unread_count'] as num?)?.toInt() ?? unreadCount.value;
+    return AppNotification.fromJson(
+      response['notification'] as Map<String, dynamic>,
+    );
   }
 
   Future<void> delete(int id) async {

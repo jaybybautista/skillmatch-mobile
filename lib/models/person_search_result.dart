@@ -48,7 +48,8 @@ class PersonSearchResult {
       avatarUrl: json['avatar_url'] as String?,
       initials: json['initials'] as String? ?? '?',
       screen: json['screen'] as String?,
-      screenParams: (json['screen_params'] as Map?)?.cast<String, dynamic>() ?? const {},
+      screenParams:
+          (json['screen_params'] as Map?)?.cast<String, dynamic>() ?? const {},
     );
   }
 }

@@ -5,7 +5,10 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'token_storage.dart';
 
-const _requestTimeout = Duration(seconds: 12);
+// 12s was too tight against a local dev server on WiFi: a request that
+// queued behind a slow one would be abandoned before it ever got a turn, and
+// the screen would report a connection problem that wasn't one.
+const _requestTimeout = Duration(seconds: 25);
 
 /// AI Help and resume import hit a Groq call (and, for import, server-side
 /// OCR) that can legitimately take much longer than a normal API round trip.
@@ -48,9 +51,15 @@ class ApiClient {
     return headers;
   }
 
-  Future<Map<String, dynamic>> get(String path, {bool authenticated = false}) async {
+  Future<Map<String, dynamic>> get(
+    String path, {
+    bool authenticated = false,
+  }) async {
     final response = await http
-        .get(Uri.parse('${ApiConfig.baseUrl}$path'), headers: await _headers(authenticated: authenticated))
+        .get(
+          Uri.parse('${ApiConfig.baseUrl}$path'),
+          headers: await _headers(authenticated: authenticated),
+        )
         .timeout(_requestTimeout, onTimeout: _throwTimeout);
     return _decode(response);
   }
@@ -60,7 +69,10 @@ class ApiClient {
   /// [http.Response.bodyBytes] and `headers['content-type']` itself. A
   /// non-2xx response is still decoded as JSON for its error message, exactly
   /// like every other call here.
-  Future<http.Response> getBytes(String path, {bool authenticated = false}) async {
+  Future<http.Response> getBytes(
+    String path, {
+    bool authenticated = false,
+  }) async {
     final headers = await _headers(authenticated: authenticated);
     headers.remove('Content-Type');
     headers['Accept'] = '*/*';
@@ -74,7 +86,10 @@ class ApiClient {
     }
 
     _decode(response);
-    throw ApiException('Something went wrong. Please try again.', statusCode: response.statusCode);
+    throw ApiException(
+      'Something went wrong. Please try again.',
+      statusCode: response.statusCode,
+    );
   }
 
   Future<Map<String, dynamic>> post(
@@ -107,9 +122,15 @@ class ApiClient {
     return _decode(response);
   }
 
-  Future<Map<String, dynamic>> delete(String path, {bool authenticated = false}) async {
+  Future<Map<String, dynamic>> delete(
+    String path, {
+    bool authenticated = false,
+  }) async {
     final response = await http
-        .delete(Uri.parse('${ApiConfig.baseUrl}$path'), headers: await _headers(authenticated: authenticated))
+        .delete(
+          Uri.parse('${ApiConfig.baseUrl}$path'),
+          headers: await _headers(authenticated: authenticated),
+        )
         .timeout(_requestTimeout, onTimeout: _throwTimeout);
     return _decode(response);
   }
@@ -139,23 +160,33 @@ class ApiClient {
     String? fileFieldName,
     bool authenticated = false,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('${ApiConfig.baseUrl}$path'));
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('${ApiConfig.baseUrl}$path'),
+    );
     final headers = await _headers(authenticated: authenticated);
     headers.remove('Content-Type');
     request.headers.addAll(headers);
     request.fields.addAll(fields);
 
     if (filePath != null && fileFieldName != null) {
-      request.files.add(await http.MultipartFile.fromPath(fileFieldName, filePath));
+      request.files.add(
+        await http.MultipartFile.fromPath(fileFieldName, filePath),
+      );
     }
 
-    final streamed = await request.send().timeout(_longRequestTimeout, onTimeout: _throwTimeout);
+    final streamed = await request.send().timeout(
+      _longRequestTimeout,
+      onTimeout: _throwTimeout,
+    );
     final response = await http.Response.fromStream(streamed);
     return _decode(response);
   }
 
   Never _throwTimeout() {
-    throw ApiException('The server took too long to respond. Please try again.');
+    throw ApiException(
+      'The server took too long to respond. Please try again.',
+    );
   }
 
   Map<String, dynamic> _decode(http.Response response) {
@@ -177,7 +208,8 @@ class ApiClient {
     Map<String, List<String>>? errors;
     if (data['errors'] is Map) {
       errors = (data['errors'] as Map).map(
-        (key, value) => MapEntry(key.toString(), List<String>.from(value as List)),
+        (key, value) =>
+            MapEntry(key.toString(), List<String>.from(value as List)),
       );
     }
 
@@ -187,8 +219,15 @@ class ApiClient {
       if (firstList.isNotEmpty) firstFieldError = firstList.first;
     }
 
-    final message = data['message'] as String? ?? firstFieldError ?? 'Something went wrong. Please try again.';
+    final message =
+        data['message'] as String? ??
+        firstFieldError ??
+        'Something went wrong. Please try again.';
 
-    throw ApiException(message, statusCode: response.statusCode, errors: errors);
+    throw ApiException(
+      message,
+      statusCode: response.statusCode,
+      errors: errors,
+    );
   }
 }

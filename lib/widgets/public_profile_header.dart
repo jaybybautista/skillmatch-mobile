@@ -39,7 +39,10 @@ class PublicProfileHeader extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.chipBackground,
             image: coverUrl != null
-                ? DecorationImage(image: NetworkImage(coverUrl!), fit: BoxFit.cover)
+                ? DecorationImage(
+                    image: NetworkImage(coverUrl!),
+                    fit: BoxFit.cover,
+                  )
                 : null,
           ),
         ),
@@ -60,19 +63,29 @@ class PublicProfileHeader extends StatelessWidget {
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    shape: isSquareAvatar ? BoxShape.rectangle : BoxShape.circle,
-                    borderRadius: isSquareAvatar ? BorderRadius.circular(16) : null,
+                    shape: isSquareAvatar
+                        ? BoxShape.rectangle
+                        : BoxShape.circle,
+                    borderRadius: isSquareAvatar
+                        ? BorderRadius.circular(16)
+                        : null,
                   ),
                   child: avatarUrl != null
                       ? ClipRRect(
-                          borderRadius: isSquareAvatar ? BorderRadius.circular(13) : BorderRadius.circular(999),
+                          borderRadius: isSquareAvatar
+                              ? BorderRadius.circular(13)
+                              : BorderRadius.circular(999),
                           child: Image.network(avatarUrl!, fit: BoxFit.cover),
                         )
                       : Container(
                           decoration: BoxDecoration(
                             color: AppColors.chipBackground,
-                            shape: isSquareAvatar ? BoxShape.rectangle : BoxShape.circle,
-                            borderRadius: isSquareAvatar ? BorderRadius.circular(13) : null,
+                            shape: isSquareAvatar
+                                ? BoxShape.rectangle
+                                : BoxShape.circle,
+                            borderRadius: isSquareAvatar
+                                ? BorderRadius.circular(13)
+                                : null,
                           ),
                           alignment: Alignment.center,
                           child: Text(
@@ -96,14 +109,20 @@ class PublicProfileHeader extends StatelessWidget {
                           name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         if (subtitle != null)
                           Text(
                             subtitle!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                       ],
                     ),
@@ -127,7 +146,12 @@ class PublicProfileHeader extends StatelessWidget {
 }
 
 class ProfileMetaChip extends StatelessWidget {
-  const ProfileMetaChip({super.key, required this.icon, required this.label, this.color});
+  const ProfileMetaChip({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.color,
+  });
 
   final IconData icon;
   final String label;
@@ -147,7 +171,14 @@ class ProfileMetaChip extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: tint),
           const SizedBox(width: 5),
-          Text(label, style: TextStyle(fontSize: 11.5, color: tint, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              color: tint,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -183,7 +214,13 @@ class ProfileSectionCard extends StatelessWidget {
             children: [
               Icon(icon, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14.5,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -245,7 +282,11 @@ class NoDataText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(fontSize: 13, color: AppColors.textMuted, fontStyle: FontStyle.italic),
+      style: const TextStyle(
+        fontSize: 13,
+        color: AppColors.textMuted,
+        fontStyle: FontStyle.italic,
+      ),
     );
   }
 }

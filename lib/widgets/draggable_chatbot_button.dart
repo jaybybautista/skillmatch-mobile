@@ -74,9 +74,21 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
   /// the screen is revisited.
   Offset? _position;
 
-  /// Drives the visuals (glow + scale). Only true once the finger has moved
-  /// far enough to count as a drag, so a plain tap doesn't flash the ring.
+  /// Drives the scale bump. Only true once the finger has moved far enough
+  /// to count as a drag.
   bool _isDragging = false;
+
+  /// A finger is on the button. This is the touch equivalent of the web's
+  /// `:hover` on the FAB — there is no hovering on a phone, so the ring lights
+  /// the moment the button is touched rather than only once it is dragged.
+  bool _isPressed = false;
+
+  /// A real mouse is over the button (desktop and web builds), which is the
+  /// web's hover exactly.
+  bool _isHovered = false;
+
+  /// Whether the colour ring should be showing.
+  bool get _isLit => _isDragging || _isPressed || _isHovered;
 
   /// True for the whole pan, including the first few pixels. Used to disable
   /// position animation while dragging so the button tracks 1:1.
@@ -127,7 +139,7 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
   void _stopGlowAfterFade() {
     _glowStopTimer?.cancel();
     _glowStopTimer = Timer(_glowFade, () {
-      if (mounted && !_isDragging) _glow.stop();
+      if (mounted && !_isLit) _glow.stop();
     });
   }
 
@@ -136,10 +148,18 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
     return Positioned.fill(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final maxLeft = (constraints.maxWidth - widget.size).clamp(0.0, double.infinity);
-          final maxTop = (constraints.maxHeight - widget.size).clamp(0.0, double.infinity);
+          final maxLeft = (constraints.maxWidth - widget.size).clamp(
+            0.0,
+            double.infinity,
+          );
+          final maxTop = (constraints.maxHeight - widget.size).clamp(
+            0.0,
+            double.infinity,
+          );
 
-          final current = _position ?? Offset(maxLeft - widget.margin, maxTop - widget.bottomMargin);
+          final current =
+              _position ??
+              Offset(maxLeft - widget.margin, maxTop - widget.bottomMargin);
 
           // Re-clamped on every build, so the button can't end up stranded
           // off-screen when the available area shrinks (rotation, keyboard).
@@ -151,7 +171,9 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
               AnimatedPositioned(
                 // Instant while a finger is down; eased when it glides back
                 // to its resting spot on return to the screen.
-                duration: _isPanActive ? Duration.zero : const Duration(milliseconds: 260),
+                duration: _isPanActive
+                    ? Duration.zero
+                    : const Duration(milliseconds: 260),
                 curve: Curves.easeOutCubic,
                 left: left,
                 top: top,
@@ -159,13 +181,14 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
                   onPanDown: (_) {
                     _travel = 0;
                     _isPanActive = true;
+                    setState(() => _isPressed = true);
+                    _startGlow();
                   },
                   onPanUpdate: (details) {
                     _travel += details.delta.distance;
                     setState(() {
                       if (_travel > widget.tapMaxDistance && !_isDragging) {
                         _isDragging = true;
-                        _startGlow();
                       }
                       _position = Offset(
                         (left + details.delta.dx).clamp(0.0, maxLeft),
@@ -178,6 +201,7 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
                     setState(() {
                       _isDragging = false;
                       _isPanActive = false;
+                      _isPressed = false;
                     });
                     _stopGlowAfterFade();
                     if (wasTap) widget.onTap?.call();
@@ -186,6 +210,7 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
                     setState(() {
                       _isDragging = false;
                       _isPanActive = false;
+                      _isPressed = false;
                     });
                     _stopGlowAfterFade();
                   },
@@ -200,6 +225,21 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
   }
 
   Widget _button() {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        _startGlow();
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _stopGlowAfterFade();
+      },
+      child: _scaledButton(),
+    );
+  }
+
+  Widget _scaledButton() {
     return AnimatedScale(
       scale: _isDragging ? 1.08 : 1,
       duration: const Duration(milliseconds: 20),
@@ -212,8 +252,20 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Positioned(left: -7, top: -7, right: -7, bottom: -7, child: _glowLayer(blur: 8)),
-            Positioned(left: -4, top: -4, right: -4, bottom: -4, child: _glowLayer()),
+            Positioned(
+              left: -7,
+              top: -7,
+              right: -7,
+              bottom: -7,
+              child: _glowLayer(blur: 8),
+            ),
+            Positioned(
+              left: -4,
+              top: -4,
+              right: -4,
+              bottom: -4,
+              child: _glowLayer(),
+            ),
             Positioned.fill(child: _circle()),
           ],
         ),
@@ -227,7 +279,8 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
   Widget _glowLayer({double blur = 0}) {
     Widget ring = AnimatedBuilder(
       animation: _glow,
-      builder: (context, child) => Transform.rotate(angle: _glow.value * 2 * math.pi, child: child),
+      builder: (context, child) =>
+          Transform.rotate(angle: _glow.value * 2 * math.pi, child: child),
       child: const DecoratedBox(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -237,12 +290,15 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
     );
 
     if (blur > 0) {
-      ring = ImageFiltered(imageFilter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur), child: ring);
+      ring = ImageFiltered(
+        imageFilter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+        child: ring,
+      );
     }
 
     return IgnorePointer(
       child: AnimatedOpacity(
-        opacity: _isDragging ? 1 : 0,
+        opacity: _isLit ? 1 : 0,
         duration: _glowFade,
         child: ring,
       ),
@@ -256,8 +312,8 @@ class _DraggableChatbotButtonState extends State<DraggableChatbotButton>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: _isDragging ? 0.35 : 0.22),
-            blurRadius: _isDragging ? 18 : 12,
+            color: Colors.black.withValues(alpha: _isLit ? 0.35 : 0.22),
+            blurRadius: _isLit ? 18 : 12,
             offset: const Offset(0, 4),
           ),
         ],

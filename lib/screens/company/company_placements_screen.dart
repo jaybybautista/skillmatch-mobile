@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../core/company_navigation.dart';
 import '../../models/company_placement.dart';
 import '../../services/company_service.dart';
+import '../../widgets/matcha_launcher.dart';
+import '../../widgets/company_bottom_nav.dart';
 import '../../widgets/company_screen_header.dart';
 import '../../widgets/company_sidebar.dart';
 import 'placement_detail_screen.dart';
@@ -30,7 +33,8 @@ class CompanyPlacementsScreen extends StatefulWidget {
   final CompanyService? service;
 
   @override
-  State<CompanyPlacementsScreen> createState() => _CompanyPlacementsScreenState();
+  State<CompanyPlacementsScreen> createState() =>
+      _CompanyPlacementsScreenState();
 }
 
 class _CompanyPlacementsScreenState extends State<CompanyPlacementsScreen> {
@@ -88,11 +92,11 @@ class _CompanyPlacementsScreenState extends State<CompanyPlacementsScreen> {
   }
 
   int _countFor(String key) => switch (key) {
-        'ongoing' => _counts.ongoing,
-        'completed' => _counts.completed,
-        'terminated' => _counts.terminated,
-        _ => _counts.total,
-      };
+    'ongoing' => _counts.ongoing,
+    'completed' => _counts.completed,
+    'terminated' => _counts.terminated,
+    _ => _counts.total,
+  };
 
   void _openDetail(CompanyPlacement placement) {
     Navigator.of(context).push(
@@ -109,66 +113,98 @@ class _CompanyPlacementsScreenState extends State<CompanyPlacementsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Every top-level company screen carries the bar, so navigation
+      // doesn't change shape depending on how you arrived. This screen is
+      // not one of its four tabs, hence no highlight.
+      bottomNavigationBar: CompanyBottomNav(
+        currentIndex: -1,
+        onSelect: (i) => handleCompanyNavTap(context, i),
+      ),
       drawer: const CompanySidebar(current: CompanySidebarItem.placements),
       backgroundColor: AppColors.primaryDark,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
         children: [
-          const CompanyScreenHeader(title: 'Placements', showMenuButton: true),
-          Expanded(
-            child: ColoredBox(
-              color: AppColors.background,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
-                      decoration: const InputDecoration(
-                        hintText: 'Search by student name or email...',
-                        prefixIcon: Icon(Icons.search, color: AppColors.textMuted),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 44,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      children: [
-                        for (final filter in _statusFilters)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text('${filter.label} (${_countFor(filter.key)})'),
-                              selected: _status == filter.key,
-                              onSelected: (_) {
-                                setState(() => _status = filter.key);
-                                _load();
-                              },
-                              labelStyle: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight:
-                                    _status == filter.key ? FontWeight.bold : FontWeight.normal,
-                                color: _status == filter.key ? Colors.white : AppColors.textDark,
-                              ),
-                              selectedColor: AppColors.primary,
-                              backgroundColor: Colors.white,
-                              showCheckmark: false,
-                              side: const BorderSide(color: AppColors.border),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CompanyScreenHeader(
+                title: 'Placements',
+                showMenuButton: true,
+              ),
+              Expanded(
+                child: ColoredBox(
+                  color: AppColors.background,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          decoration: const InputDecoration(
+                            hintText: 'Search by student name or email...',
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: AppColors.textMuted,
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                      ),
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          children: [
+                            for (final filter in _statusFilters)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: Text(
+                                    '${filter.label} (${_countFor(filter.key)})',
+                                  ),
+                                  selected: _status == filter.key,
+                                  onSelected: (_) {
+                                    setState(() => _status = filter.key);
+                                    _load();
+                                  },
+                                  labelStyle: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: _status == filter.key
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: _status == filter.key
+                                        ? Colors.white
+                                        : AppColors.textDark,
+                                  ),
+                                  selectedColor: AppColors.primary,
+                                  backgroundColor: Colors.white,
+                                  showCheckmark: false,
+                                  side: const BorderSide(
+                                    color: AppColors.border,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: _load,
+                          child: _buildBody(),
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
+          // Same launcher the web keeps on every page.
+          const MatchaLauncher(),
         ],
       ),
     );
@@ -191,13 +227,16 @@ class _CompanyPlacementsScreenState extends State<CompanyPlacementsScreen> {
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
 
     if (_placements.isEmpty) {
-      final isFiltered = _status.isNotEmpty || _searchController.text.trim().isNotEmpty;
+      final isFiltered =
+          _status.isNotEmpty || _searchController.text.trim().isNotEmpty;
 
       return ListView(
         children: [
@@ -205,7 +244,11 @@ class _CompanyPlacementsScreenState extends State<CompanyPlacementsScreen> {
             padding: const EdgeInsets.fromLTRB(32, 60, 32, 0),
             child: Column(
               children: [
-                const Icon(Icons.how_to_reg_outlined, size: 40, color: AppColors.textMuted),
+                const Icon(
+                  Icons.how_to_reg_outlined,
+                  size: 40,
+                  color: AppColors.textMuted,
+                ),
                 const SizedBox(height: 14),
                 const Text(
                   'No placements found',
@@ -222,9 +265,12 @@ class _CompanyPlacementsScreenState extends State<CompanyPlacementsScreen> {
                       // The same sentence the web page's empty state uses, so
                       // a company gets the same explanation on both.
                       : 'Accepted students will appear here once a coordinator '
-                          'creates their placement record.',
+                            'creates their placement record.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textMuted, height: 1.4),
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -295,13 +341,19 @@ class _PlacementCard extends StatelessWidget {
                               placement.studentEmail!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: colors.background,
                         borderRadius: BorderRadius.circular(6),
@@ -320,14 +372,21 @@ class _PlacementCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(Icons.work_outline, size: 14, color: AppColors.textMuted),
+                    const Icon(
+                      Icons.work_outline,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         placement.internshipTitle ?? 'No posting on record',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12.5, color: AppColors.textDark),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.textDark,
+                        ),
                       ),
                     ),
                   ],
@@ -335,12 +394,19 @@ class _PlacementCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.event_outlined, size: 14, color: AppColors.textMuted),
+                    const Icon(
+                      Icons.event_outlined,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       '${placement.startDate ?? 'No start date'}'
                       ' → ${placement.endDate ?? 'ongoing'}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -385,11 +451,11 @@ class _Avatar extends StatelessWidget {
   }
 
   Widget _initials() => Text(
-        placement.initials,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          color: AppColors.primary,
-        ),
-      );
+    placement.initials,
+    style: const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.bold,
+      color: AppColors.primary,
+    ),
+  );
 }

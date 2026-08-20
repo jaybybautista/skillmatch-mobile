@@ -14,7 +14,18 @@ import '../screens/student/settings/settings_screen.dart';
 import '../services/notification_service.dart';
 
 /// Which sidebar entry the current screen is, so it can be highlighted.
-enum SidebarItem { home, notifications, applications, bookmarks, profile, resumeBuilder, roadmap, requirements, settings, none }
+enum SidebarItem {
+  home,
+  notifications,
+  applications,
+  bookmarks,
+  profile,
+  resumeBuilder,
+  roadmap,
+  requirements,
+  settings,
+  none,
+}
 
 /// The navigation drawer, mirroring the web sidebar: the same entries in the
 /// same order, the same ACCOUNT grouping, and the same destinations.
@@ -85,11 +96,16 @@ class _AppSidebarState extends State<AppSidebar> {
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const InternshipSearchScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const InternshipSearchScreen(),
+                    ),
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.background,
                     borderRadius: BorderRadius.circular(12),
@@ -98,7 +114,13 @@ class _AppSidebarState extends State<AppSidebar> {
                     children: [
                       Icon(Icons.search, size: 19, color: AppColors.textMuted),
                       SizedBox(width: 10),
-                      Text('Search', style: TextStyle(color: AppColors.textMuted, fontSize: 15)),
+                      Text(
+                        'Search',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 15,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -121,20 +143,25 @@ class _AppSidebarState extends State<AppSidebar> {
                       label: 'Notifications',
                       badge: unread,
                       isActive: widget.current == SidebarItem.notifications,
-                      onTap: () => _go(SidebarItem.notifications, NotificationsScreen.new),
+                      onTap: () => _go(
+                        SidebarItem.notifications,
+                        NotificationsScreen.new,
+                      ),
                     ),
                   ),
                   _SidebarTile(
                     icon: Icons.description_outlined,
                     label: 'Applications',
                     isActive: widget.current == SidebarItem.applications,
-                    onTap: () => _go(SidebarItem.applications, ApplicationsScreen.new),
+                    onTap: () =>
+                        _go(SidebarItem.applications, ApplicationsScreen.new),
                   ),
                   _SidebarTile(
                     icon: Icons.bookmark_border,
                     label: 'Bookmarks',
                     isActive: widget.current == SidebarItem.bookmarks,
-                    onTap: () => _go(SidebarItem.bookmarks, BookmarksScreen.new),
+                    onTap: () =>
+                        _go(SidebarItem.bookmarks, BookmarksScreen.new),
                   ),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
@@ -158,19 +185,22 @@ class _AppSidebarState extends State<AppSidebar> {
                     icon: Icons.article_outlined,
                     label: 'Resume Builder',
                     isActive: widget.current == SidebarItem.resumeBuilder,
-                    onTap: () => _go(SidebarItem.resumeBuilder, ResumeListScreen.new),
+                    onTap: () =>
+                        _go(SidebarItem.resumeBuilder, ResumeListScreen.new),
                   ),
                   _SidebarTile(
                     icon: Icons.bolt_outlined,
                     label: 'Skill Roadmap',
                     isActive: widget.current == SidebarItem.roadmap,
-                    onTap: () => _go(SidebarItem.roadmap, SkillRoadmapScreen.new),
+                    onTap: () =>
+                        _go(SidebarItem.roadmap, SkillRoadmapScreen.new),
                   ),
                   _SidebarTile(
                     icon: Icons.apartment_outlined,
                     label: 'Requirements',
                     isActive: widget.current == SidebarItem.requirements,
-                    onTap: () => _go(SidebarItem.requirements, RequirementsScreen.new),
+                    onTap: () =>
+                        _go(SidebarItem.requirements, RequirementsScreen.new),
                   ),
                   _SidebarTile(
                     icon: Icons.settings_outlined,
@@ -229,14 +259,21 @@ class _SidebarTile extends StatelessWidget {
               ),
               if (badge > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.danger,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     badge > 99 ? '99+' : '$badge',
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
             ],

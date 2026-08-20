@@ -86,12 +86,15 @@ class Review {
       authorAvatarUrl: json['author_avatar_url'] as String?,
       authorInitial: json['author_initial'] as String? ?? 'U',
       authorScreen: json['author_screen'] as String?,
-      authorScreenParams: (json['author_screen_params'] as Map?)?.cast<String, dynamic>() ?? const {},
+      authorScreenParams:
+          (json['author_screen_params'] as Map?)?.cast<String, dynamic>() ??
+          const {},
       isMine: json['is_mine'] as bool? ?? false,
       likeCount: (json['like_count'] as num?)?.toInt() ?? 0,
       hasLiked: json['has_liked'] as bool? ?? false,
       canEdit: json['can_edit'] as bool? ?? false,
-      editSecondsRemaining: (json['edit_seconds_remaining'] as num?)?.toInt() ?? 0,
+      editSecondsRemaining:
+          (json['edit_seconds_remaining'] as num?)?.toInt() ?? 0,
       canDelete: json['can_delete'] as bool? ?? false,
       replyCount: (json['reply_count'] as num?)?.toInt() ?? 0,
       replies: (json['replies'] as List? ?? [])
@@ -139,7 +142,11 @@ class Review {
 
 /// The rating breakdown shown above the list.
 class ReviewSummary {
-  ReviewSummary({required this.total, required this.average, required this.ratingCounts});
+  ReviewSummary({
+    required this.total,
+    required this.average,
+    required this.ratingCounts,
+  });
 
   final int total;
   final double average;
@@ -154,12 +161,14 @@ class ReviewSummary {
       average: (json['average'] as num?)?.toDouble() ?? 0,
       ratingCounts: {
         for (final entry in raw.entries)
-          int.tryParse(entry.key.toString()) ?? 0: (entry.value as num?)?.toInt() ?? 0,
+          int.tryParse(entry.key.toString()) ?? 0:
+              (entry.value as num?)?.toInt() ?? 0,
       },
     );
   }
 
-  static ReviewSummary empty() => ReviewSummary(total: 0, average: 0, ratingCounts: const {});
+  static ReviewSummary empty() =>
+      ReviewSummary(total: 0, average: 0, ratingCounts: const {});
 }
 
 /// Everything the reviews tab needs in one response.

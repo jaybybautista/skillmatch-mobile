@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../core/error_message.dart';
 import '../../models/company_application.dart';
 import '../../models/company_assessment.dart';
 import '../../services/company_service.dart';
@@ -86,10 +87,19 @@ class _AssignAssessmentScreenState extends State<AssignAssessmentScreen> {
         ),
       );
       Navigator.of(context).pop(true);
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isAssigning = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            messageForError(
+              e,
+              'Could not reach the server. Check your connection and try again.',
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -116,7 +126,9 @@ class _AssignAssessmentScreenState extends State<AssignAssessmentScreen> {
             _AssignFooter(
               onAssign: _isAssigning || _selectedId == null ? null : _assign,
               isAssigning: _isAssigning,
-              label: _selectedId != null && _selectedId == widget.application.assignedAssessmentId
+              label:
+                  _selectedId != null &&
+                      _selectedId == widget.application.assignedAssessmentId
                   // Sending the same paper again is a reassignment, and the
                   // student is told as much — so the button says so too.
                   ? 'Reassign'
@@ -144,7 +156,9 @@ class _AssignAssessmentScreenState extends State<AssignAssessmentScreen> {
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
@@ -190,7 +204,11 @@ class _AssignAssessmentScreenState extends State<AssignAssessmentScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 18, color: AppColors.warning),
+                const Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: AppColors.warning,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -208,7 +226,9 @@ class _AssignAssessmentScreenState extends State<AssignAssessmentScreen> {
         const SizedBox(height: 12),
         for (var i = 0; i < _assessments.length; i++)
           Padding(
-            padding: EdgeInsets.only(bottom: i == _assessments.length - 1 ? 0 : 12),
+            padding: EdgeInsets.only(
+              bottom: i == _assessments.length - 1 ? 0 : 12,
+            ),
             child: _SelectableAssessmentCard(
               assessment: _assessments[i],
               selected: _assessments[i].id == _selectedId,
@@ -275,7 +295,10 @@ class _ApplicantSummaryCard extends StatelessWidget {
                       application.internshipTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13.5),
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 13.5,
+                      ),
                     ),
                     if (student.course != null) ...[
                       const SizedBox(height: 2),
@@ -283,7 +306,10 @@ class _ApplicantSummaryCard extends StatelessWidget {
                         student.course!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12.5),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12.5,
+                        ),
                       ),
                     ],
                   ],
@@ -331,19 +357,32 @@ class _SelectableAssessmentCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: Text(assessment.title, style: AppFonts.title(fontSize: 17))),
+                  Expanded(
+                    child: Text(
+                      assessment.title,
+                      style: AppFonts.title(fontSize: 17),
+                    ),
+                  ),
                   if (selected)
-                    const Icon(Icons.check_circle, size: 20, color: AppColors.primary),
+                    const Icon(
+                      Icons.check_circle,
+                      size: 20,
+                      color: AppColors.primary,
+                    ),
                 ],
               ),
               if (assessment.internshipTitle != null) ...[
                 const SizedBox(height: 4),
                 Text(
                   'For ${assessment.internshipTitle}',
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 12.5),
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12.5,
+                  ),
                 ),
               ],
-              if (assessment.description != null && assessment.description!.isNotEmpty) ...[
+              if (assessment.description != null &&
+                  assessment.description!.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
                   assessment.description!,
@@ -359,20 +398,34 @@ class _SelectableAssessmentCard extends StatelessWidget {
               const SizedBox(height: 14),
               Row(
                 children: [
-                  const Icon(Icons.quiz_outlined, size: 17, color: AppColors.textMuted),
+                  const Icon(
+                    Icons.quiz_outlined,
+                    size: 17,
+                    color: AppColors.textMuted,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '${assessment.questionCount} '
                     'Question${assessment.questionCount == 1 ? '' : 's'}',
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                    ),
                   ),
                   if (assessment.timeLimitMinutes != null) ...[
                     const SizedBox(width: 16),
-                    const Icon(Icons.access_time_rounded, size: 17, color: AppColors.textMuted),
+                    const Icon(
+                      Icons.access_time_rounded,
+                      size: 17,
+                      color: AppColors.textMuted,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       '${assessment.timeLimitMinutes} Mins',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ],
@@ -383,12 +436,19 @@ class _SelectableAssessmentCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(Icons.warning_amber_rounded, size: 15, color: AppColors.warning),
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 15,
+                      color: AppColors.warning,
+                    ),
                     const SizedBox(width: 6),
                     const Expanded(
                       child: Text(
                         'Still a draft — add questions before assigning it.',
-                        style: TextStyle(color: AppColors.warning, fontSize: 12),
+                        style: TextStyle(
+                          color: AppColors.warning,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -427,13 +487,18 @@ class _AssignFooter extends StatelessWidget {
           onPressed: onAssign,
           style: ElevatedButton.styleFrom(
             minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: isAssigning
               ? const SizedBox(
                   height: 20,
                   width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : Text(label),
         ),

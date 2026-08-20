@@ -45,7 +45,8 @@ class Placement {
       startDate: json['start_date'] as String?,
       endDate: json['end_date'] as String?,
       location: json['location'] as String?,
-      coordinatorName: json['coordinator_name'] as String? ?? 'Assigned Coordinator',
+      coordinatorName:
+          json['coordinator_name'] as String? ?? 'Assigned Coordinator',
       coordinatorEmail: json['coordinator_email'] as String?,
       coordinatorDept: json['coordinator_dept'] as String?,
       remarks: json['remarks'] as String?,
@@ -72,7 +73,9 @@ class PlacementSummary {
 
   factory PlacementSummary.fromJson(Map<String, dynamic> json) {
     return PlacementSummary(
-      placement: json['placement'] != null ? Placement.fromJson(json['placement'] as Map<String, dynamic>) : null,
+      placement: json['placement'] != null
+          ? Placement.fromJson(json['placement'] as Map<String, dynamic>)
+          : null,
       requiredHours: (json['required_hours'] as num?)?.toInt() ?? 0,
       hoursRendered: (json['hours_rendered'] as num?)?.toInt() ?? 0,
       progressPercent: (json['progress_percent'] as num?)?.toInt() ?? 0,

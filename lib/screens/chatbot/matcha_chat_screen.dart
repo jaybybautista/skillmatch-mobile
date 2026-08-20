@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
 import '../../models/chat_message.dart';
+import '../../services/auth_service.dart';
 import '../../services/chatbot_service.dart';
 import 'chat_destinations.dart';
 
@@ -30,13 +32,28 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
   final List<ChatMessage> _messages = [];
   bool _isSending = false;
 
-  /// Shown under the conversation, mirroring the prompts in the mockup.
-  static const _suggestions = [
+  /// Shown under the conversation. A company has none of a student's
+  /// concerns - no resume, no match rate, no assessments to sit - so the two
+  /// roles get their own prompts, each worded to hit the keywords
+  /// ChatbotNavigationService matches on for that role.
+  static const _studentSuggestions = [
     'Resume Tips',
     'How to improve my match rate?',
     'What internships fit my skills?',
     'How do I take an assessment?',
   ];
+
+  static const _companySuggestions = [
+    'How do I post an internship?',
+    'Where do I review applications?',
+    'How do I create an assessment?',
+    'Show me my analytics',
+  ];
+
+  List<String> get _suggestions {
+    final role = context.watch<AuthService>().currentUser?.role;
+    return role == 'company' ? _companySuggestions : _studentSuggestions;
+  }
 
   @override
   void dispose() {
@@ -55,13 +72,17 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
     final history = List<ChatMessage>.from(_messages);
 
     setState(() {
-      _messages.add(ChatMessage(role: ChatRole.user, text: text, sentAt: DateTime.now()));
-      _messages.add(ChatMessage(
-        role: ChatRole.assistant,
-        text: '',
-        sentAt: DateTime.now(),
-        isPending: true,
-      ));
+      _messages.add(
+        ChatMessage(role: ChatRole.user, text: text, sentAt: DateTime.now()),
+      );
+      _messages.add(
+        ChatMessage(
+          role: ChatRole.assistant,
+          text: '',
+          sentAt: DateTime.now(),
+          isPending: true,
+        ),
+      );
       _controller.clear();
       _isSending = true;
     });
@@ -74,12 +95,14 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
       setState(() {
         _messages
           ..removeLast()
-          ..add(ChatMessage(
-            role: ChatRole.assistant,
-            text: reply.answer,
-            sentAt: DateTime.now(),
-            cards: reply.cards,
-          ));
+          ..add(
+            ChatMessage(
+              role: ChatRole.assistant,
+              text: reply.answer,
+              sentAt: DateTime.now(),
+              cards: reply.cards,
+            ),
+          );
         _isSending = false;
       });
     } catch (e) {
@@ -92,12 +115,14 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
       setState(() {
         _messages
           ..removeLast()
-          ..add(ChatMessage(
-            role: ChatRole.assistant,
-            text: message,
-            sentAt: DateTime.now(),
-            hasFailed: true,
-          ));
+          ..add(
+            ChatMessage(
+              role: ChatRole.assistant,
+              text: message,
+              sentAt: DateTime.now(),
+              hasFailed: true,
+            ),
+          );
         _isSending = false;
       });
     }
@@ -121,9 +146,12 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
 
     if (destination == null) {
       // Say why when we know, rather than a blanket "not available".
-      final reason = unavailableReasonFor(card.screen)
-          ?? '${card.title} isn\'t available in the app yet.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(reason)));
+      final reason =
+          unavailableReasonFor(card.screen) ??
+          '${card.title} isn\'t available in the app yet.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(reason)));
       return;
     }
 
@@ -259,14 +287,22 @@ class _Bubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: isUser
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!isUser) ...[
-                Image.asset('assets/ai_chatbot_logo.png', width: 30, height: 30),
+                Image.asset(
+                  'assets/ai_chatbot_logo.png',
+                  width: 30,
+                  height: 30,
+                ),
                 const SizedBox(width: 8),
               ],
               Flexible(
@@ -274,7 +310,10 @@ class _Bubble extends StatelessWidget {
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.72,
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 13,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.only(
@@ -295,7 +334,10 @@ class _Bubble extends StatelessWidget {
                             ),
                             for (final card in message.cards) ...[
                               const SizedBox(height: 12),
-                              _DestinationCard(card: card, onTap: () => onCardTap(card)),
+                              _DestinationCard(
+                                card: card,
+                                onTap: () => onCardTap(card),
+                              ),
                             ],
                           ],
                         ),
@@ -305,10 +347,17 @@ class _Bubble extends StatelessWidget {
           ),
           if (!message.isPending)
             Padding(
-              padding: EdgeInsets.only(top: 6, left: isUser ? 0 : 38, right: isUser ? 4 : 0),
+              padding: EdgeInsets.only(
+                top: 6,
+                left: isUser ? 0 : 38,
+                right: isUser ? 4 : 0,
+              ),
               child: Text(
                 message.timeLabel,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 11),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  fontSize: 11,
+                ),
               ),
             ),
         ],
@@ -342,10 +391,15 @@ class _RichAnswer extends StatelessWidget {
       if (match.start > index) {
         spans.add(TextSpan(text: text.substring(index, match.start)));
       }
-      spans.add(TextSpan(
-        text: match.group(1),
-        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
-      ));
+      spans.add(
+        TextSpan(
+          text: match.group(1),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+      );
       index = match.end;
     }
 
@@ -408,12 +462,19 @@ class _DestinationCard extends StatelessWidget {
                     card.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted),
+            const Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.textMuted,
+            ),
           ],
         ),
       ),
@@ -428,9 +489,12 @@ class _TypingDots extends StatefulWidget {
   State<_TypingDots> createState() => _TypingDotsState();
 }
 
-class _TypingDotsState extends State<_TypingDots> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..repeat();
+class _TypingDotsState extends State<_TypingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat();
 
   @override
   void dispose() {
@@ -461,7 +525,10 @@ class _TypingDotsState extends State<_TypingDots> with SingleTickerProviderState
                     width: 7,
                     height: 7,
                     child: DecoratedBox(
-                      decoration: BoxDecoration(color: AppColors.textMuted, shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                        color: AppColors.textMuted,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
                 ),
@@ -496,7 +563,10 @@ class _SuggestionRow extends StatelessWidget {
               onTap: onTap == null ? null : () => onTap!(text),
               borderRadius: BorderRadius.circular(999),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(999),
@@ -534,7 +604,12 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        16 + MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 6, 6, 6),
         decoration: BoxDecoration(
@@ -575,7 +650,10 @@ class _Composer extends StatelessWidget {
                   child: isSending
                       ? const Padding(
                           padding: EdgeInsets.all(13),
-                          child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.send, color: Colors.white, size: 20),
                 ),

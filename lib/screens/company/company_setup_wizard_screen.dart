@@ -18,7 +18,8 @@ class CompanySetupWizardScreen extends StatefulWidget {
   final String? companyName;
 
   @override
-  State<CompanySetupWizardScreen> createState() => _CompanySetupWizardScreenState();
+  State<CompanySetupWizardScreen> createState() =>
+      _CompanySetupWizardScreenState();
 }
 
 class _CompanySetupWizardScreenState extends State<CompanySetupWizardScreen> {
@@ -49,8 +50,13 @@ class _CompanySetupWizardScreenState extends State<CompanySetupWizardScreen> {
   void dispose() {
     for (final controller in [
       _description,
-      _companyName, _streetAddress, _cityMunicipality, _province, _websiteUrl,
-      _email, _contactNumber,
+      _companyName,
+      _streetAddress,
+      _cityMunicipality,
+      _province,
+      _websiteUrl,
+      _email,
+      _contactNumber,
     ]) {
       controller.dispose();
     }
@@ -103,28 +109,28 @@ class _CompanySetupWizardScreenState extends State<CompanySetupWizardScreen> {
   }
 
   String get _stepLabel => switch (_step) {
-        1 => 'About the Company',
-        2 => 'Company Details',
-        _ => 'Contact Information',
-      };
+    1 => 'About the Company',
+    2 => 'Company Details',
+    _ => 'Contact Information',
+  };
 
   String get _stepTitle => switch (_step) {
-        1 => 'About the Company',
-        2 => 'Company Details',
-        _ => 'Contact Information',
-      };
+    1 => 'About the Company',
+    2 => 'Company Details',
+    _ => 'Contact Information',
+  };
 
   String get _stepSubtitle => switch (_step) {
-        1 => 'Tell students what makes your company a great place to intern.',
-        2 => "Where you're located and how applicants can find you online.",
-        _ => 'How coordinators and applicants can reach you.',
-      };
+    1 => 'Tell students what makes your company a great place to intern.',
+    2 => "Where you're located and how applicants can find you online.",
+    _ => 'How coordinators and applicants can reach you.',
+  };
 
   Widget _buildStep() => switch (_step) {
-        1 => _buildAboutCompany(),
-        2 => _buildCompanyDetails(),
-        _ => _buildContactInformation(),
-      };
+    1 => _buildAboutCompany(),
+    2 => _buildCompanyDetails(),
+    _ => _buildContactInformation(),
+  };
 
   Widget _buildAboutCompany() {
     return _CompanyDescriptionField(controller: _description);
@@ -140,9 +146,16 @@ class _CompanySetupWizardScreenState extends State<CompanySetupWizardScreen> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: SetupField(label: 'City/Municipality', controller: _cityMunicipality)),
+            Expanded(
+              child: SetupField(
+                label: 'City/Municipality',
+                controller: _cityMunicipality,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: SetupField(label: 'Province', controller: _province)),
+            Expanded(
+              child: SetupField(label: 'Province', controller: _province),
+            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -203,7 +216,8 @@ class _CompanyDescriptionField extends StatelessWidget {
             decoration: const InputDecoration(
               border: InputBorder.none,
               isCollapsed: true,
-              hintText: 'Describe your company, culture, mission, and what makes you a great '
+              hintText:
+                  'Describe your company, culture, mission, and what makes you a great '
                   'employer for interns…',
               hintStyle: TextStyle(color: AppColors.textMuted),
             ),
@@ -214,10 +228,17 @@ class _CompanyDescriptionField extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(999),
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('AI Help is not available for company profiles yet.')),
+                const SnackBar(
+                  content: Text(
+                    'AI Help is not available for company profiles yet.',
+                  ),
+                ),
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.chipBackground,
                   borderRadius: BorderRadius.circular(999),
@@ -225,7 +246,11 @@ class _CompanyDescriptionField extends StatelessWidget {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.auto_fix_high, size: 14, color: AppColors.primary),
+                    Icon(
+                      Icons.auto_fix_high,
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
                     SizedBox(width: 6),
                     Text(
                       'AI Help',

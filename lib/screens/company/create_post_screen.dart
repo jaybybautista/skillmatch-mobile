@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/error_message.dart';
+import '../../services/company_service.dart';
 import '../../widgets/company_screen_header.dart';
+import 'company_posting.dart';
 
-/// The company's 3-step "Create Post" flow — Basic Info, Responsibilities,
-/// Skills — reached from [CompanyPostingsScreen]'s "New Post" button.
+/// The company's 3-step posting flow - Basic Info, Responsibilities, Skills -
+/// reached from [CompanyPostingsScreen]'s "New Post" button.
 ///
-/// TODO: not wired to the backend yet — there is no company-postings
-/// endpoint to save against (see `CompanyPosting`), so "Post" just confirms
-/// and returns to the list like every other unbuilt company action.
+/// Saves through POST/PUT /api/company/postings, which go through the shared
+/// CompanyPostingService: the same `internships` row, the same deduplicated
+/// responsibility and skill rows, and the same mirrored `required_skills`
+/// column the website's own posting form writes. So a posting created on the
+/// phone is editable on the web, and the matcher sees it either way.
+///
+/// Pass [posting] to edit an existing one instead of creating a new one.
 class CreatePostScreen extends StatefulWidget {
-  const CreatePostScreen({super.key});
+  const CreatePostScreen({super.key, this.posting, this.service});
+
+  /// The posting being edited, or null when creating a new one.
+  final CompanyPosting? posting;
+
+  final CompanyService? service;
 
   @override
   State<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -18,7 +30,11 @@ class CreatePostScreen extends StatefulWidget {
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
   static const _totalSteps = 3;
+
+  late final CompanyService _service = widget.service ?? CompanyService();
+
   int _step = 1;
+  bool _isSaving = false;
 
   final _jobRole = TextEditingController();
   final _slot = TextEditingController();
@@ -29,6 +45,19 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _skillInput = TextEditingController();
   final _skills = <String>[];
 
+  bool get _isEditing => widget.posting != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.posting;
+    if (existing == null) return;
+    _jobRole.text = existing.title;
+    _slot.text = existing.openSlots.toString();
+    _responsibilities.addAll(existing.responsibilities);
+    _skills.addAll(existing.skills);
+  }
+
   @override
   void dispose() {
     _jobRole.dispose();
@@ -38,18 +67,115 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.dispose();
   }
 
-  void _next() {
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Whether the step on screen is ready, saying why when it isn't.
+  ///
+  /// These are the same three requirements CompanyPostingService::rules()
+  /// enforces server-side, checked here so a company isn't walked through the
+  /// whole wizard only to be rejected at the end of it.
+  bool _validateStep() {
+    switch (_step) {
+      case 1:
+        if (_jobRole.text.trim().isEmpty) {
+          _notify('Give the posting a job role first.');
+          return false;
+        }
+        final slots = int.tryParse(_slot.text.trim());
+        if (slots == null || slots < 1) {
+          _notify('Enter how many slots are open - at least 1.');
+          return false;
+        }
+        return true;
+      case 2:
+        // Anything typed but not yet added with "+" still counts: losing it
+        // silently at the step boundary is the easiest way to be told a step
+        // is empty when it visibly isn't.
+        _addResponsibility();
+        if (_responsibilities.isEmpty) {
+          _notify('Add at least one responsibility.');
+          return false;
+        }
+        return true;
+      default:
+        _addSkill();
+        if (_skills.isEmpty) {
+          _notify('Add at least one required skill.');
+          return false;
+        }
+        return true;
+    }
+  }
+
+  Future<void> _next() async {
+    if (_isSaving) return;
+    if (!_validateStep()) return;
+
     if (_step < _totalSteps) {
       setState(() => _step++);
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Posting a new internship is coming soon.')),
-    );
-    Navigator.of(context).pop();
+
+    await _save();
+  }
+
+  Future<void> _save() async {
+    setState(() => _isSaving = true);
+
+    // Resolved before the await: once the screen pops, this State's context
+    // is gone, but the app-level messenger the snack bar lands on is not.
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final slots = int.parse(_slot.text.trim());
+
+    try {
+      final saved = _isEditing
+          ? await _service.updatePosting(
+              id: widget.posting!.id,
+              jobRole: _jobRole.text.trim(),
+              slots: slots,
+              responsibilities: _responsibilities,
+              skills: _skills,
+            )
+          : await _service.createPosting(
+              jobRole: _jobRole.text.trim(),
+              slots: slots,
+              responsibilities: _responsibilities,
+              skills: _skills,
+            );
+
+      if (!mounted) return;
+      navigator.pop(saved);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            _isEditing
+                ? '"${saved.title}" updated.'
+                : '"${saved.title}" has been posted.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      _notify(
+        messageForError(
+          e,
+          _isEditing
+              ? 'Could not save your changes. Check your connection and try again.'
+              : 'Could not post this internship. Check your connection and try again.',
+        ),
+      );
+    }
   }
 
   void _back() {
+    if (_isSaving) return;
     if (_step == 1) {
       Navigator.of(context).maybePop();
       return;
@@ -59,7 +185,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   void _addResponsibility() {
     final text = _responsibilityInput.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _responsibilities.contains(text)) {
+      // Duplicates are dropped server-side anyway, so don't let one look
+      // added here and then quietly vanish on save.
+      _responsibilityInput.clear();
+      return;
+    }
     setState(() {
       _responsibilities.add(text);
       _responsibilityInput.clear();
@@ -71,7 +202,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   void _addSkill() {
     final text = _skillInput.text.trim();
-    if (text.isEmpty || _skills.contains(text)) return;
+    if (text.isEmpty || _skills.contains(text)) {
+      _skillInput.clear();
+      return;
+    }
     setState(() {
       _skills.add(text);
       _skillInput.clear();
@@ -86,7 +220,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          CompanyScreenHeader(title: 'Create Post', onBack: _back),
+          CompanyScreenHeader(
+            title: _isEditing ? 'Edit Post' : 'Create Post',
+            onBack: _back,
+          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
@@ -115,7 +252,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             showPrevious: _step > 1,
             onPrevious: _back,
             onNext: _next,
-            nextLabel: _step == _totalSteps ? 'Post' : 'Next',
+            isBusy: _isSaving,
+            nextLabel: _step == _totalSteps
+                ? (_isEditing ? 'Save changes' : 'Post')
+                : 'Next',
           ),
         ],
       ),
@@ -158,12 +298,17 @@ class _CreatePostFooter extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.nextLabel,
+    this.isBusy = false,
   });
 
   final bool showPrevious;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final String nextLabel;
+
+  /// True while the posting is being saved: both buttons go dead so a second
+  /// tap can't create the posting twice.
+  final bool isBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +321,7 @@ class _CreatePostFooter extends StatelessWidget {
             if (showPrevious) ...[
               Expanded(
                 child: OutlinedButton(
-                  onPressed: onPrevious,
+                  onPressed: isBusy ? null : onPrevious,
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(52),
                     foregroundColor: AppColors.primary,
@@ -192,14 +337,23 @@ class _CreatePostFooter extends StatelessWidget {
             ],
             Expanded(
               child: ElevatedButton(
-                onPressed: onNext,
+                onPressed: isBusy ? null : onNext,
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(52),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Text(nextLabel),
+                child: isBusy
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(nextLabel),
               ),
             ),
           ],

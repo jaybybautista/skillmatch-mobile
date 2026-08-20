@@ -26,7 +26,8 @@ class StatusBadge extends StatelessWidget {
     'unplaced': Color(0xFF64748B),
   };
 
-  Color get _color => _colors[status.toLowerCase().trim()] ?? const Color(0xFF64748B);
+  Color get _color =>
+      _colors[status.toLowerCase().trim()] ?? const Color(0xFF64748B);
 
   String get _label {
     final cleaned = status.replaceAll('_', ' ').trim();
@@ -37,8 +38,14 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14, vertical: compact ? 5 : 8),
-      decoration: BoxDecoration(color: _color, borderRadius: BorderRadius.circular(999)),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 14,
+        vertical: compact ? 5 : 8,
+      ),
+      decoration: BoxDecoration(
+        color: _color,
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Text(
         _label,
         style: TextStyle(

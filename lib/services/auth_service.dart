@@ -57,10 +57,15 @@ class AuthService extends ChangeNotifier {
 
   Future<List<Campus>> fetchCampuses() async {
     final response = await _client.get('/auth/campuses');
-    return (response['campuses'] as List).map((e) => Campus.fromJson(e as Map<String, dynamic>)).toList();
+    return (response['campuses'] as List)
+        .map((e) => Campus.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<AppUser> login({required String email, required String password}) async {
+  Future<AppUser> login({
+    required String email,
+    required String password,
+  }) async {
     final response = await _client.post('/auth/login', {
       'email': email,
       'password': password,
@@ -99,12 +104,16 @@ class AuthService extends ChangeNotifier {
   /// Throws [ApiException] for any real failure.
   Future<AppUser?> loginWithGoogle() async {
     try {
-      _googleInitFuture ??= _googleSignIn.initialize(serverClientId: ApiConfig.googleServerClientId);
+      _googleInitFuture ??= _googleSignIn.initialize(
+        serverClientId: ApiConfig.googleServerClientId,
+      );
       await _googleInitFuture;
     } catch (e) {
       debugPrint('[Google] initialize() failed: $e');
       _googleInitFuture = null; // Let the next attempt retry initialization.
-      throw ApiException('Google sign-in is not set up correctly yet. Please try again shortly.');
+      throw ApiException(
+        'Google sign-in is not set up correctly yet. Please try again shortly.',
+      );
     }
 
     final GoogleSignInAccount account;
@@ -112,7 +121,9 @@ class AuthService extends ChangeNotifier {
       account = await _googleSignIn.authenticate();
       debugPrint('[Google] authenticate() succeeded for ${account.email}');
     } on GoogleSignInException catch (e) {
-      debugPrint('[Google] authenticate() threw GoogleSignInException code=${e.code} description=${e.description}');
+      debugPrint(
+        '[Google] authenticate() threw GoogleSignInException code=${e.code} description=${e.description}',
+      );
 
       // The Android plugin sometimes reports real configuration failures
       // (e.g. "Account reauth failed" when the app's OAuth client isn't
@@ -120,10 +131,14 @@ class AuthService extends ChangeNotifier {
       // same `canceled` code as a genuine user dismissal. Only treat it as
       // a silent cancel when there's no description — a real description
       // means something actually went wrong and should be shown.
-      final isGenuineCancel = e.code == GoogleSignInExceptionCode.canceled && (e.description?.isEmpty ?? true);
+      final isGenuineCancel =
+          e.code == GoogleSignInExceptionCode.canceled &&
+          (e.description?.isEmpty ?? true);
       if (isGenuineCancel) return null;
 
-      throw ApiException('Google sign-in failed: ${e.description ?? e.code.name}');
+      throw ApiException(
+        'Google sign-in failed: ${e.description ?? e.code.name}',
+      );
     }
 
     final idToken = account.authentication.idToken;
@@ -135,7 +150,9 @@ class AuthService extends ChangeNotifier {
       );
     }
 
-    debugPrint('[Google] posting id_token to /auth/google at ${ApiConfig.baseUrl}');
+    debugPrint(
+      '[Google] posting id_token to /auth/google at ${ApiConfig.baseUrl}',
+    );
     final Map<String, dynamic> response;
     try {
       response = await _client.post('/auth/google', {'id_token': idToken});
@@ -177,12 +194,20 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<String> sendPasswordResetCode(String email) async {
-    final response = await _client.post('/auth/forgot-password', {'email': email});
+    final response = await _client.post('/auth/forgot-password', {
+      'email': email,
+    });
     return response['message'] as String;
   }
 
-  Future<void> verifyPasswordResetCode({required String email, required String code}) async {
-    await _client.post('/auth/forgot-password/verify', {'email': email, 'code': code});
+  Future<void> verifyPasswordResetCode({
+    required String email,
+    required String code,
+  }) async {
+    await _client.post('/auth/forgot-password/verify', {
+      'email': email,
+      'code': code,
+    });
   }
 
   Future<void> resetPassword({

@@ -68,8 +68,12 @@ class EditableProfile {
       province: json['province'] as String?,
       cityMunicipality: json['city_municipality'] as String?,
       barangay: json['barangay'] as String?,
-      resume: json['resume'] != null ? ResumeInfo.fromJson(json['resume'] as Map<String, dynamic>) : null,
-      campuses: (json['campuses'] as List? ?? []).map((e) => CampusOption.fromJson(e as Map<String, dynamic>)).toList(),
+      resume: json['resume'] != null
+          ? ResumeInfo.fromJson(json['resume'] as Map<String, dynamic>)
+          : null,
+      campuses: (json['campuses'] as List? ?? [])
+          .map((e) => CampusOption.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

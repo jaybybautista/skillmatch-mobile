@@ -4,15 +4,16 @@ import '../../core/app_theme.dart';
 import '../../core/company_navigation.dart';
 import '../../models/company_profile.dart';
 import '../../services/company_service.dart';
+import '../../services/notification_service.dart';
+import '../../widgets/matcha_launcher.dart';
 import '../../widgets/company_bottom_nav.dart';
 import '../../widgets/company_sidebar.dart';
-import '../../widgets/draggable_chatbot_button.dart';
-import '../chatbot/matcha_chat_screen.dart';
+import '../student/matches/internship_search_screen.dart';
 import 'company_posting.dart';
 import 'company_postings_screen.dart';
 import 'company_profile_screen.dart';
 import 'create_assessment_screen.dart';
-import 'posting_applicants_screen.dart';
+import 'posting_detail_screen.dart';
 
 /// Home dashboard shown to a company account, mirroring the student
 /// [HomeScreen]'s layout (header + search, rounded white body, floating
@@ -39,6 +40,8 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Starts the shared 15-second poll that feeds the sidebar's unread badge.
+    NotificationService.instance.startPolling();
     _load();
   }
 
@@ -61,10 +64,10 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen> {
     }
   }
 
-  void _comingSoon(BuildContext context, String what) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$what is coming soon.')));
+  @override
+  void dispose() {
+    NotificationService.instance.stopPolling();
+    super.dispose();
   }
 
   @override
@@ -99,7 +102,10 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen> {
                             // Builder so openDrawer() sees the Scaffold above it.
                             Builder(
                               builder: (context) => IconButton(
-                                icon: const Icon(Icons.menu, color: Colors.white),
+                                icon: const Icon(
+                                  Icons.menu,
+                                  color: Colors.white,
+                                ),
                                 onPressed: Scaffold.of(context).openDrawer,
                                 tooltip: 'Menu',
                                 padding: EdgeInsets.zero,
@@ -145,8 +151,11 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen> {
                         ),
                         const SizedBox(height: 20),
                         _SearchBar(
-                          onTap: () =>
-                              _comingSoon(context, 'Internship search'),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const InternshipSearchScreen(),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -254,8 +263,9 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen> {
                                     width: cardWidth,
                                     onTap: () => Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) => PostingApplicantsScreen(
-                                          posting: posting,
+                                        builder: (_) => PostingDetailScreen(
+                                          postingId: posting.id,
+                                          initialPosting: posting,
                                         ),
                                       ),
                                     ),
@@ -297,14 +307,7 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen> {
               ),
             ],
           ),
-          DraggableChatbotButton(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                fullscreenDialog: true,
-                builder: (_) => const MatchaChatScreen(),
-              ),
-            ),
-          ),
+          const MatchaLauncher(),
         ],
       ),
       bottomNavigationBar: CompanyBottomNav(
@@ -339,8 +342,8 @@ class _HeaderIconButton extends StatelessWidget {
 }
 
 /// Search field styled as a plain tap target rather than a real [TextField]
-/// — it only ever navigates elsewhere (there's no company search screen to
-/// type into yet), so a decorative caret and a suffix search button copy the
+/// - it only ever navigates to [InternshipSearchScreen], where the typing
+/// actually happens, so a decorative caret and a suffix search button copy the
 /// reference design exactly instead of fighting [InputDecoration]'s built-in
 /// icon slots.
 class _SearchBar extends StatelessWidget {

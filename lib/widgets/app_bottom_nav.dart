@@ -13,7 +13,11 @@ const List<({IconData icon, String label})> appNavItems = [
 /// highlights the active tab; [onSelect] is only called for a *different*
 /// tab than the one currently shown.
 class AppBottomNav extends StatelessWidget {
-  const AppBottomNav({super.key, required this.currentIndex, required this.onSelect});
+  const AppBottomNav({
+    super.key,
+    required this.currentIndex,
+    required this.onSelect,
+  });
 
   final int currentIndex;
   final void Function(int index) onSelect;
@@ -39,7 +43,9 @@ class AppBottomNav extends StatelessWidget {
                       children: [
                         Icon(
                           appNavItems[i].icon,
-                          color: i == currentIndex ? AppColors.primary : AppColors.textMuted,
+                          color: i == currentIndex
+                              ? AppColors.primary
+                              : AppColors.textMuted,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -47,8 +53,12 @@ class AppBottomNav extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 11,
-                            color: i == currentIndex ? AppColors.primary : AppColors.textMuted,
-                            fontWeight: i == currentIndex ? FontWeight.w600 : FontWeight.normal,
+                            color: i == currentIndex
+                                ? AppColors.primary
+                                : AppColors.textMuted,
+                            fontWeight: i == currentIndex
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                       ],

@@ -8,19 +8,28 @@ class AssessmentService {
   final ApiClient _client = ApiClient.instance;
 
   Future<AssessmentIntro> fetchIntro(int assessmentId) async {
-    final response = await _client.get('/student/assessments/$assessmentId', authenticated: true);
+    final response = await _client.get(
+      '/student/assessments/$assessmentId',
+      authenticated: true,
+    );
     return AssessmentIntro.fromJson(response);
   }
 
   /// Whether the student may still submit an attempt. Polled while answering,
   /// so finishing the same test on the web closes the quiz here immediately.
   Future<bool> isAttemptOpen(int assessmentId) async {
-    final response = await _client.get('/student/assessments/$assessmentId/state', authenticated: true);
+    final response = await _client.get(
+      '/student/assessments/$assessmentId/state',
+      authenticated: true,
+    );
     return response['open'] as bool? ?? true;
   }
 
   Future<AssessmentQuiz> fetchQuiz(int assessmentId) async {
-    final response = await _client.get('/student/assessments/$assessmentId/quiz', authenticated: true);
+    final response = await _client.get(
+      '/student/assessments/$assessmentId/quiz',
+      authenticated: true,
+    );
     return AssessmentQuiz.fromJson(response);
   }
 
@@ -47,7 +56,10 @@ class AssessmentService {
   }
 
   Future<AssessmentAttemptResult> fetchResult(int assessmentId) async {
-    final response = await _client.get('/student/assessments/$assessmentId/result', authenticated: true);
+    final response = await _client.get(
+      '/student/assessments/$assessmentId/result',
+      authenticated: true,
+    );
     return AssessmentAttemptResult.fromJson(response);
   }
 }

@@ -27,7 +27,10 @@ class QuizStateStore {
   String get _stateKey => 'student_quiz_state_$assessmentId';
   String get _timerKey => 'student_quiz_timer_end_$assessmentId';
 
-  Future<void> save({required int step, required Map<int, Object> answers}) async {
+  Future<void> save({
+    required int step,
+    required Map<int, Object> answers,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _stateKey,
@@ -45,16 +48,22 @@ class QuizStateStore {
 
     try {
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
-      final rawAnswers = decoded['answers'] as Map<String, dynamic>? ?? const {};
+      final rawAnswers =
+          decoded['answers'] as Map<String, dynamic>? ?? const {};
 
       final answers = <int, Object>{};
       rawAnswers.forEach((key, value) {
         final questionId = int.tryParse(key);
         if (questionId == null || value == null) return;
-        answers[questionId] = value is List ? value.map((e) => (e as num).toInt()).toList() : value as Object;
+        answers[questionId] = value is List
+            ? value.map((e) => (e as num).toInt()).toList()
+            : value as Object;
       });
 
-      return SavedQuizState(step: (decoded['step'] as num?)?.toInt() ?? 0, answers: answers);
+      return SavedQuizState(
+        step: (decoded['step'] as num?)?.toInt() ?? 0,
+        answers: answers,
+      );
     } catch (_) {
       // Corrupt or written by an older build — start clean rather than crash.
       return null;
@@ -68,7 +77,8 @@ class QuizStateStore {
     final existing = prefs.getInt(_timerKey);
     if (existing != null) return existing;
 
-    final deadline = DateTime.now().millisecondsSinceEpoch + limit.inMilliseconds;
+    final deadline =
+        DateTime.now().millisecondsSinceEpoch + limit.inMilliseconds;
     await prefs.setInt(_timerKey, deadline);
     return deadline;
   }

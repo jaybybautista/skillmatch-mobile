@@ -8,8 +8,13 @@ class InternshipService {
   final ApiClient _client = ApiClient.instance;
 
   Future<List<Internship>> fetchRecommendations({int limit = 5}) async {
-    final response = await _client.get('/internships/recommendations?limit=$limit', authenticated: true);
-    return (response['internships'] as List).map((e) => Internship.fromJson(e as Map<String, dynamic>)).toList();
+    final response = await _client.get(
+      '/internships/recommendations?limit=$limit',
+      authenticated: true,
+    );
+    return (response['internships'] as List)
+        .map((e) => Internship.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// Browse or search postings.
@@ -26,7 +31,9 @@ class InternshipService {
 
     final path = '/internships?${Uri(queryParameters: params).query}';
     final response = await _client.get(path, authenticated: true);
-    return (response['internships'] as List).map((e) => Internship.fromJson(e as Map<String, dynamic>)).toList();
+    return (response['internships'] as List)
+        .map((e) => Internship.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// Recomputes match scores for the current student against every open
@@ -36,8 +43,13 @@ class InternshipService {
   }
 
   Future<List<Internship>> fetchBookmarks() async {
-    final response = await _client.get('/student/bookmarks', authenticated: true);
-    return (response['internships'] as List).map((e) => Internship.fromJson(e as Map<String, dynamic>)).toList();
+    final response = await _client.get(
+      '/student/bookmarks',
+      authenticated: true,
+    );
+    return (response['internships'] as List)
+        .map((e) => Internship.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<InternshipDetail> fetchDetail(int id) async {
@@ -47,7 +59,11 @@ class InternshipService {
 
   /// Returns the new bookmarked state.
   Future<bool> toggleBookmark(int id) async {
-    final response = await _client.post('/internships/$id/bookmark', {}, authenticated: true);
+    final response = await _client.post(
+      '/internships/$id/bookmark',
+      {},
+      authenticated: true,
+    );
     return response['bookmarked'] as bool;
   }
 

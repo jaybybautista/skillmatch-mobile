@@ -21,14 +21,10 @@ class ChatbotService {
 
     // The AI call can be slow, so this uses the long timeout rather than the
     // standard one.
-    final response = await _client.postLong(
-      '/chatbot',
-      {
-        'message': message,
-        'history': trimmed.map((m) => m.toHistoryJson()).toList(),
-      },
-      authenticated: true,
-    );
+    final response = await _client.postLong('/chatbot', {
+      'message': message,
+      'history': trimmed.map((m) => m.toHistoryJson()).toList(),
+    }, authenticated: true);
 
     return ChatReply.fromJson(response);
   }

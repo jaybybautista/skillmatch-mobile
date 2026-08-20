@@ -18,8 +18,9 @@ class RoadmapStep {
       timeframe: json['timeframe'] as String? ?? '',
       title: json['title'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      suggestedSkills:
-          (json['suggested_skills'] as List? ?? const []).map((e) => e.toString()).toList(),
+      suggestedSkills: (json['suggested_skills'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
     );
   }
 }
@@ -49,13 +50,21 @@ class SkillRoadmap {
   /// How many of the market's top trending skills the student already has,
   /// as a 0-1 fraction — purely a presentational summary of the same
   /// possessed/trending sets, not a new comparison.
-  double get masteryFraction => trendingSkills.isEmpty ? 0 : possessedSkills.length / trendingSkills.length;
+  double get masteryFraction => trendingSkills.isEmpty
+      ? 0
+      : possessedSkills.length / trendingSkills.length;
 
   factory SkillRoadmap.fromJson(Map<String, dynamic> json) {
     return SkillRoadmap(
-      possessedSkills: (json['possessed_skills'] as List? ?? const []).map((e) => e.toString()).toList(),
-      suggestedSkills: (json['suggested_skills'] as List? ?? const []).map((e) => e.toString()).toList(),
-      trendingSkills: (json['trending_skills'] as List? ?? const []).map((e) => e.toString()).toList(),
+      possessedSkills: (json['possessed_skills'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      suggestedSkills: (json['suggested_skills'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      trendingSkills: (json['trending_skills'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
       skillDemand: (json['skill_demand'] as Map<String, dynamic>? ?? const {})
           .map((key, value) => MapEntry(key, (value as num).toInt())),
       steps: (json['steps'] as List? ?? const [])

@@ -1,3 +1,5 @@
+import '../core/json_parse.dart';
+
 /// An internship posting, optionally scored against the current student's
 /// skills via the backend's SkillMatchService (the same cosine-similarity AI
 /// endpoint — or its local fallback — that powers the web dashboard).
@@ -19,6 +21,7 @@ class Internship {
     required this.id,
     required this.title,
     required this.companyName,
+    this.companyId,
     this.companyLogoUrl,
     this.location,
     required this.slotsAvailable,
@@ -37,6 +40,10 @@ class Internship {
   final int id;
   final String title;
   final String companyName;
+
+  /// The owning company's row id. Used by search to tell a company its own
+  /// posting apart from someone else's.
+  final int? companyId;
   final String? companyLogoUrl;
   final String? location;
   final int slotsAvailable;
@@ -72,6 +79,7 @@ class Internship {
       id: json['id'] as int,
       title: json['title'] as String,
       companyName: json['company_name'] as String,
+      companyId: asIntOrNull(json['company_id']),
       companyLogoUrl: json['company_logo_url'] as String?,
       location: json['location'] as String?,
       slotsAvailable: json['slots_available'] as int? ?? 0,
@@ -80,8 +88,12 @@ class Internship {
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
       distanceLabel: json['distance_formatted'] as String?,
       matchReason: json['match_reason'] as String?,
-      matchedSkills: (json['matched_skills'] as List? ?? []).map((e) => e.toString()).toList(),
-      missingSkills: (json['missing_skills'] as List? ?? []).map((e) => e.toString()).toList(),
+      matchedSkills: (json['matched_skills'] as List? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      missingSkills: (json['missing_skills'] as List? ?? [])
+          .map((e) => e.toString())
+          .toList(),
       skills: (json['skills'] as List? ?? []).map((e) => e.toString()).toList(),
       isBookmarked: json['is_bookmarked'] as bool? ?? false,
       isApplied: json['is_applied'] as bool? ?? false,

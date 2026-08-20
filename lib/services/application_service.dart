@@ -17,7 +17,10 @@ class ApplicationService {
 
   /// The 15-second poll, mirroring the web layout's own status check.
   Future<ApplicationsStatusSnapshot> fetchStatusSnapshot() async {
-    final response = await _client.get('/student/status-check', authenticated: true);
+    final response = await _client.get(
+      '/student/status-check',
+      authenticated: true,
+    );
     return ApplicationsStatusSnapshot.fromJson(response);
   }
 }

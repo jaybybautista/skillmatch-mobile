@@ -12,23 +12,23 @@ int _nextDraftId = 0;
 /// author (see [QuestionType]'s own doc comment).
 extension QuestionTypeLabel on QuestionType {
   String get label => switch (this) {
-        QuestionType.multipleChoice => 'Multiple Choice',
-        QuestionType.checkbox => 'Checkboxes',
-        QuestionType.dropdown => 'Dropdown',
-        QuestionType.identification => 'Identification',
-        QuestionType.shortAnswer => 'Short Answer',
-        QuestionType.longAnswer => 'Long Answer',
-      };
+    QuestionType.multipleChoice => 'Multiple Choice',
+    QuestionType.checkbox => 'Checkboxes',
+    QuestionType.dropdown => 'Dropdown',
+    QuestionType.identification => 'Identification',
+    QuestionType.shortAnswer => 'Short Answer',
+    QuestionType.longAnswer => 'Long Answer',
+  };
 
   /// The value the API stores in `questions.question_type`.
   String get apiValue => switch (this) {
-        QuestionType.multipleChoice => 'multiple_choice',
-        QuestionType.checkbox => 'checkbox',
-        QuestionType.dropdown => 'dropdown',
-        QuestionType.identification => 'identification',
-        QuestionType.shortAnswer => 'short_answer',
-        QuestionType.longAnswer => 'long_answer',
-      };
+    QuestionType.multipleChoice => 'multiple_choice',
+    QuestionType.checkbox => 'checkbox',
+    QuestionType.dropdown => 'dropdown',
+    QuestionType.identification => 'identification',
+    QuestionType.shortAnswer => 'short_answer',
+    QuestionType.longAnswer => 'long_answer',
+  };
 }
 
 /// One answer option being authored in [CreateAssessmentScreen]'s question
@@ -36,8 +36,8 @@ extension QuestionTypeLabel on QuestionType {
 /// question reordering without losing cursor/focus state.
 class DraftOption {
   DraftOption({String text = ''})
-      : id = _nextDraftId++,
-        controller = TextEditingController(text: text);
+    : id = _nextDraftId++,
+      controller = TextEditingController(text: text);
 
   final int id;
   final TextEditingController controller;
@@ -52,18 +52,22 @@ class DraftOption {
 /// [AssessmentQuestion] the student side receives.
 class DraftQuestion {
   DraftQuestion()
-      : id = _nextDraftId++,
-        textController = TextEditingController(),
-        descriptionController = TextEditingController(),
-        options = List.generate(4, (_) => DraftOption());
+    : id = _nextDraftId++,
+      textController = TextEditingController(),
+      descriptionController = TextEditingController(),
+      options = List.generate(4, (_) => DraftOption());
 
   /// Rebuilds a draft from an assessment already stored on the server, so
   /// editing starts from what is really saved rather than a blank form.
   DraftQuestion.fromExisting(CompanyAssessmentQuestion question)
-      : id = _nextDraftId++,
-        textController = TextEditingController(text: question.text),
-        descriptionController = TextEditingController(text: question.description ?? ''),
-        options = question.choices.map((c) => DraftOption(text: c.text)).toList() {
+    : id = _nextDraftId++,
+      textController = TextEditingController(text: question.text),
+      descriptionController = TextEditingController(
+        text: question.description ?? '',
+      ),
+      options = question.choices
+          .map((c) => DraftOption(text: c.text))
+          .toList() {
     type = question.type;
     imageUrl = question.imageUrl;
 
@@ -107,7 +111,8 @@ class DraftQuestion {
   /// answer can be right.
   Set<int> correctOptionIds = {};
 
-  bool get hasImage => imagePath != null || (imageUrl != null && imageUrl!.isNotEmpty);
+  bool get hasImage =>
+      imagePath != null || (imageUrl != null && imageUrl!.isNotEmpty);
 
   bool isCorrect(DraftOption option) => type.isMultiSelect
       ? correctOptionIds.contains(option.id)
@@ -120,15 +125,15 @@ class DraftQuestion {
   /// the same filtering here as well would just be a second place to keep in
   /// step.
   Map<String, dynamic> toPayload() => {
-        'type': type.apiValue,
-        'question_text': textController.text.trim(),
-        'description': descriptionController.text.trim(),
-        'image_url': _imagePayload() ?? '',
-        'choices': [
-          for (final option in options)
-            {'text': option.text, 'is_correct': isCorrect(option)},
-        ],
-      };
+    'type': type.apiValue,
+    'question_text': textController.text.trim(),
+    'description': descriptionController.text.trim(),
+    'image_url': _imagePayload() ?? '',
+    'choices': [
+      for (final option in options)
+        {'text': option.text, 'is_correct': isCorrect(option)},
+    ],
+  };
 
   /// A newly picked file is inlined as a `data:` URI, which is exactly what
   /// the web builder stores for an inline image — so the student quiz renders

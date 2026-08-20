@@ -1,16 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
 import '../../../models/internship.dart';
 import '../../../models/person_search_result.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/internship_service.dart';
 import '../../../services/people_search_service.dart';
 import '../../../widgets/empty_results.dart';
 import '../../../widgets/match_card.dart';
 import '../../chatbot/chat_destinations.dart';
+import '../../company/posting_detail_screen.dart';
+import '../internship/internship_detail_screen.dart';
 
 /// What this screen searches for — internships (the original, and default,
 /// behavior) or one kind of account. Matches the web global search's type
@@ -26,7 +30,8 @@ enum _SearchScope {
   final String label;
 }
 
-/// A search-first screen opened by tapping the search bar on Home.
+/// A search-first screen opened by tapping the search bar on Home - by a
+/// student or a company, which is what the web's topbar search is for both.
 ///
 /// Internships query the same `/internships?q=` endpoint the browse list
 /// uses. Students, companies and coordinators query the same people search
@@ -90,7 +95,9 @@ class InternshipFilterButton extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textDark,
-                    fontWeight: filter == selected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: filter == selected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ],
@@ -102,7 +109,10 @@ class InternshipFilterButton extends StatelessWidget {
               width: 42,
               height: 42,
               alignment: Alignment.center,
-              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
               child: const Icon(Icons.tune, color: AppColors.primary, size: 20),
             )
           : const Padding(
@@ -115,7 +125,8 @@ class InternshipFilterButton extends StatelessWidget {
 
 class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
   late final InternshipService _service = widget.service ?? InternshipService();
-  late final PeopleSearchService _peopleService = widget.peopleService ?? PeopleSearchService();
+  late final PeopleSearchService _peopleService =
+      widget.peopleService ?? PeopleSearchService();
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
 
@@ -141,7 +152,9 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
     super.initState();
     // The student tapped a search bar to get here, so the keyboard should
     // already be up.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _focusNode.requestFocus(),
+    );
   }
 
   @override
@@ -166,7 +179,10 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
       return;
     }
 
-    _debounce = Timer(const Duration(milliseconds: 400), () => _search(value.trim()));
+    _debounce = Timer(
+      const Duration(milliseconds: 400),
+      () => _search(value.trim()),
+    );
   }
 
   /// Changing the ordering re-queries, since the server does the sorting.
@@ -204,7 +220,8 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
       _error = null;
     });
 
-    bool stillCurrent() => mounted && _scope == scope && _controller.text.trim() == query;
+    bool stillCurrent() =>
+        mounted && _scope == scope && _controller.text.trim() == query;
 
     try {
       if (scope == _SearchScope.internship) {
@@ -218,7 +235,10 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
         return;
       }
 
-      final results = await _peopleService.search(query: query, type: _personTypeFor(scope));
+      final results = await _peopleService.search(
+        query: query,
+        type: _personTypeFor(scope),
+      );
       if (!stillCurrent()) return;
       setState(() {
         _peopleResults = results;
@@ -235,11 +255,65 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
   }
 
   PersonSearchType _personTypeFor(_SearchScope scope) => switch (scope) {
-        _SearchScope.student => PersonSearchType.student,
-        _SearchScope.company => PersonSearchType.company,
-        _SearchScope.coordinator => PersonSearchType.coordinator,
-        _SearchScope.internship => PersonSearchType.all,
-      };
+    _SearchScope.student => PersonSearchType.student,
+    _SearchScope.company => PersonSearchType.company,
+    _SearchScope.coordinator => PersonSearchType.coordinator,
+    _SearchScope.internship => PersonSearchType.all,
+  };
+
+  /// True when a company is searching. The scopes are the same either way -
+  /// the web offers a company the identical four - but an internship result
+  /// means something different: a company either owns the posting or is
+  /// looking at someone else's, and neither is a thing it can apply to.
+  ///
+  /// Falls back to the student behaviour when there is no session to read
+  /// (a widget test, say).
+  bool get _isCompany {
+    try {
+      return context.read<AuthService>().currentUser?.role == 'company';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  int? get _viewerCompanyId {
+    try {
+      return context.read<AuthService>().currentUser?.companyId;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Where an internship result taps through to.
+  ///
+  /// A student gets the posting they can apply to. A company gets its own
+  /// posting page when the posting is theirs - the same page the web's search
+  /// sends them to - and a read-only view of anyone else's.
+  void _openInternship(Internship internship) {
+    if (!_isCompany) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => InternshipDetailScreen(internshipId: internship.id),
+        ),
+      );
+      return;
+    }
+
+    final ownCompanyId = _viewerCompanyId;
+    final isOwnPosting =
+        ownCompanyId != null && internship.companyId == ownCompanyId;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => isOwnPosting
+            ? PostingDetailScreen(postingId: internship.id)
+            : InternshipDetailScreen(
+                internshipId: internship.id,
+                canApply: false,
+              ),
+      ),
+    );
+  }
 
   void _openPerson(PersonSearchResult result) {
     if (result.screen == null) return;
@@ -260,10 +334,14 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
         ),
         titleSpacing: 0,
         actions: [
-          // The ordering menu only makes sense for internships — companies,
-          // students and coordinators have no "Top Matches" / "Proximity".
-          if (_scope == _SearchScope.internship)
-            InternshipFilterButton(selected: _filter, onChanged: _onFilterChanged),
+          // The ordering menu only makes sense when a student is searching
+          // internships: "Top Matches" is scored against the searcher's own
+          // skills, and a company has none.
+          if (_scope == _SearchScope.internship && !_isCompany)
+            InternshipFilterButton(
+              selected: _filter,
+              onChanged: _onFilterChanged,
+            ),
         ],
         title: Padding(
           padding: const EdgeInsets.only(right: 4),
@@ -281,12 +359,23 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
               filled: true,
               fillColor: Colors.white,
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              prefixIcon: const Icon(Icons.search, color: AppColors.textMuted, size: 20),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppColors.textMuted,
+                size: 20,
+              ),
               suffixIcon: _controller.text.isEmpty
                   ? null
                   : IconButton(
-                      icon: const Icon(Icons.close, size: 18, color: AppColors.textMuted),
+                      icon: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: AppColors.textMuted,
+                      ),
                       onPressed: () {
                         _controller.clear();
                         _onChanged('');
@@ -383,7 +472,10 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
-              '$count ${count == 1 ? 'result' : 'results'} for "$_shownQuery" · ${_filter.label}',
+              _isCompany
+                  ? '$count ${count == 1 ? 'result' : 'results'} for "$_shownQuery"'
+                  : '$count ${count == 1 ? 'result' : 'results'} for '
+                        '"$_shownQuery" · ${_filter.label}',
               style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
             ),
           );
@@ -394,7 +486,12 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            MatchCard(internship: internship),
+            MatchCard(
+              internship: internship,
+              onOpen: () => _openInternship(internship),
+              // Bookmarking a posting is a student action.
+              showBookmark: !_isCompany,
+            ),
             // Distance only comes back on the proximity filter, so this shows
             // exactly when it's the thing being sorted on.
             if (internship.distanceLabel != null)
@@ -402,11 +499,18 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
                 padding: const EdgeInsets.only(top: 6, left: 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.place_outlined, size: 14, color: AppColors.textMuted),
+                    const Icon(
+                      Icons.place_outlined,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       internship.distanceLabel!,
-                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -430,7 +534,12 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
       return ListView(
         padding: const EdgeInsets.fromLTRB(20, 40, 20, 32),
         children: [
-          EmptyResults(icon: Icons.wifi_off, title: 'Search failed', hint: message, padding: EdgeInsets.zero),
+          EmptyResults(
+            icon: Icons.wifi_off,
+            title: 'Search failed',
+            hint: message,
+            padding: EdgeInsets.zero,
+          ),
           const SizedBox(height: 16),
           Center(
             child: TextButton(
@@ -451,8 +560,8 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
         hint: _scope == _SearchScope.student
             ? 'Find students by name, course, or email.'
             : _scope == _SearchScope.company
-                ? 'Find companies by name, industry, or city.'
-                : 'Find coordinators by name, department, or campus.',
+            ? 'Find companies by name, industry, or city.'
+            : 'Find coordinators by name, department, or campus.',
         padding: const EdgeInsets.fromLTRB(32, 72, 32, 32),
       );
     }
@@ -486,7 +595,10 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
           );
         }
 
-        return _PersonResultTile(result: results[index - 1], onTap: _openPerson);
+        return _PersonResultTile(
+          result: results[index - 1],
+          onTap: _openPerson,
+        );
       },
     );
   }
@@ -515,7 +627,9 @@ class _ScopeTabs extends StatelessWidget {
                 onSelected: (_) => onSelected(scope),
                 labelStyle: TextStyle(
                   fontSize: 12.5,
-                  fontWeight: scope == selected ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: scope == selected
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                   color: scope == selected ? Colors.white : AppColors.textDark,
                 ),
                 selectedColor: AppColors.primary,
@@ -555,11 +669,16 @@ class _PersonResultTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: AppColors.chipBackground,
-                backgroundImage: result.avatarUrl != null ? NetworkImage(result.avatarUrl!) : null,
+                backgroundImage: result.avatarUrl != null
+                    ? NetworkImage(result.avatarUrl!)
+                    : null,
                 child: result.avatarUrl == null
                     ? Text(
                         result.initials,
-                        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       )
                     : null,
               ),
@@ -575,20 +694,30 @@ class _PersonResultTile extends StatelessWidget {
                             result.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                         if (result.badge != null)
                           Container(
                             margin: const EdgeInsets.only(left: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.chipBackground,
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
                               result.badge!,
-                              style: const TextStyle(fontSize: 10.5, color: AppColors.primary, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                       ],
@@ -597,7 +726,10 @@ class _PersonResultTile extends StatelessWidget {
                       result.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                     if (result.meta.isNotEmpty)
                       Padding(
@@ -606,13 +738,17 @@ class _PersonResultTile extends StatelessWidget {
                           result.meta,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
-              if (result.isNavigable) const Icon(Icons.chevron_right, color: AppColors.textMuted),
+              if (result.isNavigable)
+                const Icon(Icons.chevron_right, color: AppColors.textMuted),
             ],
           ),
         ),

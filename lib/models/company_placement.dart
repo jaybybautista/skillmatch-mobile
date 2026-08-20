@@ -1,3 +1,4 @@
+import '../core/json_parse.dart';
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
@@ -41,16 +42,19 @@ class CompanyPlacement {
     final parts = studentName.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
     if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length >= 2 ? 2 : 1).toUpperCase();
+      return parts.first
+          .substring(0, parts.first.length >= 2 ? 2 : 1)
+          .toUpperCase();
     }
     return (parts.first[0] + parts.last[0]).toUpperCase();
   }
 
-  factory CompanyPlacement.fromJson(Map<String, dynamic> json) => CompanyPlacement(
-        id: (json['id'] as num).toInt(),
+  factory CompanyPlacement.fromJson(Map<String, dynamic> json) =>
+      CompanyPlacement(
+        id: asInt(json['id']),
         status: json['status'] as String? ?? 'ongoing',
         statusLabel: json['status_label'] as String? ?? 'Ongoing',
-        studentId: (json['student_id'] as num?)?.toInt(),
+        studentId: asIntOrNull(json['student_id']),
         studentName: json['student_name'] as String? ?? 'Unknown',
         studentEmail: json['student_email'] as String?,
         studentAvatarUrl: json['student_avatar_url'] as String?,
@@ -77,17 +81,19 @@ class PlacementInternship {
   final List<String> skills;
   final List<String> responsibilities;
 
-  factory PlacementInternship.fromJson(Map<String, dynamic> json) => PlacementInternship(
+  factory PlacementInternship.fromJson(Map<String, dynamic> json) =>
+      PlacementInternship(
         title: json['title'] as String? ?? 'Untitled posting',
         location: json['location'] as String?,
         skills: (json['skills'] as List? ?? const []).map((e) => '$e').toList(),
-        responsibilities:
-            (json['responsibilities'] as List? ?? const []).map((e) => '$e').toList(),
+        responsibilities: (json['responsibilities'] as List? ?? const [])
+            .map((e) => '$e')
+            .toList(),
       );
 }
 
 /// Everything the placement detail screen shows: the list fields plus the
-/// student's particulars, the posting, the hours, and the coordinator.
+/// student's particulars, the posting, the evaluation, and the coordinator.
 class CompanyPlacementDetail {
   const CompanyPlacementDetail({
     required this.placement,
@@ -100,8 +106,6 @@ class CompanyPlacementDetail {
     required this.internship,
     required this.coordinatorName,
     required this.coordinatorEmail,
-    required this.hoursRendered,
-    required this.requiredHours,
     required this.evaluationScore,
     required this.remarks,
   });
@@ -116,35 +120,28 @@ class CompanyPlacementDetail {
   final PlacementInternship? internship;
   final String? coordinatorName;
   final String? coordinatorEmail;
-  final int hoursRendered;
-  final int requiredHours;
   final double? evaluationScore;
   final String? remarks;
-
-  /// Fraction of the required hours logged so far, clamped to 0–1 so an
-  /// over-run doesn't overflow the progress bar.
-  double get hoursProgress {
-    if (requiredHours <= 0) return 0;
-    return (hoursRendered / requiredHours).clamp(0.0, 1.0);
-  }
 
   factory CompanyPlacementDetail.fromJson(Map<String, dynamic> json) =>
       CompanyPlacementDetail(
         placement: CompanyPlacement.fromJson(json),
         course: json['course'] as String?,
-        yearLevel: (json['year_level'] as num?)?.toInt(),
+        yearLevel: asIntOrNull(json['year_level']),
         campus: json['campus'] as String?,
         contactNumber: json['contact_number'] as String?,
         address: json['address'] as String?,
-        studentSkills: (json['student_skills'] as List? ?? const []).map((e) => '$e').toList(),
+        studentSkills: (json['student_skills'] as List? ?? const [])
+            .map((e) => '$e')
+            .toList(),
         internship: json['internship'] == null
             ? null
-            : PlacementInternship.fromJson(json['internship'] as Map<String, dynamic>),
+            : PlacementInternship.fromJson(
+                json['internship'] as Map<String, dynamic>,
+              ),
         coordinatorName: json['coordinator_name'] as String?,
         coordinatorEmail: json['coordinator_email'] as String?,
-        hoursRendered: (json['hours_rendered'] as num?)?.toInt() ?? 0,
-        requiredHours: (json['required_hours'] as num?)?.toInt() ?? 0,
-        evaluationScore: (json['evaluation_score'] as num?)?.toDouble(),
+        evaluationScore: asDoubleOrNull(json['evaluation_score']),
         remarks: json['remarks'] as String?,
       );
 }
@@ -163,11 +160,15 @@ class PlacementCounts {
   final int completed;
   final int terminated;
 
-  static const empty =
-      PlacementCounts(total: 0, ongoing: 0, completed: 0, terminated: 0);
+  static const empty = PlacementCounts(
+    total: 0,
+    ongoing: 0,
+    completed: 0,
+    terminated: 0,
+  );
 
   factory PlacementCounts.fromJson(Map<String, dynamic> json) {
-    int at(String key) => (json[key] as num?)?.toInt() ?? 0;
+    int at(String key) => asInt(json[key]);
     return PlacementCounts(
       total: at('total'),
       ongoing: at('ongoing'),
@@ -182,7 +183,10 @@ class PlacementCounts {
 ({Color background, Color text}) placementStatusColors(String status) {
   switch (status) {
     case 'completed':
-      return (background: const Color(0xFFEAFAF1), text: const Color(0xFF1A7F4B));
+      return (
+        background: const Color(0xFFEAFAF1),
+        text: const Color(0xFF1A7F4B),
+      );
     case 'terminated':
       return (background: const Color(0xFFFFF1F1), text: AppColors.danger);
     default:

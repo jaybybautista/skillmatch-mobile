@@ -46,8 +46,14 @@ class ApplicationSummary {
       id: json['id'] as int,
       status: json['status'] as String? ?? 'pending',
       statusLabel: json['status_label'] as String? ?? 'Pending',
-      statusBackground: _parseHexColor(json['status_bg_color'] as String?, const Color(0xFFF1F5F9)),
-      statusTextColor: _parseHexColor(json['status_text_color'] as String?, const Color(0xFF64748B)),
+      statusBackground: _parseHexColor(
+        json['status_bg_color'] as String?,
+        const Color(0xFFF1F5F9),
+      ),
+      statusTextColor: _parseHexColor(
+        json['status_text_color'] as String?,
+        const Color(0xFF64748B),
+      ),
       internshipTitle: json['internship_title'] as String? ?? 'Internship',
       companyName: json['company_name'] as String? ?? 'Company',
       companyLogoUrl: json['company_logo_url'] as String?,
@@ -102,14 +108,17 @@ class ApplicationsStatusSnapshot {
   factory ApplicationsStatusSnapshot.fromJson(Map<String, dynamic> json) {
     final entries = <int, ApplicationStatusEntry>{};
     for (final raw in (json['applications'] as List? ?? const [])) {
-      final entry = ApplicationStatusEntry.fromJson(raw as Map<String, dynamic>);
+      final entry = ApplicationStatusEntry.fromJson(
+        raw as Map<String, dynamic>,
+      );
       entries[entry.id] = entry;
     }
 
     return ApplicationsStatusSnapshot(
       statuses: entries,
       pendingAssessments: (json['pending_assessments'] as num?)?.toInt() ?? 0,
-      reassignedAssessments: (json['reassigned_assessments'] as num?)?.toInt() ?? 0,
+      reassignedAssessments:
+          (json['reassigned_assessments'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -129,9 +138,11 @@ class ApplicationStatusEntry {
   final bool hasPendingAssessment;
   final bool isReassignment;
 
-  factory ApplicationStatusEntry.fromJson(Map<String, dynamic> json) => ApplicationStatusEntry(
+  factory ApplicationStatusEntry.fromJson(Map<String, dynamic> json) =>
+      ApplicationStatusEntry(
         id: (json['id'] as num).toInt(),
-        internshipTitle: json['internship_title'] as String? ?? 'your application',
+        internshipTitle:
+            json['internship_title'] as String? ?? 'your application',
         status: json['status'] as String? ?? 'pending',
         hasPendingAssessment: json['has_pending_assessment'] as bool? ?? false,
         isReassignment: json['is_reassignment'] as bool? ?? false,

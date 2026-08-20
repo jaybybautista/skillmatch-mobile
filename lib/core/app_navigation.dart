@@ -13,13 +13,21 @@ import '../widgets/app_bottom_nav.dart';
 void handleAppNavTap(BuildContext context, int index) {
   switch (index) {
     case 0:
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     case 1:
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const ApplicationsScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const ApplicationsScreen()),
+      );
     case 2:
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const ResumeListScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const ResumeListScreen()),
+      );
     case 3:
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const RequirementsScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const RequirementsScreen()),
+      );
     default:
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${appNavItems[index].label} is coming soon.')),

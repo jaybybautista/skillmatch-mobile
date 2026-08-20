@@ -1,5 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../services/auth_service.dart';
+import '../company/assessment_library_screen.dart';
+import '../company/browse_candidates_screen.dart';
+import '../company/company_analytics_screen.dart';
+import '../company/company_applications_screen.dart';
+import '../company/company_home_screen.dart';
+import '../company/company_placements_screen.dart';
+import '../company/company_postings_screen.dart';
+import '../company/company_profile_screen.dart';
+import '../company/company_records_screen.dart';
+import '../company/company_settings_screen.dart';
+import '../company/create_post_screen.dart';
 import '../student/applications/applications_screen.dart';
 import '../student/bookmarks/bookmarks_screen.dart';
 import '../student/home/home_screen.dart';
@@ -32,7 +45,10 @@ typedef ChatDestination = void Function(BuildContext context);
 /// web has, the app has too.
 const Map<String, String> unavailableDestinations = {};
 
-ChatDestination? chatDestinationFor(String screen, [Map<String, dynamic> params = const {}]) {
+ChatDestination? chatDestinationFor(
+  String screen, [
+  Map<String, dynamic> params = const {},
+]) {
   final builder = _destinations[screen];
   if (builder == null) return null;
   return (context) => builder(context, params);
@@ -45,6 +61,27 @@ void _push(BuildContext context, Widget screen) {
   Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 }
 
+/// True when the signed-in account is a company.
+///
+/// A handful of destination ids mean different screens depending on who is
+/// asking - the backend hands back one 'home' / 'profile' / 'settings' id for
+/// both roles, because on the web those are one route each. Falls back to the
+/// student side when there is no session to read (a widget test, say).
+bool _isCompany(BuildContext context) {
+  try {
+    return context.read<AuthService>().currentUser?.role == 'company';
+  } catch (_) {
+    return false;
+  }
+}
+
+void _replaceAll(BuildContext context, Widget screen) {
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => screen),
+    (route) => false,
+  );
+}
+
 int? _intParam(Map<String, dynamic> params, String key) {
   final value = params[key];
   if (value is int) return value;
@@ -52,14 +89,16 @@ int? _intParam(Map<String, dynamic> params, String key) {
   return int.tryParse('$value');
 }
 
-typedef _DestinationBuilder = void Function(BuildContext context, Map<String, dynamic> params);
+typedef _DestinationBuilder =
+    void Function(BuildContext context, Map<String, dynamic> params);
 
 final Map<String, _DestinationBuilder> _destinations = {
-  'home': (context, _) => Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (route) => false,
-      ),
-  'internship_search': (context, _) => _push(context, const InternshipSearchScreen()),
+  'home': (context, _) => _replaceAll(
+    context,
+    _isCompany(context) ? const CompanyHomeScreen() : const HomeScreen(),
+  ),
+  'internship_search': (context, _) =>
+      _push(context, const InternshipSearchScreen()),
   'top_matches': (context, _) => _push(context, const MatchesListScreen()),
   'bookmarks': (context, _) => _push(context, const BookmarksScreen()),
   'applications': (context, _) => _push(context, const ApplicationsScreen()),
@@ -67,9 +106,43 @@ final Map<String, _DestinationBuilder> _destinations = {
   'resume_builder': (context, _) => _push(context, const ResumeListScreen()),
   'requirements': (context, _) => _push(context, const RequirementsScreen()),
   'roadmap': (context, _) => _push(context, const SkillRoadmapScreen()),
-  'profile': (context, _) => _push(context, const ProfileScreen()),
-  'settings': (context, _) => _push(context, const SettingsScreen()),
+  'profile': (context, _) => _push(
+    context,
+    _isCompany(context) ? const CompanyProfileScreen() : const ProfileScreen(),
+  ),
+  'settings': (context, _) => _push(
+    context,
+    _isCompany(context)
+        ? const CompanySettingsScreen()
+        : const SettingsScreen(),
+  ),
   'notifications': (context, _) => _push(context, const NotificationsScreen()),
+
+  // The company side. Every id here comes from ChatbotNavigationService's
+  // `company` capability list, so Matcha can take a company to the same
+  // screens on the phone that its cards link to on the website.
+  'company_internships': (context, _) =>
+      _push(context, const CompanyPostingsScreen()),
+  'company_internship_create': (context, _) =>
+      _push(context, const CreatePostScreen()),
+  'company_applications': (context, _) =>
+      _push(context, const CompanyApplicationsScreen()),
+  'company_candidates': (context, _) =>
+      _push(context, const BrowseCandidatesScreen()),
+  'company_bookmarks': (context, _) =>
+      _push(context, const BrowseCandidatesScreen(bookmarksOnly: true)),
+  'company_assessments': (context, _) =>
+      _push(context, const AssessmentLibraryScreen()),
+  'company_placements': (context, _) =>
+      _push(context, const CompanyPlacementsScreen()),
+  'company_records': (context, _) =>
+      _push(context, const CompanyRecordsScreen()),
+  'company_analytics': (context, _) =>
+      _push(context, const CompanyAnalyticsScreen()),
+  // The signed-in company's own profile, as opposed to 'company_profile'
+  // below, which opens some other company's public one by id.
+  'company_my_profile': (context, _) =>
+      _push(context, const CompanyProfileScreen()),
 
   // Notification destinations that carry an id.
   'internship_detail': (context, params) {

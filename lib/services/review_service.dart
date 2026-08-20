@@ -27,7 +27,10 @@ class ReviewService {
   /// One review with its whole reply subtree. The backend walks up to the
   /// root, so passing any reply's id returns the conversation it belongs to.
   Future<Review> fetchOne(int reviewId) async {
-    final response = await _client.get('/reviews/$reviewId', authenticated: true);
+    final response = await _client.get(
+      '/reviews/$reviewId',
+      authenticated: true,
+    );
     return Review.fromJson(response['review'] as Map<String, dynamic>);
   }
 
@@ -38,27 +41,25 @@ class ReviewService {
     required int rating,
     String? title,
   }) async {
-    final response = await _client.post(
-      '/reviews',
-      {
-        'reviewable_type': reviewableType,
-        'reviewable_id': reviewableId,
-        'content': content,
-        'rating': rating,
-        if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
-      },
-      authenticated: true,
-    );
+    final response = await _client.post('/reviews', {
+      'reviewable_type': reviewableType,
+      'reviewable_id': reviewableId,
+      'content': content,
+      'rating': rating,
+      if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+    }, authenticated: true);
 
     return Review.fromJson(response['review'] as Map<String, dynamic>);
   }
 
-  Future<Review> postReply({required int parentId, required String content}) async {
-    final response = await _client.post(
-      '/reviews',
-      {'parent_id': parentId, 'content': content},
-      authenticated: true,
-    );
+  Future<Review> postReply({
+    required int parentId,
+    required String content,
+  }) async {
+    final response = await _client.post('/reviews', {
+      'parent_id': parentId,
+      'content': content,
+    }, authenticated: true);
 
     return Review.fromJson(response['review'] as Map<String, dynamic>);
   }
@@ -66,11 +67,9 @@ class ReviewService {
   /// Throws [ApiException] with the server's message when the 30-minute
   /// window has already closed.
   Future<Review> edit({required int reviewId, required String content}) async {
-    final response = await _client.put(
-      '/reviews/$reviewId',
-      {'content': content},
-      authenticated: true,
-    );
+    final response = await _client.put('/reviews/$reviewId', {
+      'content': content,
+    }, authenticated: true);
 
     return Review.fromJson(response['review'] as Map<String, dynamic>);
   }
@@ -81,11 +80,9 @@ class ReviewService {
 
   /// Returns the new (liked, count) pair after toggling.
   Future<({bool liked, int likeCount})> toggleLike(int reviewId) async {
-    final response = await _client.post(
-      '/reviews/$reviewId/react',
-      {'reaction_type': 'like'},
-      authenticated: true,
-    );
+    final response = await _client.post('/reviews/$reviewId/react', {
+      'reaction_type': 'like',
+    }, authenticated: true);
 
     return (
       liked: response['reacted'] as bool? ?? false,

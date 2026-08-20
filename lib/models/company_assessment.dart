@@ -1,3 +1,4 @@
+import '../core/json_parse.dart';
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
@@ -52,20 +53,24 @@ class CompanyAssessment {
   bool get isPublished => status == 'published';
   bool get isDraft => status != 'published';
 
-  factory CompanyAssessment.fromJson(Map<String, dynamic> json) => CompanyAssessment(
-        id: (json['id'] as num).toInt(),
-        internshipId: (json['internship_id'] as num?)?.toInt(),
+  factory CompanyAssessment.fromJson(Map<String, dynamic> json) =>
+      CompanyAssessment(
+        id: asInt(json['id']),
+        internshipId: asIntOrNull(json['internship_id']),
         internshipTitle: json['internship_title'] as String?,
         title: json['title'] as String? ?? 'Untitled assessment',
         description: json['description'] as String?,
-        timeLimitMinutes: (json['time_limit'] as num?)?.toInt(),
-        totalPoints: (json['total_points'] as num?)?.toInt() ?? 0,
+        timeLimitMinutes: asIntOrNull(json['time_limit']),
+        totalPoints: asInt(json['total_points']),
         status: json['status'] as String? ?? 'draft',
-        questionCount: (json['question_count'] as num?)?.toInt() ?? 0,
-        submissionCount: (json['submission_count'] as num?)?.toInt() ?? 0,
+        questionCount: asInt(json['question_count']),
+        submissionCount: asInt(json['submission_count']),
         createdAtHuman: json['created_at_human'] as String? ?? '',
         questions: (json['questions'] as List? ?? const [])
-            .map((e) => CompanyAssessmentQuestion.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) =>
+                  CompanyAssessmentQuestion.fromJson(e as Map<String, dynamic>),
+            )
             .toList(),
       );
 }
@@ -98,14 +103,17 @@ class CompanyAssessmentQuestion {
 
   factory CompanyAssessmentQuestion.fromJson(Map<String, dynamic> json) =>
       CompanyAssessmentQuestion(
-        id: (json['id'] as num).toInt(),
+        id: asInt(json['id']),
         text: json['question_text'] as String? ?? '',
         description: json['description'] as String?,
         type: QuestionType.parse(json['question_type'] as String?),
         imageUrl: json['image_url'] as String?,
-        points: (json['points'] as num?)?.toInt() ?? 1,
+        points: asInt(json['points'], 1),
         choices: (json['choices'] as List? ?? const [])
-            .map((e) => CompanyAssessmentChoice.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) =>
+                  CompanyAssessmentChoice.fromJson(e as Map<String, dynamic>),
+            )
             .toList(),
       );
 }
@@ -123,7 +131,7 @@ class CompanyAssessmentChoice {
 
   factory CompanyAssessmentChoice.fromJson(Map<String, dynamic> json) =>
       CompanyAssessmentChoice(
-        id: (json['id'] as num?)?.toInt() ?? 0,
+        id: asInt(json['id']),
         text: json['choice_text'] as String? ?? '',
         isCorrect: json['is_correct'] as bool? ?? false,
       );
@@ -139,7 +147,7 @@ class AssessmentPostingOption {
 
   factory AssessmentPostingOption.fromJson(Map<String, dynamic> json) =>
       AssessmentPostingOption(
-        id: (json['id'] as num).toInt(),
+        id: asInt(json['id']),
         title: json['title'] as String? ?? 'Untitled posting',
       );
 }
@@ -155,12 +163,16 @@ class AssessmentLibrary {
   final List<CompanyAssessment> assessments;
   final List<AssessmentPostingOption> postingOptions;
 
-  factory AssessmentLibrary.fromJson(Map<String, dynamic> json) => AssessmentLibrary(
+  factory AssessmentLibrary.fromJson(Map<String, dynamic> json) =>
+      AssessmentLibrary(
         assessments: (json['assessments'] as List? ?? const [])
             .map((e) => CompanyAssessment.fromJson(e as Map<String, dynamic>))
             .toList(),
         postingOptions: (json['posting_options'] as List? ?? const [])
-            .map((e) => AssessmentPostingOption.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) =>
+                  AssessmentPostingOption.fromJson(e as Map<String, dynamic>),
+            )
             .toList(),
       );
 }

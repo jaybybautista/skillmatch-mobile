@@ -18,7 +18,8 @@ enum PersonSearchType {
 /// Talks to Api\GlobalSearchController@people, which runs the same queries
 /// (and the same visibility rules) as the web's global search.
 class PeopleSearchService {
-  PeopleSearchService({ApiClient? client}) : _client = client ?? ApiClient.instance;
+  PeopleSearchService({ApiClient? client})
+    : _client = client ?? ApiClient.instance;
 
   final ApiClient _client;
 

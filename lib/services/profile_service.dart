@@ -14,7 +14,10 @@ class ProfileService {
   }
 
   Future<EditableProfile> fetchEditableProfile() async {
-    final response = await _client.get('/student/profile/editable', authenticated: true);
+    final response = await _client.get(
+      '/student/profile/editable',
+      authenticated: true,
+    );
     return EditableProfile.fromJson(response);
   }
 
@@ -32,24 +35,20 @@ class ProfileService {
     String? cityMunicipality,
     String? barangay,
   }) async {
-    await _client.put(
-      '/student/profile',
-      {
-        'first_name': firstName,
-        'last_name': lastName,
-        'student_number': studentNumber,
-        'contact_number': contactNumber,
-        'campus_id': campusId,
-        'course': course,
-        'year_level': yearLevel,
-        'address': address,
-        'region': region,
-        'province': province,
-        'city_municipality': cityMunicipality,
-        'barangay': barangay,
-      },
-      authenticated: true,
-    );
+    await _client.put('/student/profile', {
+      'first_name': firstName,
+      'last_name': lastName,
+      'student_number': studentNumber,
+      'contact_number': contactNumber,
+      'campus_id': campusId,
+      'course': course,
+      'year_level': yearLevel,
+      'address': address,
+      'region': region,
+      'province': province,
+      'city_municipality': cityMunicipality,
+      'barangay': barangay,
+    }, authenticated: true);
   }
 
   /// Uploads a new profile photo (any image, max 2 MB) and returns the new
@@ -67,7 +66,9 @@ class ProfileService {
 
   /// "Upload Only" — stores the file, leaves profile fields untouched.
   /// Accepts PDF/DOC/DOCX up to 5 MB, matching the web form.
-  Future<({String message, ResumeInfo? resume})> uploadResume(String filePath) async {
+  Future<({String message, ResumeInfo? resume})> uploadResume(
+    String filePath,
+  ) async {
     final response = await _client.postMultipart(
       '/student/profile/resume',
       fields: const {},
@@ -81,7 +82,9 @@ class ProfileService {
   /// "Upload & Auto-Fill" — stores the file, then runs the same OCR + AI
   /// pipeline as the web and merges skills/education/experience into the
   /// profile. Accepts PDF/JPG/PNG up to 8 MB.
-  Future<({String message, ResumeInfo? resume})> uploadResumeWithAutofill(String filePath) async {
+  Future<({String message, ResumeInfo? resume})> uploadResumeWithAutofill(
+    String filePath,
+  ) async {
     final response = await _client.postMultipart(
       '/student/profile/resume/autofill',
       fields: const {},
@@ -96,10 +99,14 @@ class ProfileService {
     await _client.delete('/student/profile/resume', authenticated: true);
   }
 
-  ({String message, ResumeInfo? resume}) _resumeResult(Map<String, dynamic> response) {
+  ({String message, ResumeInfo? resume}) _resumeResult(
+    Map<String, dynamic> response,
+  ) {
     return (
       message: response['message'] as String? ?? 'Resume updated.',
-      resume: response['resume'] != null ? ResumeInfo.fromJson(response['resume'] as Map<String, dynamic>) : null,
+      resume: response['resume'] != null
+          ? ResumeInfo.fromJson(response['resume'] as Map<String, dynamic>)
+          : null,
     );
   }
 }

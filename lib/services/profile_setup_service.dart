@@ -9,7 +9,10 @@ class ProfileSetupService {
   final ApiClient _client = ApiClient.instance;
 
   Future<SetupState> fetchState() async {
-    final response = await _client.get('/student/setup/state', authenticated: true);
+    final response = await _client.get(
+      '/student/setup/state',
+      authenticated: true,
+    );
     return SetupState.fromJson(response);
   }
 
@@ -33,17 +36,13 @@ class ProfileSetupService {
     String? phoneNumber,
     String? email,
   }) async {
-    await _client.post(
-      '/student/setup/step/1',
-      {
-        'name': name,
-        'address': ?address,
-        'zip_code': ?zipCode,
-        'phone_number': ?phoneNumber,
-        'email': ?email,
-      },
-      authenticated: true,
-    );
+    await _client.post('/student/setup/step/1', {
+      'name': name,
+      'address': ?address,
+      'zip_code': ?zipCode,
+      'phone_number': ?phoneNumber,
+      'email': ?email,
+    }, authenticated: true);
   }
 
   Future<void> saveStep2({
@@ -52,27 +51,22 @@ class ProfileSetupService {
     String? degree,
     String? major,
   }) async {
-    await _client.post(
-      '/student/setup/step/2',
-      {
-        'school_name': ?schoolName,
-        'school_address': ?schoolAddress,
-        'degree': ?degree,
-        'major': ?major,
-      },
-      authenticated: true,
-    );
+    await _client.post('/student/setup/step/2', {
+      'school_name': ?schoolName,
+      'school_address': ?schoolAddress,
+      'degree': ?degree,
+      'major': ?major,
+    }, authenticated: true);
   }
 
   Future<void> saveStep3({
     required List<String> technicalSkills,
     required List<String> softSkills,
   }) async {
-    await _client.post(
-      '/student/setup/step/3',
-      {'technical_skills': technicalSkills, 'soft_skills': softSkills},
-      authenticated: true,
-    );
+    await _client.post('/student/setup/step/3', {
+      'technical_skills': technicalSkills,
+      'soft_skills': softSkills,
+    }, authenticated: true);
   }
 
   Future<Certification> addCertification({
@@ -80,20 +74,21 @@ class ProfileSetupService {
     String? issuingOrganization,
     String? issueDate,
   }) async {
-    final response = await _client.post(
-      '/student/setup/certifications',
-      {
-        'title': title,
-        'issuing_organization': ?issuingOrganization,
-        'issue_date': ?issueDate,
-      },
-      authenticated: true,
+    final response = await _client.post('/student/setup/certifications', {
+      'title': title,
+      'issuing_organization': ?issuingOrganization,
+      'issue_date': ?issueDate,
+    }, authenticated: true);
+    return Certification.fromJson(
+      response['certification'] as Map<String, dynamic>,
     );
-    return Certification.fromJson(response['certification'] as Map<String, dynamic>);
   }
 
   Future<void> deleteCertification(int id) async {
-    await _client.delete('/student/setup/certifications/$id', authenticated: true);
+    await _client.delete(
+      '/student/setup/certifications/$id',
+      authenticated: true,
+    );
   }
 
   Future<Experience> addExperience({
@@ -103,17 +98,13 @@ class ProfileSetupService {
     String? endDate,
     String? description,
   }) async {
-    final response = await _client.post(
-      '/student/setup/experiences',
-      {
-        'position': position,
-        'organization': organization,
-        'start_date': ?startDate,
-        'end_date': ?endDate,
-        'description': ?description,
-      },
-      authenticated: true,
-    );
+    final response = await _client.post('/student/setup/experiences', {
+      'position': position,
+      'organization': organization,
+      'start_date': ?startDate,
+      'end_date': ?endDate,
+      'description': ?description,
+    }, authenticated: true);
     return Experience.fromJson(response['experience'] as Map<String, dynamic>);
   }
 
@@ -122,14 +113,21 @@ class ProfileSetupService {
   }
 
   Future<SetupReview> fetchReview() async {
-    final response = await _client.get('/student/setup/review', authenticated: true);
+    final response = await _client.get(
+      '/student/setup/review',
+      authenticated: true,
+    );
     return SetupReview.fromJson(response);
   }
 
   /// Marks setup complete and recomputes match scores server-side, so the
   /// dashboard already knows the student when they land on it.
   Future<void> finish() async {
-    await _client.postLong('/student/setup/save', const {}, authenticated: true);
+    await _client.postLong(
+      '/student/setup/save',
+      const {},
+      authenticated: true,
+    );
   }
 
   Future<void> skip() async {

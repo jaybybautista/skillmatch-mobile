@@ -39,7 +39,12 @@ class CertificationInfo {
 }
 
 class ExperienceInfo {
-  ExperienceInfo({this.position, this.organization, this.startDate, this.endDate});
+  ExperienceInfo({
+    this.position,
+    this.organization,
+    this.startDate,
+    this.endDate,
+  });
 
   final String? position;
   final String? organization;
@@ -117,15 +122,23 @@ class StudentProfile {
       location: json['location'] as String?,
       professionalSummary: json['professional_summary'] as String?,
       skills: (json['skills'] as List? ?? []).map((e) => e.toString()).toList(),
-      resume: json['resume'] != null ? ResumeInfo.fromJson(json['resume'] as Map<String, dynamic>) : null,
-      placement:
-          json['placement'] != null ? PlacementIndicator.fromJson(json['placement'] as Map<String, dynamic>) : null,
-      education: json['education'] != null ? EducationInfo.fromJson(json['education'] as Map<String, dynamic>) : null,
+      resume: json['resume'] != null
+          ? ResumeInfo.fromJson(json['resume'] as Map<String, dynamic>)
+          : null,
+      placement: json['placement'] != null
+          ? PlacementIndicator.fromJson(
+              json['placement'] as Map<String, dynamic>,
+            )
+          : null,
+      education: json['education'] != null
+          ? EducationInfo.fromJson(json['education'] as Map<String, dynamic>)
+          : null,
       certifications: (json['certifications'] as List? ?? [])
           .map((e) => CertificationInfo.fromJson(e as Map<String, dynamic>))
           .toList(),
-      experiences:
-          (json['experiences'] as List? ?? []).map((e) => ExperienceInfo.fromJson(e as Map<String, dynamic>)).toList(),
+      experiences: (json['experiences'] as List? ?? [])
+          .map((e) => ExperienceInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

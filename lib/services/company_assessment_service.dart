@@ -14,14 +14,22 @@ class CompanyAssessmentService {
 
   /// The library, plus the postings a new assessment can be attached to.
   Future<AssessmentLibrary> fetchLibrary() async {
-    final response = await _client.get('/company/assessments', authenticated: true);
+    final response = await _client.get(
+      '/company/assessments',
+      authenticated: true,
+    );
     return AssessmentLibrary.fromJson(response);
   }
 
   /// One assessment with its questions and which answers are correct.
   Future<CompanyAssessment> fetchAssessment(int id) async {
-    final response = await _client.get('/company/assessments/$id', authenticated: true);
-    return CompanyAssessment.fromJson(response['assessment'] as Map<String, dynamic>);
+    final response = await _client.get(
+      '/company/assessments/$id',
+      authenticated: true,
+    );
+    return CompanyAssessment.fromJson(
+      response['assessment'] as Map<String, dynamic>,
+    );
   }
 
   /// Step 1 for a new assessment. Creates it as a draft — it only becomes
@@ -32,18 +40,16 @@ class CompanyAssessmentService {
     String? description,
     int? timeLimitMinutes,
   }) async {
-    final response = await _client.post(
-      '/company/assessments',
-      {
-        'internship_id': internshipId,
-        'title': title,
-        'description': ?description,
-        'time_limit': ?timeLimitMinutes,
-      },
-      authenticated: true,
-    );
+    final response = await _client.post('/company/assessments', {
+      'internship_id': internshipId,
+      'title': title,
+      'description': ?description,
+      'time_limit': ?timeLimitMinutes,
+    }, authenticated: true);
 
-    return CompanyAssessment.fromJson(response['assessment'] as Map<String, dynamic>);
+    return CompanyAssessment.fromJson(
+      response['assessment'] as Map<String, dynamic>,
+    );
   }
 
   /// Step 1 again, for an assessment that already exists.
@@ -54,18 +60,16 @@ class CompanyAssessmentService {
     String? description,
     int? timeLimitMinutes,
   }) async {
-    final response = await _client.put(
-      '/company/assessments/$id',
-      {
-        'internship_id': internshipId,
-        'title': title,
-        'description': ?description,
-        'time_limit': ?timeLimitMinutes,
-      },
-      authenticated: true,
-    );
+    final response = await _client.put('/company/assessments/$id', {
+      'internship_id': internshipId,
+      'title': title,
+      'description': ?description,
+      'time_limit': ?timeLimitMinutes,
+    }, authenticated: true);
 
-    return CompanyAssessment.fromJson(response['assessment'] as Map<String, dynamic>);
+    return CompanyAssessment.fromJson(
+      response['assessment'] as Map<String, dynamic>,
+    );
   }
 
   /// Step 2: replaces the whole paper and publishes it.
@@ -78,13 +82,13 @@ class CompanyAssessmentService {
     required int id,
     required List<Map<String, dynamic>> questions,
   }) async {
-    final response = await _client.post(
-      '/company/assessments/$id/questions',
-      {'questions': questions},
-      authenticated: true,
-    );
+    final response = await _client.post('/company/assessments/$id/questions', {
+      'questions': questions,
+    }, authenticated: true);
 
-    return CompanyAssessment.fromJson(response['assessment'] as Map<String, dynamic>);
+    return CompanyAssessment.fromJson(
+      response['assessment'] as Map<String, dynamic>,
+    );
   }
 
   Future<void> deleteAssessment(int id) async {
@@ -92,8 +96,13 @@ class CompanyAssessmentService {
   }
 
   /// Everyone who has completed this assessment, newest first.
-  Future<List<AssessmentSubmission>> fetchSubmissions(int id, {String query = ''}) async {
-    final suffix = query.trim().isEmpty ? '' : '?q=${Uri.encodeQueryComponent(query.trim())}';
+  Future<List<AssessmentSubmission>> fetchSubmissions(
+    int id, {
+    String query = '',
+  }) async {
+    final suffix = query.trim().isEmpty
+        ? ''
+        : '?q=${Uri.encodeQueryComponent(query.trim())}';
     final response = await _client.get(
       '/company/assessments/$id/submissions$suffix',
       authenticated: true,

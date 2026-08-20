@@ -5,4 +5,5 @@ import 'package:flutter/widgets.dart';
 /// back to a screen.
 ///
 /// Registered on [MaterialApp.navigatorObservers] in main.dart.
-final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();

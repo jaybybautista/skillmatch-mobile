@@ -30,11 +30,13 @@ class AssessmentPreviewScreen extends StatefulWidget {
   final CompanyAssessmentService? service;
 
   @override
-  State<AssessmentPreviewScreen> createState() => _AssessmentPreviewScreenState();
+  State<AssessmentPreviewScreen> createState() =>
+      _AssessmentPreviewScreenState();
 }
 
 class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
-  late final CompanyAssessmentService _service = widget.service ?? CompanyAssessmentService();
+  late final CompanyAssessmentService _service =
+      widget.service ?? CompanyAssessmentService();
 
   bool _isLoading = true;
   Object? _error;
@@ -71,7 +73,8 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
   }
 
   void _toggleAll() {
-    final questions = _assessment?.questions ?? const <CompanyAssessmentQuestion>[];
+    final questions =
+        _assessment?.questions ?? const <CompanyAssessmentQuestion>[];
     setState(() {
       if (_revealed.length == questions.length) {
         _revealed.clear();
@@ -86,8 +89,10 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
   @override
   Widget build(BuildContext context) {
     final assessment = _assessment;
-    final questions = assessment?.questions ?? const <CompanyAssessmentQuestion>[];
-    final allRevealed = questions.isNotEmpty && _revealed.length == questions.length;
+    final questions =
+        assessment?.questions ?? const <CompanyAssessmentQuestion>[];
+    final allRevealed =
+        questions.isNotEmpty && _revealed.length == questions.length;
 
     return Scaffold(
       backgroundColor: AppColors.primaryDark,
@@ -103,10 +108,14 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
                 : IconButton(
                     onPressed: _toggleAll,
                     icon: Icon(
-                      allRevealed ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      allRevealed
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       color: Colors.white,
                     ),
-                    tooltip: allRevealed ? 'Hide all answers' : 'Reveal all answers',
+                    tooltip: allRevealed
+                        ? 'Hide all answers'
+                        : 'Reveal all answers',
                   ),
           ),
           Expanded(
@@ -137,7 +146,9 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
@@ -153,7 +164,8 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
           children: [
             _MetaPill(
               icon: Icons.quiz_outlined,
-              label: '${assessment.questionCount} '
+              label:
+                  '${assessment.questionCount} '
                   'Question${assessment.questionCount == 1 ? '' : 's'}',
             ),
             if (assessment.timeLimitMinutes != null)
@@ -163,20 +175,28 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
               ),
             _MetaPill(
               icon: Icons.assignment_turned_in_outlined,
-              label: '${assessment.submissionCount} '
+              label:
+                  '${assessment.submissionCount} '
                   'Submission${assessment.submissionCount == 1 ? '' : 's'}',
             ),
             _MetaPill(
-              icon: assessment.isPublished ? Icons.check_circle_outline : Icons.edit_note,
+              icon: assessment.isPublished
+                  ? Icons.check_circle_outline
+                  : Icons.edit_note,
               label: assessment.isPublished ? 'Published' : 'Draft',
             ),
           ],
         ),
-        if (assessment.description != null && assessment.description!.isNotEmpty) ...[
+        if (assessment.description != null &&
+            assessment.description!.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
             assessment.description!,
-            style: const TextStyle(fontSize: 13.5, color: AppColors.textMuted, height: 1.45),
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: AppColors.textMuted,
+              height: 1.45,
+            ),
           ),
         ],
         const SizedBox(height: 20),
@@ -238,7 +258,10 @@ class _QuestionPreviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('Question ${index + 1}', style: AppFonts.title(fontSize: 15)),
+              Text(
+                'Question ${index + 1}',
+                style: AppFonts.title(fontSize: 15),
+              ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -267,11 +290,16 @@ class _QuestionPreviewCard extends StatelessWidget {
               height: 1.35,
             ),
           ),
-          if (question.description != null && question.description!.isNotEmpty) ...[
+          if (question.description != null &&
+              question.description!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               question.description!,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted, height: 1.4),
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textMuted,
+                height: 1.4,
+              ),
             ),
           ],
           if (question.imageUrl != null && question.imageUrl!.isNotEmpty) ...[
@@ -301,10 +329,14 @@ class _QuestionPreviewCard extends StatelessWidget {
             child: TextButton.icon(
               onPressed: onToggleReveal,
               icon: Icon(
-                isRevealed ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                isRevealed
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
                 size: 16,
               ),
-              label: Text(isRevealed ? 'Hide correct answer' : 'Show correct answer'),
+              label: Text(
+                isRevealed ? 'Hide correct answer' : 'Show correct answer',
+              ),
               style: TextButton.styleFrom(padding: EdgeInsets.zero),
             ),
           ),
@@ -348,14 +380,20 @@ class _ChoiceRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.bold,
-                color: highlight ? const Color(0xFF1A7F4B) : AppColors.textMuted,
+                color: highlight
+                    ? const Color(0xFF1A7F4B)
+                    : AppColors.textMuted,
               ),
             ),
           ),
           Expanded(
             child: Text(
               choice.text,
-              style: const TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.3),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textDark,
+                height: 1.3,
+              ),
             ),
           ),
           if (highlight) ...[

@@ -35,25 +35,21 @@ class CompanyService {
     String? contactEmail,
     String? contactNumber,
   }) async {
-    final response = await _client.put(
-      '/company/profile',
-      {
-        'company_name': companyName,
-        // Null means "not being edited here", so the entry is dropped rather
-        // than sent as null and blanking a stored value.
-        'industry': ?industry,
-        'description': ?description,
-        'address': ?address,
-        'region': ?region,
-        'province': ?province,
-        'city': ?city,
-        'barangay': ?barangay,
-        'website': ?website,
-        'contact_email': ?contactEmail,
-        'contact_number': ?contactNumber,
-      },
-      authenticated: true,
-    );
+    final response = await _client.put('/company/profile', {
+      'company_name': companyName,
+      // Null means "not being edited here", so the entry is dropped rather
+      // than sent as null and blanking a stored value.
+      'industry': ?industry,
+      'description': ?description,
+      'address': ?address,
+      'region': ?region,
+      'province': ?province,
+      'city': ?city,
+      'barangay': ?barangay,
+      'website': ?website,
+      'contact_email': ?contactEmail,
+      'contact_number': ?contactNumber,
+    }, authenticated: true);
 
     return CompanyProfile.fromJson(response['company'] as Map<String, dynamic>);
   }
@@ -71,11 +67,28 @@ class CompanyService {
     return response['logo_url'] as String?;
   }
 
+  /// Returns the new cover photo URL.
+  Future<String?> updateCover(String filePath) async {
+    final response = await _client.postMultipart(
+      '/company/profile/cover',
+      fields: const {},
+      filePath: filePath,
+      fileFieldName: 'cover_photo',
+      authenticated: true,
+    );
+
+    return response['cover_url'] as String?;
+  }
+
   /// The feedback shown on the company's own profile: reviews left on the
   /// company plus reviews left on any of its postings, exactly the merged
   /// list the web profile page renders (Company::allReviews()).
-  Future<({List<Review> reviews, ReviewSummary summary})> fetchProfileReviews() async {
-    final response = await _client.get('/company/profile/reviews', authenticated: true);
+  Future<({List<Review> reviews, ReviewSummary summary})>
+  fetchProfileReviews() async {
+    final response = await _client.get(
+      '/company/profile/reviews',
+      authenticated: true,
+    );
 
     return (
       reviews: (response['reviews'] as List? ?? const [])
@@ -90,7 +103,10 @@ class CompanyService {
   // ---- dashboard & analytics ----
 
   Future<CompanyDashboard> fetchDashboard() async {
-    final response = await _client.get('/company/dashboard', authenticated: true);
+    final response = await _client.get(
+      '/company/dashboard',
+      authenticated: true,
+    );
     return CompanyDashboard.fromJson(response);
   }
 
@@ -98,16 +114,17 @@ class CompanyService {
   /// thing the web analytics page's dropdown does.
   Future<CompanyAnalytics> fetchAnalytics({int? internshipId}) async {
     final suffix = internshipId == null ? '' : '?internship_id=$internshipId';
-    final response = await _client.get('/company/analytics$suffix', authenticated: true);
+    final response = await _client.get(
+      '/company/analytics$suffix',
+      authenticated: true,
+    );
     return CompanyAnalytics.fromJson(response);
   }
 
   // ---- placements ----
 
-  Future<({List<CompanyPlacement> placements, PlacementCounts counts})> fetchPlacements({
-    String status = '',
-    String query = '',
-  }) async {
+  Future<({List<CompanyPlacement> placements, PlacementCounts counts})>
+  fetchPlacements({String status = '', String query = ''}) async {
     final params = <String, String>{
       if (status.isNotEmpty) 'status': status,
       if (query.trim().isNotEmpty) 'q': query.trim(),
@@ -116,7 +133,10 @@ class CompanyService {
         ? ''
         : '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
 
-    final response = await _client.get('/company/placements$suffix', authenticated: true);
+    final response = await _client.get(
+      '/company/placements$suffix',
+      authenticated: true,
+    );
 
     return (
       placements: (response['placements'] as List? ?? const [])
@@ -129,7 +149,10 @@ class CompanyService {
   }
 
   Future<CompanyPlacementDetail> fetchPlacement(int id) async {
-    final response = await _client.get('/company/placements/$id', authenticated: true);
+    final response = await _client.get(
+      '/company/placements/$id',
+      authenticated: true,
+    );
     return CompanyPlacementDetail.fromJson(
       response['placement'] as Map<String, dynamic>,
     );
@@ -138,10 +161,42 @@ class CompanyService {
   // ---- postings ----
 
   Future<List<CompanyPosting>> fetchPostings() async {
-    final response = await _client.get('/company/postings', authenticated: true);
+    final response = await _client.get(
+      '/company/postings',
+      authenticated: true,
+    );
     return (response['postings'] as List? ?? const [])
         .map((e) => CompanyPosting.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// One posting with everything the detail screen shows: the same payload
+  /// the website's posting page renders, so the two cannot disagree on a
+  /// count.
+  Future<
+    ({
+      CompanyPosting posting,
+      PostingStatusCounts counts,
+      List<CompanyAssessment> assessments,
+    })
+  >
+  fetchPosting(int id) async {
+    final response = await _client.get(
+      '/company/postings/$id',
+      authenticated: true,
+    );
+
+    return (
+      posting: CompanyPosting.fromJson(
+        response['posting'] as Map<String, dynamic>,
+      ),
+      counts: PostingStatusCounts.fromJson(
+        (response['status_counts'] as Map<String, dynamic>?) ?? const {},
+      ),
+      assessments: (response['assessments'] as List? ?? const [])
+          .map((e) => CompanyAssessment.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
   }
 
   Future<CompanyPosting> createPosting({
@@ -150,16 +205,12 @@ class CompanyService {
     required List<String> responsibilities,
     required List<String> skills,
   }) async {
-    final response = await _client.post(
-      '/company/postings',
-      {
-        'job_role': jobRole,
-        'slots': slots,
-        'responsibilities': responsibilities,
-        'skills': skills,
-      },
-      authenticated: true,
-    );
+    final response = await _client.post('/company/postings', {
+      'job_role': jobRole,
+      'slots': slots,
+      'responsibilities': responsibilities,
+      'skills': skills,
+    }, authenticated: true);
 
     return CompanyPosting.fromJson(response['posting'] as Map<String, dynamic>);
   }
@@ -171,16 +222,12 @@ class CompanyService {
     required List<String> responsibilities,
     required List<String> skills,
   }) async {
-    final response = await _client.put(
-      '/company/postings/$id',
-      {
-        'job_role': jobRole,
-        'slots': slots,
-        'responsibilities': responsibilities,
-        'skills': skills,
-      },
-      authenticated: true,
-    );
+    final response = await _client.put('/company/postings/$id', {
+      'job_role': jobRole,
+      'slots': slots,
+      'responsibilities': responsibilities,
+      'skills': skills,
+    }, authenticated: true);
 
     return CompanyPosting.fromJson(response['posting'] as Map<String, dynamic>);
   }
@@ -202,19 +249,27 @@ class CompanyService {
 
   // ---- applications ----
 
-  Future<({List<CompanyApplication> applications, ApplicationCounts counts})> fetchApplications({
+  Future<({List<CompanyApplication> applications, ApplicationCounts counts})>
+  fetchApplications({
     String status = '',
     String query = '',
+    int? internshipId,
   }) async {
     final params = <String, String>{
       if (status.isNotEmpty) 'status': status,
       if (query.trim().isNotEmpty) 'q': query.trim(),
+      // Narrows to one posting, which is what the per-posting applicant list
+      // asks for.
+      if (internshipId != null) 'internship_id': '$internshipId',
     };
     final suffix = params.isEmpty
         ? ''
         : '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
 
-    final response = await _client.get('/company/applications$suffix', authenticated: true);
+    final response = await _client.get(
+      '/company/applications$suffix',
+      authenticated: true,
+    );
 
     return (
       applications: (response['applications'] as List? ?? const [])
@@ -227,8 +282,13 @@ class CompanyService {
   }
 
   Future<CompanyApplication> fetchApplication(int id) async {
-    final response = await _client.get('/company/applications/$id', authenticated: true);
-    return CompanyApplication.fromJson(response['application'] as Map<String, dynamic>);
+    final response = await _client.get(
+      '/company/applications/$id',
+      authenticated: true,
+    );
+    return CompanyApplication.fromJson(
+      response['application'] as Map<String, dynamic>,
+    );
   }
 
   /// Moves an application to [status]. A rejection may carry a reason, which
@@ -238,13 +298,14 @@ class CompanyService {
     required String status,
     String? rejectionReason,
   }) async {
-    final response = await _client.post(
-      '/company/applications/$id/status',
-      {'status': status, 'rejection_reason': ?rejectionReason},
-      authenticated: true,
-    );
+    final response = await _client.post('/company/applications/$id/status', {
+      'status': status,
+      'rejection_reason': ?rejectionReason,
+    }, authenticated: true);
 
-    return CompanyApplication.fromJson(response['application'] as Map<String, dynamic>);
+    return CompanyApplication.fromJson(
+      response['application'] as Map<String, dynamic>,
+    );
   }
 
   /// Reverts the most recent status change (one level, no redo).
@@ -255,7 +316,9 @@ class CompanyService {
       authenticated: true,
     );
 
-    return CompanyApplication.fromJson(response['application'] as Map<String, dynamic>);
+    return CompanyApplication.fromJson(
+      response['application'] as Map<String, dynamic>,
+    );
   }
 
   /// The assessments this company can hand to an applicant — anything it has
@@ -284,32 +347,66 @@ class CompanyService {
       authenticated: true,
     );
 
-    return CompanyApplication.fromJson(response['application'] as Map<String, dynamic>);
+    return CompanyApplication.fromJson(
+      response['application'] as Map<String, dynamic>,
+    );
   }
 
   // ---- candidates ----
 
-  Future<List<Candidate>> fetchCandidates({
+  Future<({List<Candidate> candidates, int minScore, List<String> courses})>
+  fetchCandidates({
     String query = '',
     String sort = 'match_score',
     int? minScore,
+    String course = '',
   }) async {
     final params = <String, String>{
       if (query.trim().isNotEmpty) 'q': query.trim(),
       'sort': sort,
       if (minScore != null) 'min_score': '$minScore',
+      if (course.trim().isNotEmpty) 'course': course.trim(),
     };
-    final suffix = '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
+    final suffix =
+        '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
 
-    final response = await _client.get('/company/candidates$suffix', authenticated: true);
+    final response = await _client.get(
+      '/company/candidates$suffix',
+      authenticated: true,
+    );
 
-    return (response['candidates'] as List? ?? const [])
-        .map((e) => Candidate.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return (
+      candidates: (response['candidates'] as List? ?? const [])
+          .map((e) => Candidate.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      // The effective threshold: the company's own AI Match Score setting
+      // unless this request overrode it.
+      minScore: (response['min_score'] as num?)?.toInt() ?? 0,
+      courses: (response['courses'] as List? ?? const [])
+          .map((e) => '$e')
+          .toList(),
+    );
+  }
+
+  /// One candidate in full, with what they're missing against the posting
+  /// and their background — the same payload the website's candidate page
+  /// renders.
+  Future<CandidateDetail> fetchCandidate(int studentId) async {
+    final response = await _client.get(
+      '/company/candidates/$studentId',
+      authenticated: true,
+    );
+
+    return CandidateDetail.fromJson(
+      response['candidate'] as Map<String, dynamic>,
+    );
   }
 
   Future<List<Candidate>> fetchBookmarkedCandidates() async {
-    final response = await _client.get('/company/candidates/bookmarks', authenticated: true);
+    final response = await _client.get(
+      '/company/candidates/bookmarks',
+      authenticated: true,
+    );
     return (response['candidates'] as List? ?? const [])
         .map((e) => Candidate.fromJson(e as Map<String, dynamic>))
         .toList();

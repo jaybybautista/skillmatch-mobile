@@ -27,11 +27,14 @@ class AssessmentSubmissionsScreen extends StatefulWidget {
   final CompanyAssessmentService? service;
 
   @override
-  State<AssessmentSubmissionsScreen> createState() => _AssessmentSubmissionsScreenState();
+  State<AssessmentSubmissionsScreen> createState() =>
+      _AssessmentSubmissionsScreenState();
 }
 
-class _AssessmentSubmissionsScreenState extends State<AssessmentSubmissionsScreen> {
-  late final CompanyAssessmentService _service = widget.service ?? CompanyAssessmentService();
+class _AssessmentSubmissionsScreenState
+    extends State<AssessmentSubmissionsScreen> {
+  late final CompanyAssessmentService _service =
+      widget.service ?? CompanyAssessmentService();
   final _searchController = TextEditingController();
   Timer? _debounce;
 
@@ -94,7 +97,7 @@ class _AssessmentSubmissionsScreenState extends State<AssessmentSubmissionsScree
             subtitle: count == null
                 ? 'Submissions'
                 : '${count.toString().padLeft(2, '0')} '
-                    'Submission${count == 1 ? '' : 's'}',
+                      'Submission${count == 1 ? '' : 's'}',
             onBack: () => Navigator.of(context).maybePop(),
           ),
           Expanded(
@@ -109,12 +112,18 @@ class _AssessmentSubmissionsScreenState extends State<AssessmentSubmissionsScree
                       onChanged: _onSearchChanged,
                       decoration: const InputDecoration(
                         hintText: 'Search by name or email...',
-                        prefixIcon: Icon(Icons.search, color: AppColors.textMuted),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ),
                   ),
                   Expanded(
-                    child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+                    child: RefreshIndicator(
+                      onRefresh: _load,
+                      child: _buildBody(),
+                    ),
                   ),
                 ],
               ),
@@ -142,7 +151,9 @@ class _AssessmentSubmissionsScreenState extends State<AssessmentSubmissionsScree
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
@@ -156,11 +167,16 @@ class _AssessmentSubmissionsScreenState extends State<AssessmentSubmissionsScree
             padding: const EdgeInsets.fromLTRB(32, 60, 32, 0),
             child: Column(
               children: [
-                const Icon(Icons.assignment_turned_in_outlined,
-                    size: 40, color: AppColors.textMuted),
+                const Icon(
+                  Icons.assignment_turned_in_outlined,
+                  size: 40,
+                  color: AppColors.textMuted,
+                ),
                 const SizedBox(height: 14),
                 Text(
-                  isSearching ? 'No matching submissions' : 'No submissions yet',
+                  isSearching
+                      ? 'No matching submissions'
+                      : 'No submissions yet',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -173,7 +189,10 @@ class _AssessmentSubmissionsScreenState extends State<AssessmentSubmissionsScree
                       ? 'No one by that name has completed this assessment.'
                       : 'Results appear here once a candidate completes this assessment.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textMuted, height: 1.4),
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -186,7 +205,9 @@ class _AssessmentSubmissionsScreenState extends State<AssessmentSubmissionsScree
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
       itemCount: _submissions.length,
       itemBuilder: (_, index) => Padding(
-        padding: EdgeInsets.only(bottom: index == _submissions.length - 1 ? 0 : 16),
+        padding: EdgeInsets.only(
+          bottom: index == _submissions.length - 1 ? 0 : 16,
+        ),
         child: _SubmissionCard(submission: _submissions[index]),
       ),
     );
@@ -248,7 +269,10 @@ class _SubmissionCard extends StatelessWidget {
                         submission.email!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ],
@@ -313,8 +337,8 @@ class _VerdictPill extends StatelessWidget {
     final (label, background, foreground) = submission.timedOut
         ? ('Timed out', AppColors.warningBackground, AppColors.warning)
         : submission.passed
-            ? ('Passed', const Color(0xFFEAFAF1), const Color(0xFF1A7F4B))
-            : ('Failed', const Color(0xFFFFF1F1), AppColors.danger);
+        ? ('Passed', const Color(0xFFEAFAF1), const Color(0xFF1A7F4B))
+        : ('Failed', const Color(0xFFFFF1F1), AppColors.danger);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -324,7 +348,11 @@ class _VerdictPill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: foreground),
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.bold,
+          color: foreground,
+        ),
       ),
     );
   }

@@ -142,7 +142,9 @@ class StudentPublicProfile {
           .map((e) => PublicEducationEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
       certifications: (json['certifications'] as List? ?? [])
-          .map((e) => PublicCertificationEntry.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => PublicCertificationEntry.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
       experiences: (json['experiences'] as List? ?? [])
           .map((e) => PublicExperienceEntry.fromJson(e as Map<String, dynamic>))

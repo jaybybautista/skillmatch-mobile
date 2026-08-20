@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../core/error_message.dart';
+import '../../core/company_navigation.dart';
 import '../../models/company_analytics.dart';
 import '../../models/company_application.dart';
 import '../../services/company_service.dart';
+import '../../widgets/matcha_launcher.dart';
+import '../../widgets/company_bottom_nav.dart';
 import '../../widgets/company_screen_header.dart';
 import '../../widgets/company_sidebar.dart';
 import 'browse_candidates_screen.dart';
@@ -37,6 +41,15 @@ class _CompanyAnalyticsScreenState extends State<CompanyAnalyticsScreen> {
   /// Which posting the pipeline is narrowed to, or null for all of them.
   int? _pipelineFilter;
 
+  /// True while a filter change is in flight, so the panel can show that
+  /// something is happening rather than looking inert.
+  bool _isPipelineLoading = false;
+
+  /// Sequence number for filter requests. Only the newest response is applied:
+  /// changing the dropdown twice quickly used to let a slow first response
+  /// land last and overwrite the newer numbers.
+  int _pipelineRequest = 0;
+
   @override
   void initState() {
     super.initState();
@@ -67,14 +80,44 @@ class _CompanyAnalyticsScreenState extends State<CompanyAnalyticsScreen> {
   /// Refetches only to re-run the pipeline query, so the rest of the screen
   /// keeps showing its numbers instead of blanking to a spinner.
   Future<void> _applyPipelineFilter(int? internshipId) async {
-    setState(() => _pipelineFilter = internshipId);
+    final request = ++_pipelineRequest;
+
+    setState(() {
+      _pipelineFilter = internshipId;
+      _isPipelineLoading = true;
+    });
+
     try {
       final data = await _service.fetchAnalytics(internshipId: internshipId);
+      // A newer selection has been made since this one was sent, so its
+      // numbers are the ones that belong on screen.
       if (!mounted) return;
-      setState(() => _data = data);
-    } on ApiException catch (e) {
+      if (request != _pipelineRequest) return;
+      setState(() {
+        _data = data;
+        _isPipelineLoading = false;
+      });
+    } catch (e) {
+      // Every failure, not just ApiException. Catching only ApiException left
+      // a timeout or a decode error with nowhere to go: the request failed,
+      // nothing on screen changed, and no message appeared — which looked
+      // exactly like the dropdown doing nothing at all.
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      // The spinner clears even for a superseded request, so a stale failure
+      // can never leave the dropdown disabled with no way back.
+      setState(() => _isPipelineLoading = false);
+      if (request != _pipelineRequest) return;
+      setState(() {
+        _isPipelineLoading = false;
+        // The dropdown must not claim a filter the numbers below don't
+        // reflect, so it snaps back to whatever the shown data is for.
+        _pipelineFilter = _data?.pipelineFilter;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(messageForError(e, 'Could not filter the pipeline.')),
+        ),
+      );
     }
   }
 
@@ -85,22 +128,38 @@ class _CompanyAnalyticsScreenState extends State<CompanyAnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Every top-level company screen carries the bar, so navigation
+      // doesn't change shape depending on how you arrived. This screen is
+      // not one of its four tabs, hence no highlight.
+      bottomNavigationBar: CompanyBottomNav(
+        currentIndex: -1,
+        onSelect: (i) => handleCompanyNavTap(context, i),
+      ),
       drawer: const CompanySidebar(current: CompanySidebarItem.analytics),
       backgroundColor: AppColors.primaryDark,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
         children: [
-          const CompanyScreenHeader(
-            title: 'Dashboard and analytics',
-            subtitle: 'Recruitment performance, matching, and activity',
-            showMenuButton: true,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CompanyScreenHeader(
+                title: 'Dashboard and analytics',
+                subtitle: 'Recruitment performance, matching, and activity',
+                showMenuButton: true,
+              ),
+              Expanded(
+                child: ColoredBox(
+                  color: AppColors.background,
+                  child: RefreshIndicator(
+                    onRefresh: _load,
+                    child: _buildBody(),
+                  ),
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: ColoredBox(
-              color: AppColors.background,
-              child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
-            ),
-          ),
+          // Same launcher the web keeps on every page.
+          const MatchaLauncher(),
         ],
       ),
     );
@@ -123,7 +182,9 @@ class _CompanyAnalyticsScreenState extends State<CompanyAnalyticsScreen> {
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
@@ -182,10 +243,27 @@ class _CompanyAnalyticsScreenState extends State<CompanyAnalyticsScreen> {
           trailing: _PostingFilter(
             options: data.postingOptions,
             selected: _pipelineFilter,
-            onChanged: _applyPipelineFilter,
+            onChanged: _isPipelineLoading ? null : _applyPipelineFilter,
           ),
-          child: data.pipelineTotal == 0
-              ? const _EmptyRow('No applications to break down yet.')
+          child: _isPipelineLoading
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 28),
+                  child: Center(
+                    child: SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.2),
+                    ),
+                  ),
+                )
+              : data.pipelineTotal == 0
+              // The wording follows the filter: "this posting" is
+              // meaningless while the pipeline is showing all of them.
+              ? _EmptyRow(
+                  _pipelineFilter == null
+                      ? 'No applications to break down yet.'
+                      : 'No applications for this posting yet.',
+                )
               : Column(
                   children: [
                     for (final stage in data.pipelineStages)
@@ -203,7 +281,11 @@ class _CompanyAnalyticsScreenState extends State<CompanyAnalyticsScreen> {
               _StatRow(label: 'Open', value: '${data.openPostings}'),
               _StatRow(label: 'Closed', value: '${data.closedPostings}'),
               _StatRow(label: 'Slots still open', value: '${data.openSlots}'),
-              _StatRow(label: 'Slots filled', value: '${data.slotsFilled}', isLast: true),
+              _StatRow(
+                label: 'Slots filled',
+                value: '${data.slotsFilled}',
+                isLast: true,
+              ),
             ],
           ),
         ),
@@ -318,13 +400,20 @@ class _MetricCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         caption,
-                        style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 if (onTap != null)
-                  const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
               ],
             ),
           ),
@@ -397,11 +486,19 @@ class _PostingFilter extends StatelessWidget {
 
   final List<PostingOption> options;
   final int? selected;
-  final ValueChanged<int?> onChanged;
+
+  /// Null while a change is already in flight, which disables the dropdown so
+  /// a second selection can't race the first.
+  final ValueChanged<int?>? onChanged;
 
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<int?>(
+      // Keyed on the current selection so the field is rebuilt from scratch
+      // whenever the filter changes. Without this its displayed value lives
+      // in FormField state that the parent cannot correct — which matters
+      // when a failed request rolls the filter back.
+      key: ValueKey<int?>(selected),
       initialValue: selected,
       isExpanded: true,
       decoration: const InputDecoration(
@@ -471,7 +568,10 @@ class _PipelineRow extends StatelessWidget {
                 child: Text(
                   '${stage.percentage}%',
                   textAlign: TextAlign.right,
-                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ),
             ],
@@ -493,7 +593,11 @@ class _PipelineRow extends StatelessWidget {
 }
 
 class _StatRow extends StatelessWidget {
-  const _StatRow({required this.label, required this.value, this.isLast = false});
+  const _StatRow({
+    required this.label,
+    required this.value,
+    this.isLast = false,
+  });
 
   final String label;
   final String value;
@@ -567,7 +671,10 @@ class _AssessmentRowTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${row.questionsCount} question${row.questionsCount == 1 ? '' : 's'}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ],
             ),

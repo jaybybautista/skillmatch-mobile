@@ -31,12 +31,17 @@ class AutosaveTextField extends StatefulWidget {
 }
 
 class AutosaveTextFieldState extends State<AutosaveTextField> {
-  late final TextEditingController _controller = TextEditingController(text: widget.initialValue);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialValue,
+  );
   Timer? _debounce;
 
   void _handleChange(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 700), () => widget.onChanged(value));
+    _debounce = Timer(
+      const Duration(milliseconds: 700),
+      () => widget.onChanged(value),
+    );
   }
 
   /// Pushes text in from outside (e.g. an accepted AI Help suggestion) and
@@ -87,9 +92,18 @@ class AutosaveTextFieldState extends State<AutosaveTextField> {
             isDense: true,
             filled: true,
             fillColor: AppColors.background,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
           ),
         ),
       ],

@@ -8,7 +8,7 @@ import '../../widgets/company_screen_header.dart';
 
 /// One placement in full — the phone's version of the website's
 /// company.placements.show page: the student's particulars, the posting they
-/// were placed into, the timeline, hours logged, and the assigned
+/// were placed into, the timeline, the evaluation, and the assigned
 /// coordinator.
 class PlacementDetailScreen extends StatefulWidget {
   const PlacementDetailScreen({
@@ -66,7 +66,8 @@ class _PlacementDetailScreenState extends State<PlacementDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = _detail?.placement.studentName ?? widget.initialName ?? 'Placement';
+    final title =
+        _detail?.placement.studentName ?? widget.initialName ?? 'Placement';
 
     return Scaffold(
       backgroundColor: AppColors.primaryDark,
@@ -106,7 +107,9 @@ class _PlacementDetailScreenState extends State<PlacementDetailScreen> {
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
@@ -128,7 +131,10 @@ class _PlacementDetailScreenState extends State<PlacementDetailScreen> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: colors.background,
                       borderRadius: BorderRadius.circular(6),
@@ -159,48 +165,34 @@ class _PlacementDetailScreenState extends State<PlacementDetailScreen> {
           ),
         ),
 
-        _Card(
-          title: 'Hours rendered',
-          icon: Icons.timer_outlined,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${detail.hoursRendered} of ${detail.requiredHours} hours',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: detail.hoursProgress,
-                  minHeight: 8,
-                  backgroundColor: AppColors.background,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-              ),
-              if (detail.evaluationScore != null) ...[
-                const SizedBox(height: 10),
-                _InfoRow('Evaluation score', '${detail.evaluationScore}', isLast: true),
-              ],
-              if (detail.remarks != null && detail.remarks!.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                  detail.remarks!,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.textMuted,
-                    height: 1.4,
+        if (detail.evaluationScore != null ||
+            (detail.remarks != null && detail.remarks!.isNotEmpty))
+          _Card(
+            title: 'Evaluation',
+            icon: Icons.grading_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (detail.evaluationScore != null)
+                  _InfoRow(
+                    'Score',
+                    '${detail.evaluationScore}',
+                    isLast: detail.remarks == null || detail.remarks!.isEmpty,
                   ),
-                ),
+                if (detail.remarks != null && detail.remarks!.isNotEmpty) ...[
+                  if (detail.evaluationScore != null) const SizedBox(height: 8),
+                  Text(
+                    detail.remarks!,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textMuted,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
 
         if (internship != null)
           _Card(
@@ -221,12 +213,19 @@ class _PlacementDetailScreenState extends State<PlacementDetailScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.place_outlined, size: 14, color: AppColors.textMuted),
+                      const Icon(
+                        Icons.place_outlined,
+                        size: 14,
+                        color: AppColors.textMuted,
+                      ),
                       const SizedBox(width: 5),
                       Expanded(
                         child: Text(
                           internship.location!,
-                          style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                     ],
@@ -246,7 +245,10 @@ class _PlacementDetailScreenState extends State<PlacementDetailScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('•  ', style: TextStyle(color: AppColors.textMuted)),
+                          const Text(
+                            '•  ',
+                            style: TextStyle(color: AppColors.textMuted),
+                          ),
                           Expanded(
                             child: Text(
                               item,
@@ -305,7 +307,10 @@ class _PlacementDetailScreenState extends State<PlacementDetailScreen> {
                     if (detail.coordinatorEmail != null)
                       Text(
                         detail.coordinatorEmail!,
-                        style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                   ],
                 ),
@@ -380,7 +385,9 @@ class _InfoRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        border: isLast ? null : const Border(bottom: BorderSide(color: AppColors.border)),
+        border: isLast
+            ? null
+            : const Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,7 +396,10 @@ class _InfoRow extends StatelessWidget {
             width: 118,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textMuted,
+              ),
             ),
           ),
           Expanded(

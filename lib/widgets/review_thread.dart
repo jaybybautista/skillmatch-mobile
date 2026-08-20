@@ -50,7 +50,8 @@ class _BranchRailPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BranchRailPainter oldDelegate) => oldDelegate.isLast != isLast;
+  bool shouldRepaint(_BranchRailPainter oldDelegate) =>
+      oldDelegate.isLast != isLast;
 }
 
 /// One review with its replies in a single branch beneath it.
@@ -127,13 +128,21 @@ class ReviewTile extends StatelessWidget {
                 onPressed: () => onOpenThread!(review),
                 icon: const Icon(Icons.forum_outlined, size: 16),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 label: Text(
-                  review.replyCount == 1 ? '1 reply' : '${review.replyCount} replies',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  review.replyCount == 1
+                      ? '1 reply'
+                      : '${review.replyCount} replies',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -177,7 +186,9 @@ class ReplyRow extends StatelessWidget {
           top: 0,
           bottom: 0,
           width: _railWidth,
-          child: CustomPaint(painter: _BranchRailPainter(isLast: isLastSibling)),
+          child: CustomPaint(
+            painter: _BranchRailPainter(isLast: isLastSibling),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.only(left: _railWidth + 4, top: 6),
@@ -227,8 +238,9 @@ class ReviewBody extends StatelessWidget {
           child: CircleAvatar(
             radius: isReply ? 13 : 18,
             backgroundColor: AppColors.chipBackground,
-            backgroundImage:
-                review.authorAvatarUrl != null ? NetworkImage(review.authorAvatarUrl!) : null,
+            backgroundImage: review.authorAvatarUrl != null
+                ? NetworkImage(review.authorAvatarUrl!)
+                : null,
             child: review.authorAvatarUrl == null
                 ? Text(
                     review.authorInitial,
@@ -257,9 +269,15 @@ class ReviewBody extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: isReply ? 12.5 : 14,
-                          color: hasProfile ? AppColors.primaryLight : AppColors.textDark,
-                          decoration: hasProfile ? TextDecoration.underline : TextDecoration.none,
-                          decorationColor: AppColors.primaryLight.withValues(alpha: 0.4),
+                          color: hasProfile
+                              ? AppColors.primaryLight
+                              : AppColors.textDark,
+                          decoration: hasProfile
+                              ? TextDecoration.underline
+                              : TextDecoration.none,
+                          decorationColor: AppColors.primaryLight.withValues(
+                            alpha: 0.4,
+                          ),
                         ),
                       ),
                     ),
@@ -267,7 +285,10 @@ class ReviewBody extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     '· ${review.createdAtHuman}',
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11.5),
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11.5,
+                    ),
                   ),
                 ],
               ),
@@ -290,7 +311,10 @@ class ReviewBody extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     review.title!,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13.5,
+                    ),
                   ),
                 ),
               Padding(
@@ -323,9 +347,15 @@ class ReviewBody extends StatelessWidget {
                 child: Row(
                   children: [
                     _IconAction(
-                      icon: review.hasLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-                      color: review.hasLiked ? AppColors.primary : AppColors.textMuted,
-                      label: review.likeCount > 0 ? '${review.likeCount}' : null,
+                      icon: review.hasLiked
+                          ? Icons.thumb_up
+                          : Icons.thumb_up_outlined,
+                      color: review.hasLiked
+                          ? AppColors.primary
+                          : AppColors.textMuted,
+                      label: review.likeCount > 0
+                          ? '${review.likeCount}'
+                          : null,
                       tooltip: 'Like',
                       onTap: () => onLike(review),
                     ),
@@ -396,7 +426,11 @@ class _IconAction extends StatelessWidget {
 }
 
 class _MoreMenu extends StatelessWidget {
-  const _MoreMenu({required this.review, required this.onEdit, required this.onDelete});
+  const _MoreMenu({
+    required this.review,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final Review review;
   final VoidCallback onEdit;
@@ -496,7 +530,10 @@ class ReviewComposer extends StatelessWidget {
                       Expanded(
                         child: Text(
                           contextLabel!,
-                          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                       if (onCancel != null)
@@ -504,7 +541,11 @@ class ReviewComposer extends StatelessWidget {
                           onTap: onCancel,
                           child: const Padding(
                             padding: EdgeInsets.all(4),
-                            child: Icon(Icons.close, size: 16, color: AppColors.textMuted),
+                            child: Icon(
+                              Icons.close,
+                              size: 16,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ),
                     ],
@@ -522,8 +563,14 @@ class ReviewComposer extends StatelessWidget {
                       decoration: InputDecoration(
                         isDense: true,
                         hintText: hintText,
-                        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        hintStyle: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 14,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: const BorderSide(color: AppColors.border),
@@ -540,7 +587,10 @@ class ReviewComposer extends StatelessWidget {
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.send_rounded, color: AppColors.primary),
+                        : const Icon(
+                            Icons.send_rounded,
+                            color: AppColors.primary,
+                          ),
                     tooltip: 'Send',
                   ),
                 ],

@@ -35,6 +35,7 @@ class AppUser {
     this.familyName,
     this.profilePictureUrl,
     this.student,
+    this.companyId,
   });
 
   final int id;
@@ -50,6 +51,10 @@ class AppUser {
   final String? familyName;
   final String? profilePictureUrl;
   final StudentInfo? student;
+
+  /// The `companies` row id for a company account, null for anyone else.
+  /// Present in /auth/me's payload already — the app just never read it.
+  final int? companyId;
 
   String get firstName {
     final given = givenName?.trim();
@@ -67,7 +72,10 @@ class AppUser {
       role: json['role'] as String,
       status: json['status'] as String,
       profilePictureUrl: json['profile_picture_url'] as String?,
-      student: json['student'] != null ? StudentInfo.fromJson(json['student'] as Map<String, dynamic>) : null,
+      student: json['student'] != null
+          ? StudentInfo.fromJson(json['student'] as Map<String, dynamic>)
+          : null,
+      companyId: (json['company'] as Map<String, dynamic>?)?['id'] as int?,
     );
   }
 }

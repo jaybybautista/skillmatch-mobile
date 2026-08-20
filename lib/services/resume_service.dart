@@ -12,21 +12,30 @@ class ResumeService {
   /// entries here lets a partial "just this one field changed" update go
   /// out without wiping the other fields back to null server-side.
   Map<String, dynamic> _presentOnly(Map<String, dynamic> body) {
-    return {for (final entry in body.entries) if (entry.value != null) entry.key: entry.value};
+    return {
+      for (final entry in body.entries)
+        if (entry.value != null) entry.key: entry.value,
+    };
   }
 
   Future<List<ResumeSummary>> fetchResumes() async {
     final response = await _client.get('/resumes', authenticated: true);
-    return (response['resumes'] as List).map((e) => ResumeSummary.fromJson(e as Map<String, dynamic>)).toList();
+    return (response['resumes'] as List)
+        .map((e) => ResumeSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<Resume> createResume(String title) async {
-    final response = await _client.post('/resumes', {'title': title}, authenticated: true);
+    final response = await _client.post('/resumes', {
+      'title': title,
+    }, authenticated: true);
     return Resume.fromJson(response);
   }
 
   Future<void> renameResume(int resumeId, String title) async {
-    await _client.put('/resumes/$resumeId/rename', {'title': title}, authenticated: true);
+    await _client.put('/resumes/$resumeId/rename', {
+      'title': title,
+    }, authenticated: true);
   }
 
   Future<void> deleteResume(int resumeId) async {
@@ -34,7 +43,10 @@ class ResumeService {
   }
 
   Future<Resume> fetchResume(int resumeId) async {
-    final response = await _client.get('/resumes/$resumeId', authenticated: true);
+    final response = await _client.get(
+      '/resumes/$resumeId',
+      authenticated: true,
+    );
     return Resume.fromJson(response);
   }
 
@@ -44,11 +56,11 @@ class ResumeService {
     String? description,
     required String inputType,
   }) async {
-    await _client.post(
-      '/resumes/$resumeId/sections',
-      {'title': title, 'description': description, 'input_type': inputType},
-      authenticated: true,
-    );
+    await _client.post('/resumes/$resumeId/sections', {
+      'title': title,
+      'description': description,
+      'input_type': inputType,
+    }, authenticated: true);
   }
 
   Future<void> deleteSection(int sectionId) async {
@@ -77,7 +89,9 @@ class ResumeService {
   }
 
   Future<void> updateTextSection(int sectionId, String? content) async {
-    await _client.put('/resume-sections/$sectionId/text', {'content': content}, authenticated: true);
+    await _client.put('/resume-sections/$sectionId/text', {
+      'content': content,
+    }, authenticated: true);
   }
 
   Future<ResumeExperienceEntry> addExperience(
@@ -89,18 +103,15 @@ class ResumeService {
     String? periodStart,
     String? periodEnd,
   }) async {
-    final response = await _client.post(
-      '/resume-sections/$sectionId/experiences',
-      {
-        'job_title': jobTitle,
-        'company': company,
-        'address': address,
-        'responsibilities': responsibilities,
-        'period_start': periodStart,
-        'period_end': periodEnd,
-      },
-      authenticated: true,
-    );
+    final response = await _client
+        .post('/resume-sections/$sectionId/experiences', {
+          'job_title': jobTitle,
+          'company': company,
+          'address': address,
+          'responsibilities': responsibilities,
+          'period_start': periodStart,
+          'period_end': periodEnd,
+        }, authenticated: true);
     return ResumeExperienceEntry.fromJson(response);
   }
 
@@ -128,7 +139,10 @@ class ResumeService {
   }
 
   Future<void> deleteExperience(int experienceId) async {
-    await _client.delete('/resume-experiences/$experienceId', authenticated: true);
+    await _client.delete(
+      '/resume-experiences/$experienceId',
+      authenticated: true,
+    );
   }
 
   Future<ResumeAchievementEntry> addAchievement(
@@ -140,7 +154,12 @@ class ResumeService {
   }) async {
     final response = await _client.post(
       '/resume-sections/$sectionId/achievements',
-      {'title': title, 'category': category, 'location': location, 'date_text': dateText},
+      {
+        'title': title,
+        'category': category,
+        'location': location,
+        'date_text': dateText,
+      },
       authenticated: true,
     );
     return ResumeAchievementEntry.fromJson(response);
@@ -155,16 +174,28 @@ class ResumeService {
   }) async {
     await _client.put(
       '/resume-achievements/$achievementId',
-      _presentOnly({'title': title, 'category': category, 'location': location, 'date_text': dateText}),
+      _presentOnly({
+        'title': title,
+        'category': category,
+        'location': location,
+        'date_text': dateText,
+      }),
       authenticated: true,
     );
   }
 
   Future<void> deleteAchievement(int achievementId) async {
-    await _client.delete('/resume-achievements/$achievementId', authenticated: true);
+    await _client.delete(
+      '/resume-achievements/$achievementId',
+      authenticated: true,
+    );
   }
 
-  Future<ResumeProjectEntry> addProject(int sectionId, {String? title, String? description}) async {
+  Future<ResumeProjectEntry> addProject(
+    int sectionId, {
+    String? title,
+    String? description,
+  }) async {
     final response = await _client.post(
       '/resume-sections/$sectionId/projects',
       {'title': title, 'description': description},
@@ -173,7 +204,11 @@ class ResumeService {
     return ResumeProjectEntry.fromJson(response);
   }
 
-  Future<void> updateProject(int projectId, {String? title, String? description}) async {
+  Future<void> updateProject(
+    int projectId, {
+    String? title,
+    String? description,
+  }) async {
     await _client.put(
       '/resume-projects/$projectId',
       _presentOnly({'title': title, 'description': description}),
@@ -192,11 +227,13 @@ class ResumeService {
     String? startDate,
     String? endDate,
   }) async {
-    final response = await _client.post(
-      '/resume-sections/$sectionId/education',
-      {'degree': degree, 'school_name': schoolName, 'start_date': startDate, 'end_date': endDate},
-      authenticated: true,
-    );
+    final response = await _client
+        .post('/resume-sections/$sectionId/education', {
+          'degree': degree,
+          'school_name': schoolName,
+          'start_date': startDate,
+          'end_date': endDate,
+        }, authenticated: true);
     return ResumeEducationEntry.fromJson(response);
   }
 
@@ -209,7 +246,12 @@ class ResumeService {
   }) async {
     await _client.put(
       '/resume-education/$educationId',
-      _presentOnly({'degree': degree, 'school_name': schoolName, 'start_date': startDate, 'end_date': endDate}),
+      _presentOnly({
+        'degree': degree,
+        'school_name': schoolName,
+        'start_date': startDate,
+        'end_date': endDate,
+      }),
       authenticated: true,
     );
   }
@@ -220,12 +262,15 @@ class ResumeService {
 
   /// Returns the section's full, updated skill lists (technical + soft) —
   /// the backend returns the whole section here rather than a single skill.
-  Future<ResumeSection> addSkill(int sectionId, {required String category, required String skillName}) async {
-    final response = await _client.post(
-      '/resume-sections/$sectionId/skills',
-      {'category': category, 'skill_name': skillName},
-      authenticated: true,
-    );
+  Future<ResumeSection> addSkill(
+    int sectionId, {
+    required String category,
+    required String skillName,
+  }) async {
+    final response = await _client.post('/resume-sections/$sectionId/skills', {
+      'category': category,
+      'skill_name': skillName,
+    }, authenticated: true);
     return ResumeSection.fromJson(response);
   }
 
@@ -236,19 +281,26 @@ class ResumeService {
   /// Sends the current text to the same Groq-backed rewrite endpoint the web
   /// app's "AI Help" buttons use, returning the improved version. [context]
   /// carries extra fields (e.g. job_title/company) the model uses for tone.
-  Future<String> improveText(String fieldLabel, String text, {Map<String, String> context = const {}}) async {
-    final response = await _client.postLong(
-      '/resumes/ai-help',
-      {'field_label': fieldLabel, 'text': text, 'context': context},
-      authenticated: true,
-    );
+  Future<String> improveText(
+    String fieldLabel,
+    String text, {
+    Map<String, String> context = const {},
+  }) async {
+    final response = await _client.postLong('/resumes/ai-help', {
+      'field_label': fieldLabel,
+      'text': text,
+      'context': context,
+    }, authenticated: true);
     return response['text'] as String;
   }
 
   /// Uploads a resume file (or reuses the student's already-uploaded profile
   /// resume) to the same OCR + AI parsing pipeline the web app's Import
   /// feature uses, and returns the newly created resume.
-  Future<Resume> importResume({String? filePath, bool useProfileResume = false}) async {
+  Future<Resume> importResume({
+    String? filePath,
+    bool useProfileResume = false,
+  }) async {
     final response = await _client.postMultipart(
       '/resumes/import',
       fields: {'use_profile_resume': useProfileResume.toString()},

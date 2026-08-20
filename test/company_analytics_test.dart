@@ -19,6 +19,9 @@ class _FakeCompanyService extends CompanyService {
     this.counts = PlacementCounts.empty,
     this.detail,
     this.error,
+    this.filteredAnalytics = false,
+    this.delay = Duration.zero,
+    this.failAfterFirst,
   });
 
   CompanyAnalytics? analytics;
@@ -27,12 +30,27 @@ class _FakeCompanyService extends CompanyService {
   CompanyPlacementDetail? detail;
   final Object? error;
 
+  /// Answers with a narrowed pipeline when a posting filter is passed, so a
+  /// test can tell whether the screen re-rendered the filtered numbers.
+  final bool filteredAnalytics;
+
+  final Duration delay;
+
+  /// Thrown by every call after the first — mimics the filter request failing
+  /// once the user starts changing the dropdown.
+  final Object? failAfterFirst;
+
   final calls = <String>[];
 
   @override
   Future<CompanyAnalytics> fetchAnalytics({int? internshipId}) async {
     calls.add('analytics:${internshipId ?? "all"}');
+    if (delay > Duration.zero) await Future<void>.delayed(delay);
     if (error != null) throw error!;
+    if (failAfterFirst != null && calls.length > 1) throw failAfterFirst!;
+    if (filteredAnalytics) {
+      return CompanyAnalytics.fromJson(_analyticsJson(narrowed: internshipId != null));
+    }
     return analytics ?? CompanyAnalytics.fromJson(const {});
   }
 
@@ -54,7 +72,12 @@ class _FakeCompanyService extends CompanyService {
   }
 }
 
-Map<String, dynamic> _analyticsJson({int pipelineTotal = 5, int? filter}) => {
+Map<String, dynamic> _analyticsJson({
+  int pipelineTotal = 5,
+  int? filter,
+  bool narrowed = false,
+}) =>
+    {
       'postings': {'total': 2, 'open': 2, 'closed': 0, 'open_slots': 14, 'slots_filled': 1},
       'applicants': {
         'total': 5,
@@ -68,12 +91,27 @@ Map<String, dynamic> _analyticsJson({int pipelineTotal = 5, int? filter}) => {
       'assessments': {'total': 1, 'quizzes_taken': 4, 'average_score': 71},
       'placements': {'total': 1, 'active': 1},
       'pipeline': {
-        'total': pipelineTotal,
+        'total': narrowed ? 3 : pipelineTotal,
         'stages': [
           {'status': 'pending', 'label': 'Pending', 'count': 0, 'percentage': 0},
-          {'status': 'under_review', 'label': 'Under review', 'count': 1, 'percentage': 20},
-          {'status': 'interview', 'label': 'Interview', 'count': 3, 'percentage': 60},
-          {'status': 'accepted', 'label': 'Accepted', 'count': 1, 'percentage': 20},
+          {
+            'status': 'under_review',
+            'label': 'Under review',
+            'count': 1,
+            'percentage': narrowed ? 33 : 20,
+          },
+          {
+            'status': 'interview',
+            'label': 'Interview',
+            'count': narrowed ? 2 : 3,
+            'percentage': narrowed ? 67 : 60,
+          },
+          {
+            'status': 'accepted',
+            'label': 'Accepted',
+            'count': narrowed ? 0 : 1,
+            'percentage': 20,
+          },
           {'status': 'rejected', 'label': 'Rejected', 'count': 0, 'percentage': 0},
         ],
       },
@@ -125,6 +163,16 @@ Map<String, dynamic> _placementJson({
 /// simply is not in the tree until it is scrolled to.
 Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(finder, 220, scrollable: find.byType(Scrollable).last);
+  await tester.pumpAndSettle();
+}
+
+/// Opens the pipeline's posting dropdown and picks [label].
+Future<void> _pick(WidgetTester tester, String label) async {
+  final dropdown = find.byType(DropdownButtonFormField<int?>);
+  await _scrollTo(tester, dropdown);
+  await tester.tap(dropdown);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(label).last);
   await tester.pumpAndSettle();
 }
 
@@ -213,9 +261,69 @@ void main() {
       expect(find.text('60%'), findsOneWidget);
     });
 
-    testWidgets('choosing a posting re-queries the pipeline for it', (tester) async {
+    testWidgets('choosing a posting re-renders the pipeline with its numbers',
+        (tester) async {
+      final service = _FakeCompanyService(filteredAnalytics: true);
+
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyAnalyticsScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+
+      await _scrollTo(tester, find.byType(DropdownButtonFormField<int?>));
+      expect(find.text('60%'), findsOneWidget, reason: 'unfiltered interview share');
+
+      await _pick(tester, 'Laravel Developer');
+
+      expect(service.calls, ['analytics:all', 'analytics:5']);
+      await _scrollTo(tester, find.text('Interview'));
+      expect(find.text('67%'), findsOneWidget, reason: 'narrowed share is on screen');
+      expect(find.text('60%'), findsNothing, reason: 'the old share is gone');
+    });
+
+    testWidgets('switching back to All postings restores the full numbers',
+        (tester) async {
+      final service = _FakeCompanyService(filteredAnalytics: true);
+
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyAnalyticsScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+
+      await _pick(tester, 'Laravel Developer');
+      await _pick(tester, 'All postings');
+
+      expect(service.calls, ['analytics:all', 'analytics:5', 'analytics:all']);
+      await _scrollTo(tester, find.text('Interview'));
+      expect(find.text('60%'), findsOneWidget);
+    });
+
+    testWidgets('the chosen posting survives scrolling the panel out of view',
+        (tester) async {
+      final service = _FakeCompanyService(filteredAnalytics: true);
+
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyAnalyticsScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+
+      await _pick(tester, 'Laravel Developer');
+
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, 2000));
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.byType(DropdownButtonFormField<int?>));
+
+      expect(find.text('Laravel Developer'), findsOneWidget);
+    });
+
+    testWidgets('a failed filter says so instead of silently doing nothing',
+        (tester) async {
+      // A bare error rather than an ApiException — which is what a timeout or
+      // a decode failure surfaces as. These used to escape uncaught, leaving
+      // the screen unchanged and the user with no idea anything had happened.
       final service = _FakeCompanyService(
-        analytics: CompanyAnalytics.fromJson(_analyticsJson()),
+        filteredAnalytics: true,
+        failAfterFirst: Exception('boom'),
       );
 
       await tester.pumpWidget(
@@ -223,18 +331,35 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(service.calls, ['analytics:all']);
+      await _pick(tester, 'Laravel Developer');
+
+      expect(find.textContaining('Could not filter the pipeline'), findsOneWidget);
+    });
+
+    testWidgets('a slow filter shows the panel is working', (tester) async {
+      final service = _FakeCompanyService(
+        filteredAnalytics: true,
+        delay: const Duration(milliseconds: 600),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyAnalyticsScreen(service: service)),
+      );
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
 
       final dropdown = find.byType(DropdownButtonFormField<int?>);
       await _scrollTo(tester, dropdown);
-      await tester.ensureVisible(dropdown);
       await tester.tap(dropdown);
       await tester.pumpAndSettle();
-
       await tester.tap(find.text('Laravel Developer').last);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-      expect(service.calls, ['analytics:all', 'analytics:5']);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('a load failure offers a retry', (tester) async {
@@ -366,28 +491,12 @@ void main() {
       expect(find.byType(PlacementDetailScreen), findsOneWidget);
       expect(find.text('BSIT'), findsOneWidget);
 
-      await _scrollTo(tester, find.text('250 of 500 hours'));
-      expect(find.text('250 of 500 hours'), findsOneWidget);
+      // Hours rendered is deliberately not shown on this screen.
+      expect(find.textContaining('hours'), findsNothing);
+      expect(find.text('Hours rendered'), findsNothing);
 
       await _scrollTo(tester, find.text('Dr. Maria Santos'));
       expect(find.text('Dr. Maria Santos'), findsOneWidget);
-    });
-  });
-
-  group('CompanyPlacementDetail', () {
-    test('hours progress is a fraction, clamped at one', () {
-      CompanyPlacementDetail detailWith(int rendered, int required) =>
-          CompanyPlacementDetail.fromJson({
-            ..._placementJson(),
-            'hours_rendered': rendered,
-            'required_hours': required,
-          });
-
-      expect(detailWith(250, 500).hoursProgress, 0.5);
-      // Logging more than required must not overflow the progress bar.
-      expect(detailWith(600, 500).hoursProgress, 1.0);
-      // No required hours on record means no meaningful progress to draw.
-      expect(detailWith(10, 0).hoursProgress, 0.0);
     });
   });
 

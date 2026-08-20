@@ -40,7 +40,10 @@ class EmptyResults extends StatelessWidget {
               width: 104,
               height: 104,
               alignment: Alignment.center,
-              decoration: const BoxDecoration(color: Color(0xFFEAF1FD), shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEAF1FD),
+                shape: BoxShape.circle,
+              ),
               child: Icon(icon, size: 44, color: AppColors.primary),
             ),
             const SizedBox(height: 26),

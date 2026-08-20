@@ -1,3 +1,5 @@
+import '../core/json_parse.dart';
+
 /// One student's completed attempt at a company's assessment — the same
 /// `assessment_results` row the website's Records → Assessments table lists.
 ///
@@ -44,20 +46,23 @@ class AssessmentSubmission {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
     if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length >= 2 ? 2 : 1).toUpperCase();
+      return parts.first
+          .substring(0, parts.first.length >= 2 ? 2 : 1)
+          .toUpperCase();
     }
     return (parts.first[0] + parts.last[0]).toUpperCase();
   }
 
-  factory AssessmentSubmission.fromJson(Map<String, dynamic> json) => AssessmentSubmission(
-        id: (json['id'] as num).toInt(),
-        studentId: (json['student_id'] as num?)?.toInt(),
+  factory AssessmentSubmission.fromJson(Map<String, dynamic> json) =>
+      AssessmentSubmission(
+        id: asInt(json['id']),
+        studentId: asIntOrNull(json['student_id']),
         name: json['student_name'] as String? ?? 'Unknown',
         email: json['student_email'] as String?,
         avatarUrl: json['student_avatar_url'] as String?,
-        score: (json['score'] as num?)?.toInt() ?? 0,
-        totalPoints: (json['total_points'] as num?)?.toInt() ?? 0,
-        percentage: (json['percentage'] as num?)?.toInt() ?? 0,
+        score: asInt(json['score']),
+        totalPoints: asInt(json['total_points']),
+        percentage: asInt(json['percentage']),
         passed: json['passed'] as bool? ?? false,
         timedOut: json['timed_out'] as bool? ?? false,
         submittedAtLabel: json['submitted_at_label'] as String? ?? '',

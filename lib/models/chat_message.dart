@@ -8,7 +8,12 @@ library;
 /// The web navigates using [url]; the app uses [screen], a platform-neutral id
 /// that ChatbotNavigationService assigns so both stay in step.
 class ChatCard {
-  ChatCard({required this.title, required this.subtitle, required this.screen, this.url});
+  ChatCard({
+    required this.title,
+    required this.subtitle,
+    required this.screen,
+    this.url,
+  });
 
   final String title;
   final String subtitle;
@@ -16,11 +21,11 @@ class ChatCard {
   final String? url;
 
   factory ChatCard.fromJson(Map<String, dynamic> json) => ChatCard(
-        title: json['title'] as String? ?? '',
-        subtitle: json['subtitle'] as String? ?? '',
-        screen: json['screen'] as String? ?? '',
-        url: json['url'] as String?,
-      );
+    title: json['title'] as String? ?? '',
+    subtitle: json['subtitle'] as String? ?? '',
+    screen: json['screen'] as String? ?? '',
+    url: json['url'] as String?,
+  );
 }
 
 enum ChatRole { user, assistant }
@@ -50,9 +55,9 @@ class ChatMessage {
 
   /// The shape the API expects for prior turns.
   Map<String, String> toHistoryJson() => {
-        'role': role == ChatRole.user ? 'user' : 'assistant',
-        'content': text,
-      };
+    'role': role == ChatRole.user ? 'user' : 'assistant',
+    'content': text,
+  };
 
   /// "10:24 AM"
   String get timeLabel {
@@ -71,9 +76,11 @@ class ChatReply {
   final List<ChatCard> cards;
 
   factory ChatReply.fromJson(Map<String, dynamic> json) => ChatReply(
-        answer: json['answer'] as String? ?? "I didn't get a response. Please try again.",
-        cards: (json['cards'] as List? ?? const [])
-            .map((e) => ChatCard.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    answer:
+        json['answer'] as String? ??
+        "I didn't get a response. Please try again.",
+    cards: (json['cards'] as List? ?? const [])
+        .map((e) => ChatCard.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 }

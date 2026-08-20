@@ -63,7 +63,9 @@ class AssessmentIntro {
       questionCount: (assessment['question_count'] as num?)?.toInt() ?? 0,
       totalPoints: (assessment['total_points'] as num?)?.toInt() ?? 0,
       timeLimitMinutes: (assessment['time_limit'] as num?)?.toInt(),
-      instructions: (json['instructions'] as List? ?? const []).map((e) => e.toString()).toList(),
+      instructions: (json['instructions'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
       alreadyCompleted: json['already_completed'] as bool? ?? false,
       isRetake: json['is_retake'] as bool? ?? false,
       attemptHistory: (json['attempt_history'] as List? ?? const [])
@@ -98,7 +100,8 @@ class AssessmentAttempt {
   /// those "Before reassignment".
   final bool isCurrent;
 
-  factory AssessmentAttempt.fromJson(Map<String, dynamic> json) => AssessmentAttempt(
+  factory AssessmentAttempt.fromJson(Map<String, dynamic> json) =>
+      AssessmentAttempt(
         score: (json['score'] as num?)?.toInt() ?? 0,
         totalPoints: (json['total_points'] as num?)?.toInt() ?? 0,
         percentage: (json['percentage'] as num?)?.toInt() ?? 0,
@@ -117,9 +120,9 @@ class QuestionChoice {
   final String text;
 
   factory QuestionChoice.fromJson(Map<String, dynamic> json) => QuestionChoice(
-        id: (json['id'] as num).toInt(),
-        text: json['choice_text'] as String? ?? '',
-      );
+    id: (json['id'] as num).toInt(),
+    text: json['choice_text'] as String? ?? '',
+  );
 }
 
 /// How a question is answered. Companies can currently author the first three;
@@ -151,7 +154,8 @@ enum QuestionType {
   }
 
   /// True when the answer is free text rather than a choice id.
-  bool get isFreeText => this == QuestionType.shortAnswer || this == QuestionType.longAnswer;
+  bool get isFreeText =>
+      this == QuestionType.shortAnswer || this == QuestionType.longAnswer;
 
   /// True when more than one choice may be selected.
   bool get isMultiSelect => this == QuestionType.checkbox;
@@ -179,7 +183,8 @@ class AssessmentQuestion {
   final String? imageUrl;
   final List<QuestionChoice> choices;
 
-  factory AssessmentQuestion.fromJson(Map<String, dynamic> json) => AssessmentQuestion(
+  factory AssessmentQuestion.fromJson(Map<String, dynamic> json) =>
+      AssessmentQuestion(
         id: (json['id'] as num).toInt(),
         text: json['question_text'] as String? ?? '',
         description: json['description'] as String?,
@@ -245,7 +250,8 @@ class AssessmentAttemptResult {
   final bool timedOut;
   final String? submittedAt;
 
-  factory AssessmentAttemptResult.fromJson(Map<String, dynamic> json) => AssessmentAttemptResult(
+  factory AssessmentAttemptResult.fromJson(Map<String, dynamic> json) =>
+      AssessmentAttemptResult(
         assessmentTitle: json['assessment_title'] as String? ?? 'Assessment',
         score: (json['score'] as num?)?.toInt() ?? 0,
         totalPoints: (json['total_points'] as num?)?.toInt() ?? 0,
