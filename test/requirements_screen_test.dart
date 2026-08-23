@@ -108,7 +108,9 @@ void main() {
       _item(id: 3, title: 'Submitted form', hasUpload: true, isSubmitted: true),
     ]);
 
-    await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
+    await tester.pumpWidget(
+      MaterialApp(home: RequirementsScreen(service: service)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Not started'), findsOneWidget);
@@ -119,7 +121,9 @@ void main() {
   testWidgets('the empty state names what is missing', (tester) async {
     final service = _FakeRequirementService(const []);
 
-    await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
+    await tester.pumpWidget(
+      MaterialApp(home: RequirementsScreen(service: service)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('No requirements published yet'), findsOneWidget);
@@ -129,10 +133,12 @@ void main() {
     final service = _FakeRequirementService([_item()]);
     final observer = _PushRecordingNavigatorObserver();
 
-    await tester.pumpWidget(MaterialApp(
-      navigatorObservers: [observer],
-      home: RequirementsScreen(service: service),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: [observer],
+        home: RequirementsScreen(service: service),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Application for Internship'));
@@ -144,10 +150,14 @@ void main() {
     expect(observer.pushed, contains(RequirementViewerScreen));
   });
 
-  testWidgets('Submit to coordinator calls the service and reloads', (tester) async {
+  testWidgets('Submit to coordinator calls the service and reloads', (
+    tester,
+  ) async {
     final service = _FakeRequirementService([_item(hasUpload: true)]);
 
-    await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
+    await tester.pumpWidget(
+      MaterialApp(home: RequirementsScreen(service: service)),
+    );
     await tester.pumpAndSettle();
 
     // Submit/withdraw/remove only live on the My Uploads tab's menu.
@@ -162,9 +172,13 @@ void main() {
   });
 
   testWidgets('Withdraw submission calls unsubmit', (tester) async {
-    final service = _FakeRequirementService([_item(hasUpload: true, isSubmitted: true)]);
+    final service = _FakeRequirementService([
+      _item(hasUpload: true, isSubmitted: true),
+    ]);
 
-    await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
+    await tester.pumpWidget(
+      MaterialApp(home: RequirementsScreen(service: service)),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('My Uploads'));
@@ -177,10 +191,14 @@ void main() {
     expect(service.calls, contains('unsubmit:1'));
   });
 
-  testWidgets('Remove upload asks for confirmation before deleting', (tester) async {
+  testWidgets('Remove upload asks for confirmation before deleting', (
+    tester,
+  ) async {
     final service = _FakeRequirementService([_item(hasUpload: true)]);
 
-    await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
+    await tester.pumpWidget(
+      MaterialApp(home: RequirementsScreen(service: service)),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('My Uploads'));
@@ -200,14 +218,18 @@ void main() {
     expect(service.calls, contains('removeUpload:1'));
   });
 
-  testWidgets('a requirement with no template yet is not tappable', (tester) async {
+  testWidgets('a requirement with no template yet is not tappable', (
+    tester,
+  ) async {
     final service = _FakeRequirementService([_item(hasTemplate: false)]);
     final observer = _PushRecordingNavigatorObserver();
 
-    await tester.pumpWidget(MaterialApp(
-      navigatorObservers: [observer],
-      home: RequirementsScreen(service: service),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: [observer],
+        home: RequirementsScreen(service: service),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Application for Internship'));
@@ -217,83 +239,117 @@ void main() {
   });
 
   group('Coordinator Forms / My Uploads split', () {
-    testWidgets('defaults to Coordinator Forms and lists every form', (tester) async {
+    testWidgets('defaults to Coordinator Forms and lists every form', (
+      tester,
+    ) async {
       final service = _FakeRequirementService([
         _item(id: 1, title: 'Not uploaded yet'),
         _item(id: 2, title: 'Already uploaded', hasUpload: true),
       ]);
 
-      await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: RequirementsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Not uploaded yet'), findsOneWidget);
       expect(find.text('Already uploaded'), findsOneWidget);
     });
 
-    testWidgets('My Uploads only lists what the student has actually uploaded', (tester) async {
-      final service = _FakeRequirementService([
-        _item(id: 1, title: 'Not uploaded yet'),
-        _item(id: 2, title: 'Already uploaded', hasUpload: true),
-      ]);
+    testWidgets(
+      'My Uploads only lists what the student has actually uploaded',
+      (tester) async {
+        final service = _FakeRequirementService([
+          _item(id: 1, title: 'Not uploaded yet'),
+          _item(id: 2, title: 'Already uploaded', hasUpload: true),
+        ]);
 
-      await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          MaterialApp(home: RequirementsScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('My Uploads'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('My Uploads'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Not uploaded yet'), findsNothing);
-      expect(find.text('Already uploaded'), findsOneWidget);
-    });
+        expect(find.text('Not uploaded yet'), findsNothing);
+        expect(find.text('Already uploaded'), findsOneWidget);
+      },
+    );
 
-    testWidgets('My Uploads shows its own empty state when nothing is uploaded', (tester) async {
-      final service = _FakeRequirementService([_item(id: 1, title: 'Not uploaded yet')]);
+    testWidgets(
+      'My Uploads shows its own empty state when nothing is uploaded',
+      (tester) async {
+        final service = _FakeRequirementService([
+          _item(id: 1, title: 'Not uploaded yet'),
+        ]);
 
-      await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          MaterialApp(home: RequirementsScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('My Uploads'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('My Uploads'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Nothing uploaded yet'), findsOneWidget);
-    });
+        expect(find.text('Nothing uploaded yet'), findsOneWidget);
+      },
+    );
 
-    testWidgets('tapping a card in My Uploads opens the uploaded copy, not the template', (tester) async {
+    testWidgets(
+      'tapping a card in My Uploads opens the uploaded copy, not the template',
+      (tester) async {
+        final service = _FakeRequirementService([
+          _item(id: 1, hasUpload: true),
+        ]);
+
+        await tester.pumpWidget(
+          MaterialApp(home: RequirementsScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('My Uploads'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Application for Internship'));
+        await tester.pump();
+        await tester.pump();
+
+        expect(service.calls, contains('previewUpload:1'));
+        expect(service.calls, isNot(contains('previewTemplate:1')));
+      },
+    );
+
+    testWidgets(
+      'the Coordinator Forms menu never offers submit/withdraw/remove',
+      (tester) async {
+        final service = _FakeRequirementService([
+          _item(id: 1, hasUpload: true, isSubmitted: true),
+        ]);
+
+        await tester.pumpWidget(
+          MaterialApp(home: RequirementsScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.more_vert));
+        await tester.pumpAndSettle();
+
+        expect(find.text('View template'), findsOneWidget);
+        expect(find.text('Replace my copy'), findsOneWidget);
+        expect(find.text('Withdraw submission'), findsNothing);
+        expect(find.text('Remove upload'), findsNothing);
+      },
+    );
+
+    testWidgets('the My Uploads menu never offers template actions', (
+      tester,
+    ) async {
       final service = _FakeRequirementService([_item(id: 1, hasUpload: true)]);
 
-      await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('My Uploads'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Application for Internship'));
-      await tester.pump();
-      await tester.pump();
-
-      expect(service.calls, contains('previewUpload:1'));
-      expect(service.calls, isNot(contains('previewTemplate:1')));
-    });
-
-    testWidgets('the Coordinator Forms menu never offers submit/withdraw/remove', (tester) async {
-      final service = _FakeRequirementService([_item(id: 1, hasUpload: true, isSubmitted: true)]);
-
-      await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-
-      expect(find.text('View template'), findsOneWidget);
-      expect(find.text('Replace my copy'), findsOneWidget);
-      expect(find.text('Withdraw submission'), findsNothing);
-      expect(find.text('Remove upload'), findsNothing);
-    });
-
-    testWidgets('the My Uploads menu never offers template actions', (tester) async {
-      final service = _FakeRequirementService([_item(id: 1, hasUpload: true)]);
-
-      await tester.pumpWidget(MaterialApp(home: RequirementsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: RequirementsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('My Uploads'));

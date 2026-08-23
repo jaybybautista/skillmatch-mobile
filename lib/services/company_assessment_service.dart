@@ -32,16 +32,44 @@ class CompanyAssessmentService {
     );
   }
 
+  /// The same call, plus the postings the edit form may offer.
+  ///
+  /// That list is not the library's: it also carries any closed posting this
+  /// assessment is already linked to. Saving writes exactly the ticked ids,
+  /// so a posting missing from the form would be quietly unlinked — which is
+  /// why the server works it out per assessment rather than once per company.
+  Future<AssessmentEdit> fetchAssessmentForEditing(int id) async {
+    final response = await _client.get(
+      '/company/assessments/$id',
+      authenticated: true,
+    );
+
+    return AssessmentEdit(
+      assessment: CompanyAssessment.fromJson(
+        response['assessment'] as Map<String, dynamic>,
+      ),
+      postingOptions: (response['posting_options'] as List? ?? const [])
+          .map(
+            (e) => AssessmentPostingOption.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
+    );
+  }
+
   /// Step 1 for a new assessment. Creates it as a draft — it only becomes
   /// published once [saveQuestions] runs, the same two-step flow the web has.
+  ///
+  /// [internshipIds] is a list because one assessment can screen for several
+  /// postings at once. Reusing a paper is a link in `assessment_internship`,
+  /// not a copy, so editing it later reaches every posting that uses it.
   Future<CompanyAssessment> createAssessment({
-    required int internshipId,
+    required List<int> internshipIds,
     required String title,
     String? description,
     int? timeLimitMinutes,
   }) async {
     final response = await _client.post('/company/assessments', {
-      'internship_id': internshipId,
+      'internship_ids': internshipIds,
       'title': title,
       'description': ?description,
       'time_limit': ?timeLimitMinutes,
@@ -53,15 +81,19 @@ class CompanyAssessmentService {
   }
 
   /// Step 1 again, for an assessment that already exists.
+  ///
+  /// [internshipIds] replaces the whole set of linked postings — whatever is
+  /// not in it is unlinked. Answers already given are untouched; only the
+  /// next applicant stops seeing the paper on a posting you removed.
   Future<CompanyAssessment> updateAssessment({
     required int id,
-    required int internshipId,
+    required List<int> internshipIds,
     required String title,
     String? description,
     int? timeLimitMinutes,
   }) async {
     final response = await _client.put('/company/assessments/$id', {
-      'internship_id': internshipId,
+      'internship_ids': internshipIds,
       'title': title,
       'description': ?description,
       'time_limit': ?timeLimitMinutes,
@@ -71,6 +103,69 @@ class CompanyAssessmentService {
       response['assessment'] as Map<String, dynamic>,
     );
   }
+
+  /// Adds [internshipId] to the postings this assessment screens for,
+  /// leaving the ones it already has alone.
+  ///
+  /// This is the "reuse what I already wrote" path taken from a posting
+  /// rather than from the assessment's own form. It goes through the same
+  /// update endpoint, so it is the same pivot write either way.
+  Future<CompanyAssessment> linkToPosting(
+    CompanyAssessment assessment,
+    int internshipId,
+  ) async {
+    final current = await _reread(assessment);
+
+    return updateAssessment(
+      id: current.id,
+      internshipIds: {...current.internshipIds, internshipId}.toList(),
+      title: current.title,
+      description: current.description,
+      timeLimitMinutes: current.timeLimitMinutes,
+    );
+  }
+
+  /// Removes [internshipId] from the postings this assessment screens for.
+  ///
+  /// Refused when it is the only one left: the backend requires at least one
+  /// posting, and an assessment attached to nothing cannot be reached again.
+  Future<CompanyAssessment> unlinkFromPosting(
+    CompanyAssessment assessment,
+    int internshipId,
+  ) async {
+    final current = await _reread(assessment);
+
+    final remaining = current.internshipIds
+        .where((id) => id != internshipId)
+        .toList();
+
+    if (remaining.isEmpty) {
+      throw StateError(
+        'This is the only posting using this assessment. Delete the '
+        'assessment instead, or link it elsewhere first.',
+      );
+    }
+
+    return updateAssessment(
+      id: current.id,
+      internshipIds: remaining,
+      title: current.title,
+      description: current.description,
+      timeLimitMinutes: current.timeLimitMinutes,
+    );
+  }
+
+  /// Reads the assessment back before rewriting it.
+  ///
+  /// Update is a full replace: whatever is left out of the body is cleared,
+  /// and whichever ids are sent become the complete set of linked postings.
+  /// The card a list screen holds is a summary — it may not carry the
+  /// description, and it carries only the postings that list knew about — so
+  /// linking from a card would quietly wipe the description and unlink the
+  /// other postings. Re-reading first is what makes these two safe to call
+  /// from anywhere.
+  Future<CompanyAssessment> _reread(CompanyAssessment assessment) =>
+      fetchAssessment(assessment.id);
 
   /// Step 2: replaces the whole paper and publishes it.
   ///
@@ -96,20 +191,30 @@ class CompanyAssessmentService {
   }
 
   /// Everyone who has completed this assessment, newest first.
-  Future<List<AssessmentSubmission>> fetchSubmissions(
+  ///
+  /// [internshipId] narrows it to the applicants who took the paper for one
+  /// posting. A paper shared between postings has one set of questions but
+  /// several audiences, and the totals per posting come back either way so
+  /// the filter can say how many are behind each option.
+  Future<AssessmentSubmissions> fetchSubmissions(
     int id, {
     String query = '',
+    int? internshipId,
   }) async {
-    final suffix = query.trim().isEmpty
+    final params = <String, String>{
+      if (query.trim().isNotEmpty) 'q': query.trim(),
+      if (internshipId != null) 'internship_id': '$internshipId',
+    };
+
+    final suffix = params.isEmpty
         ? ''
-        : '?q=${Uri.encodeQueryComponent(query.trim())}';
+        : '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
+
     final response = await _client.get(
       '/company/assessments/$id/submissions$suffix',
       authenticated: true,
     );
 
-    return (response['submissions'] as List? ?? const [])
-        .map((e) => AssessmentSubmission.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return AssessmentSubmissions.fromJson(response);
   }
 }

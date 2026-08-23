@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../services/auth_service.dart';
 import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
 import '../../../models/profile_setup.dart';
 import '../../../services/profile_setup_service.dart';
-import '../home/home_screen.dart';
+import 'setup_entry_screen.dart';
 import 'setup_review_screen.dart';
 import 'setup_scaffold.dart';
 
@@ -32,7 +34,8 @@ class SetupWizardScreen extends StatefulWidget {
 }
 
 class _SetupWizardScreenState extends State<SetupWizardScreen> {
-  late final ProfileSetupService _service = widget.service ?? ProfileSetupService();
+  late final ProfileSetupService _service =
+      widget.service ?? ProfileSetupService();
 
   static const _totalSteps = 5;
   int _step = 1;
@@ -91,9 +94,17 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
   @override
   void dispose() {
     for (final controller in [
-      _name, _address, _zip, _phone, _email,
-      _school, _schoolAddress, _degree, _major,
-      _technicalInput, _softInput,
+      _name,
+      _address,
+      _zip,
+      _phone,
+      _email,
+      _school,
+      _schoolAddress,
+      _degree,
+      _major,
+      _technicalInput,
+      _softInput,
     ]) {
       controller.dispose();
     }
@@ -108,112 +119,132 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
       await action();
     } catch (e) {
       if (!mounted) return;
-      final message = e is ApiException ? e.message : 'Something went wrong. Please try again.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      final message = e is ApiException
+          ? e.message
+          : 'Something went wrong. Please try again.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
   }
 
   Future<void> _next() => _guard(() async {
-        switch (_step) {
-          case 1:
-            await _service.saveStep1(
-              name: _name.text.trim(),
-              address: _address.text.trim(),
-              zipCode: _zip.text.trim(),
-              phoneNumber: _phone.text.trim(),
-              email: _email.text.trim(),
-            );
-          case 2:
-            await _service.saveStep2(
-              schoolName: _school.text.trim(),
-              schoolAddress: _schoolAddress.text.trim(),
-              degree: _degree.text.trim(),
-              major: _major.text.trim(),
-            );
-          case 3:
-            await _service.saveStep3(technicalSkills: _technical, softSkills: _soft);
-        }
+    switch (_step) {
+      case 1:
+        await _service.saveStep1(
+          name: _name.text.trim(),
+          address: _address.text.trim(),
+          zipCode: _zip.text.trim(),
+          phoneNumber: _phone.text.trim(),
+          email: _email.text.trim(),
+        );
+      case 2:
+        await _service.saveStep2(
+          schoolName: _school.text.trim(),
+          schoolAddress: _schoolAddress.text.trim(),
+          degree: _degree.text.trim(),
+          major: _major.text.trim(),
+        );
+      case 3:
+        await _service.saveStep3(
+          technicalSkills: _technical,
+          softSkills: _soft,
+        );
+    }
 
-        if (!mounted) return;
+    if (!mounted) return;
 
-        if (_step == _totalSteps) {
-          await Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => SetupReviewScreen(service: _service)),
-          );
-          return;
-        }
-
-        setState(() => _step++);
-      });
-
-  void _back() {
-    if (_step == 1) {
-      Navigator.of(context).maybePop();
+    if (_step == _totalSteps) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => SetupReviewScreen(service: _service)),
+      );
       return;
     }
-    setState(() => _step--);
+
+    setState(() => _step++);
+  });
+
+  void _back() {
+    if (_step > 1) {
+      setState(() => _step--);
+      return;
+    }
+
+    // Step 1 has nothing to pop to: the entry screen used pushReplacement to
+    // get here, so it is no longer on the stack and maybePop() did nothing at
+    // all. Put the entry screen back rather than leaving Back looking broken.
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => SetupEntryScreen(service: _service)),
+    );
   }
 
   /// Leaving the wizard early is allowed — the profile keeps whatever was
   /// saved and the student can finish it later from their profile page.
   Future<void> _skip() => _guard(() async {
-        await _service.skip();
-        if (!mounted) return;
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
-      });
+    await _service.skip();
+    if (!mounted) return;
+    context.read<AuthService>().invalidateSetupState();
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SetupScaffold(
-      step: _step,
-      totalSteps: _totalSteps,
-      stepLabel: _stepLabel,
-      title: _stepTitle,
-      subtitle: _stepSubtitle,
-      isBusy: _isBusy,
-      onBack: _back,
-      onNext: _next,
-      nextLabel: _step == _totalSteps ? 'Review' : 'Next',
-      child: _buildStep(),
+    return PopScope(
+      canPop: false,
+      // The system back gesture should do what the Back button does, not
+      // silently fail on step 1 or drop the student out of setup mid-way.
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_isBusy) _back();
+      },
+      child: SetupScaffold(
+        step: _step,
+        totalSteps: _totalSteps,
+        stepLabel: _stepLabel,
+        title: _stepTitle,
+        subtitle: _stepSubtitle,
+        isBusy: _isBusy,
+        onBack: _back,
+        onSkip: _skip,
+        onNext: _next,
+        nextLabel: _step == _totalSteps ? 'Review' : 'Next',
+        child: _buildStep(),
+      ),
     );
   }
 
   String get _stepLabel => switch (_step) {
-        1 => 'About you',
-        2 => 'Education',
-        3 => 'Skills',
-        4 => 'Certifications',
-        _ => 'Experience',
-      };
+    1 => 'About you',
+    2 => 'Education',
+    3 => 'Skills',
+    4 => 'Certifications',
+    _ => 'Experience',
+  };
 
   String get _stepTitle => switch (_step) {
-        1 => 'About you',
-        2 => 'Education',
-        3 => 'Skills',
-        4 => 'Certifications',
-        _ => 'Experience',
-      };
+    1 => 'About you',
+    2 => 'Education',
+    3 => 'Skills',
+    4 => 'Certifications',
+    _ => 'Experience',
+  };
 
   String get _stepSubtitle => switch (_step) {
-        1 => 'Your name and how employers can reach you.',
-        2 => "Where you study and what you're taking.",
-        3 => 'The skills that best describe you.',
-        4 => "Certificates and credentials you've earned.",
-        _ => "Jobs, internships or projects you've taken on.",
-      };
+    1 => 'Your name and how employers can reach you.',
+    2 => "Where you study and what you're taking.",
+    3 => 'The skills that best describe you.',
+    4 => "Certificates and credentials you've earned.",
+    _ => "Jobs, internships or projects you've taken on.",
+  };
 
   Widget _buildStep() => switch (_step) {
-        1 => _buildAboutYou(),
-        2 => _buildEducation(),
-        3 => _buildSkills(),
-        4 => _buildCertifications(),
-        _ => _buildExperience(),
-      };
+    1 => _buildAboutYou(),
+    2 => _buildEducation(),
+    3 => _buildSkills(),
+    4 => _buildCertifications(),
+    _ => _buildExperience(),
+  };
 
   Widget _buildAboutYou() {
     return Column(
@@ -223,7 +254,10 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(flex: 2, child: SetupField(label: 'Address', controller: _address)),
+            Expanded(
+              flex: 2,
+              child: SetupField(label: 'Address', controller: _address),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: SetupField(
@@ -250,7 +284,10 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
           const SizedBox(height: 18),
           const Align(
             alignment: Alignment.centerLeft,
-            child: Text('Resume', style: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
+            child: Text(
+              'Resume',
+              style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+            ),
           ),
           const SizedBox(height: 6),
           Container(
@@ -276,13 +313,6 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
             ),
           ),
         ],
-        const SizedBox(height: 20),
-        Center(
-          child: TextButton(
-            onPressed: _isBusy ? null : _skip,
-            child: const Text("I'll do this later"),
-          ),
-        ),
       ],
     );
   }
@@ -336,7 +366,9 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
             subtitle: certification.subtitle,
             onDelete: () => _guard(() async {
               await _service.deleteCertification(certification.id);
-              if (mounted) setState(() => _certifications.remove(certification));
+              if (mounted) {
+                setState(() => _certifications.remove(certification));
+              }
             }),
           ),
         _AddButton(
@@ -347,7 +379,9 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
               isScrollControlled: true,
               builder: (_) => _CertificationSheet(service: _service),
             );
-            if (result != null && mounted) setState(() => _certifications.add(result));
+            if (result != null && mounted) {
+              setState(() => _certifications.add(result));
+            }
           },
         ),
       ],
@@ -360,9 +394,10 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
         for (final experience in _experiences)
           _EntryCard(
             title: experience.position,
-            subtitle: [experience.organization, experience.period]
-                .where((s) => s.isNotEmpty)
-                .join(' • '),
+            subtitle: [
+              experience.organization,
+              experience.period,
+            ].where((s) => s.isNotEmpty).join(' • '),
             body: experience.description,
             onDelete: () => _guard(() async {
               await _service.deleteExperience(experience.id);
@@ -377,7 +412,9 @@ class _SetupWizardScreenState extends State<SetupWizardScreen> {
               isScrollControlled: true,
               builder: (_) => _ExperienceSheet(service: _service),
             );
-            if (result != null && mounted) setState(() => _experiences.add(result));
+            if (result != null && mounted) {
+              setState(() => _experiences.add(result));
+            }
           },
         ),
       ],
@@ -408,7 +445,8 @@ class _SkillGroup extends StatelessWidget {
   void _add() {
     final value = controller.text.trim();
     // Case-insensitive, so "React" and "react" don't both end up on the profile.
-    if (value.isEmpty || skills.any((s) => s.toLowerCase() == value.toLowerCase())) {
+    if (value.isEmpty ||
+        skills.any((s) => s.toLowerCase() == value.toLowerCase())) {
       controller.clear();
       return;
     }
@@ -442,7 +480,10 @@ class _SkillGroup extends StatelessWidget {
               ),
               Text(
                 '${skills.length} ${skills.length == 1 ? 'SKILL' : 'SKILLS'}',
-                style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),
@@ -456,7 +497,10 @@ class _SkillGroup extends StatelessWidget {
                   onSubmitted: (_) => _add(),
                   decoration: const InputDecoration(
                     hintText: 'e.g. Project Management',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
                   ),
                 ),
               ),
@@ -465,7 +509,9 @@ class _SkillGroup extends StatelessWidget {
                 onPressed: _add,
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(76, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 child: const Text('Add'),
               ),
@@ -489,7 +535,11 @@ class _SkillGroup extends StatelessWidget {
                       children: [
                         Text(
                           skill,
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: textColor,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         InkWell(
@@ -543,13 +593,19 @@ class _EntryCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
                     ),
                     if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ],
                   ],
@@ -557,7 +613,11 @@ class _EntryCard extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.textMuted),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 20,
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),
@@ -565,7 +625,11 @@ class _EntryCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               body!,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted, height: 1.45),
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textMuted,
+                height: 1.45,
+              ),
             ),
           ],
         ],
@@ -614,7 +678,12 @@ class _AddButton extends StatelessWidget {
 
 /// Bottom sheet shell shared by the two add forms.
 class _SheetShell extends StatelessWidget {
-  const _SheetShell({required this.title, required this.children, required this.onSave, required this.isSaving});
+  const _SheetShell({
+    required this.title,
+    required this.children,
+    required this.onSave,
+    required this.isSaving,
+  });
 
   final String title;
   final List<Widget> children;
@@ -624,7 +693,9 @@ class _SheetShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         child: Column(
@@ -653,12 +724,16 @@ class _SheetShell extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                    onPressed: isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(50),
                       foregroundColor: AppColors.primary,
                       side: const BorderSide(color: AppColors.primary),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text('Cancel'),
                   ),
@@ -669,13 +744,18 @@ class _SheetShell extends StatelessWidget {
                     onPressed: isSaving ? null : onSave,
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: isSaving
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Text('Save'),
                   ),
@@ -732,8 +812,12 @@ class _CertificationSheetState extends State<_CertificationSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      final message = e is ApiException ? e.message : 'Could not save that certification.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      final message = e is ApiException
+          ? e.message
+          : 'Could not save that certification.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -748,7 +832,11 @@ class _CertificationSheetState extends State<_CertificationSheet> {
         const SizedBox(height: 14),
         SetupField(label: 'Issuing organization', controller: _organization),
         const SizedBox(height: 14),
-        SetupField(label: 'Issue date', controller: _issueDate, hintText: 'e.g. 2023'),
+        SetupField(
+          label: 'Issue date',
+          controller: _issueDate,
+          hintText: 'e.g. 2023',
+        ),
       ],
     );
   }
@@ -773,7 +861,13 @@ class _ExperienceSheetState extends State<_ExperienceSheet> {
 
   @override
   void dispose() {
-    for (final controller in [_position, _organization, _start, _end, _description]) {
+    for (final controller in [
+      _position,
+      _organization,
+      _start,
+      _end,
+      _description,
+    ]) {
       controller.dispose();
     }
     super.dispose();
@@ -801,8 +895,12 @@ class _ExperienceSheetState extends State<_ExperienceSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      final message = e is ApiException ? e.message : 'Could not save that experience.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      final message = e is ApiException
+          ? e.message
+          : 'Could not save that experience.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -820,9 +918,21 @@ class _ExperienceSheetState extends State<_ExperienceSheet> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: SetupField(label: 'Start date', controller: _start, hintText: 'June 2021')),
+            Expanded(
+              child: SetupField(
+                label: 'Start date',
+                controller: _start,
+                hintText: 'June 2021',
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: SetupField(label: 'End date', controller: _end, hintText: 'Aug 2024')),
+            Expanded(
+              child: SetupField(
+                label: 'End date',
+                controller: _end,
+                hintText: 'Aug 2024',
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 14),

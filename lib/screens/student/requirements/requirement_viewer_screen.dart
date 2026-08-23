@@ -32,7 +32,8 @@ class RequirementViewerScreen extends StatefulWidget {
   final String downloadFilename;
 
   @override
-  State<RequirementViewerScreen> createState() => _RequirementViewerScreenState();
+  State<RequirementViewerScreen> createState() =>
+      _RequirementViewerScreenState();
 }
 
 class _RequirementViewerScreenState extends State<RequirementViewerScreen> {
@@ -47,7 +48,9 @@ class _RequirementViewerScreenState extends State<RequirementViewerScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not download this file. Please try again.')),
+          const SnackBar(
+            content: Text('Could not download this file. Please try again.'),
+          ),
         );
       }
     } finally {
@@ -70,9 +73,16 @@ class _RequirementViewerScreenState extends State<RequirementViewerScreen> {
               widget.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
-            Text(widget.subtitle, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+            Text(
+              widget.subtitle,
+              style: const TextStyle(fontSize: 11, color: Colors.white70),
+            ),
           ],
         ),
         actions: [
@@ -81,7 +91,10 @@ class _RequirementViewerScreenState extends State<RequirementViewerScreen> {
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.download_outlined, color: Colors.white),
             tooltip: 'Download',
@@ -97,7 +110,10 @@ class _RequirementViewerScreenState extends State<RequirementViewerScreen> {
           }
 
           if (snapshot.hasError) {
-            return _Fallback(message: 'Could not load this file. Please try again.', onDownload: _download);
+            return _Fallback(
+              message: 'Could not load this file. Please try again.',
+              onDownload: _download,
+            );
           }
 
           final preview = snapshot.data!;
@@ -112,7 +128,9 @@ class _RequirementViewerScreenState extends State<RequirementViewerScreen> {
               return InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 4,
-                child: Center(child: Image.memory(Uint8List.fromList(preview.bytes!))),
+                child: Center(
+                  child: Image.memory(Uint8List.fromList(preview.bytes!)),
+                ),
               );
             case PreviewKind.none:
               return _Fallback(
@@ -140,9 +158,17 @@ class _Fallback extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.insert_drive_file_outlined, size: 48, color: AppColors.textMuted),
+            const Icon(
+              Icons.insert_drive_file_outlined,
+              size: 48,
+              color: AppColors.textMuted,
+            ),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textMuted),
+            ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: onDownload,

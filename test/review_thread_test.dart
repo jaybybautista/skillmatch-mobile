@@ -44,16 +44,21 @@ Map<String, dynamic> _json({
 void main() {
   group('Review model', () {
     test('parses a nested thread and keeps reply depth', () {
-      final review = Review.fromJson(_json(
-        id: 1,
-        rating: 4,
-        replyCount: 2,
-        replies: [
-          _json(id: 2, parentId: 1, content: 'first reply', replies: [
-            _json(id: 3, parentId: 2, content: 'nested reply'),
-          ]),
-        ],
-      ));
+      final review = Review.fromJson(
+        _json(
+          id: 1,
+          rating: 4,
+          replyCount: 2,
+          replies: [
+            _json(
+              id: 2,
+              parentId: 1,
+              content: 'first reply',
+              replies: [_json(id: 3, parentId: 2, content: 'nested reply')],
+            ),
+          ],
+        ),
+      );
 
       expect(review.isReply, isFalse);
       expect(review.rating, 4);
@@ -83,15 +88,20 @@ void main() {
 
   group('replaceInTree', () {
     test('updates a deeply nested reply without touching its siblings', () {
-      final root = Review.fromJson(_json(
-        id: 1,
-        replies: [
-          _json(id: 2, parentId: 1, content: 'sibling'),
-          _json(id: 3, parentId: 1, content: 'target', replies: [
-            _json(id: 4, parentId: 3, content: 'deep'),
-          ]),
-        ],
-      ));
+      final root = Review.fromJson(
+        _json(
+          id: 1,
+          replies: [
+            _json(id: 2, parentId: 1, content: 'sibling'),
+            _json(
+              id: 3,
+              parentId: 1,
+              content: 'target',
+              replies: [_json(id: 4, parentId: 3, content: 'deep')],
+            ),
+          ],
+        ),
+      );
 
       final updated = replaceInTree(
         [root],
@@ -110,35 +120,49 @@ void main() {
 
   group('ReviewTile', () {
     Widget wrap(Widget child) => MaterialApp(
-          home: Scaffold(body: SingleChildScrollView(child: child)),
-        );
+      home: Scaffold(body: SingleChildScrollView(child: child)),
+    );
 
-    testWidgets('offers no edit menu once the window has closed', (tester) async {
+    testWidgets('offers no edit menu once the window has closed', (
+      tester,
+    ) async {
       final review = Review.fromJson(_json(id: 1, canEdit: false));
 
-      await tester.pumpWidget(wrap(ReviewTile(
-        review: review,
-        onLike: (_) {},
-        onReply: (_) {},
-        onEdit: (_) {},
-        onDelete: (_) {},
-        onAuthorTap: (_) {},
-      )));
+      await tester.pumpWidget(
+        wrap(
+          ReviewTile(
+            review: review,
+            onLike: (_) {},
+            onReply: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onAuthorTap: (_) {},
+          ),
+        ),
+      );
 
       expect(find.byIcon(Icons.more_vert), findsNothing);
     });
 
-    testWidgets('shows the remaining edit time while the window is open', (tester) async {
-      final review = Review.fromJson(_json(id: 1, canEdit: true, editSeconds: 22 * 60));
+    testWidgets('shows the remaining edit time while the window is open', (
+      tester,
+    ) async {
+      final review = Review.fromJson(
+        _json(id: 1, canEdit: true, editSeconds: 22 * 60),
+      );
 
-      await tester.pumpWidget(wrap(ReviewTile(
-        review: review,
-        onLike: (_) {},
-        onReply: (_) {},
-        onEdit: (_) {},
-        onDelete: (_) {},
-        onAuthorTap: (_) {},
-      )));
+      await tester.pumpWidget(
+        wrap(
+          ReviewTile(
+            review: review,
+            onLike: (_) {},
+            onReply: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onAuthorTap: (_) {},
+          ),
+        ),
+      );
 
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
@@ -147,24 +171,32 @@ void main() {
       expect(find.text('Delete'), findsOneWidget);
     });
 
-    testWidgets('the list collapses replies behind a count button', (tester) async {
+    testWidgets('the list collapses replies behind a count button', (
+      tester,
+    ) async {
       var opened = 0;
-      final review = Review.fromJson(_json(
-        id: 1,
-        replyCount: 3,
-        replies: [_json(id: 2, parentId: 1, content: 'hidden reply')],
-      ));
+      final review = Review.fromJson(
+        _json(
+          id: 1,
+          replyCount: 3,
+          replies: [_json(id: 2, parentId: 1, content: 'hidden reply')],
+        ),
+      );
 
-      await tester.pumpWidget(wrap(ReviewTile(
-        review: review,
-        showReplies: false,
-        onOpenThread: (_) => opened++,
-        onLike: (_) {},
-        onReply: (_) {},
-        onEdit: (_) {},
-        onDelete: (_) {},
-        onAuthorTap: (_) {},
-      )));
+      await tester.pumpWidget(
+        wrap(
+          ReviewTile(
+            review: review,
+            showReplies: false,
+            onOpenThread: (_) => opened++,
+            onLike: (_) {},
+            onReply: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onAuthorTap: (_) {},
+          ),
+        ),
+      );
 
       expect(find.text('hidden reply'), findsNothing);
       expect(find.text('3 replies'), findsOneWidget);
@@ -173,27 +205,41 @@ void main() {
       expect(opened, 1);
     });
 
-    testWidgets('every reply sits in one branch, never a nested one', (tester) async {
+    testWidgets('every reply sits in one branch, never a nested one', (
+      tester,
+    ) async {
       // The shape the backend now sends: a reply-to-a-reply is hoisted into
       // the same branch and carries the name it answers instead.
-      final review = Review.fromJson(_json(
-        id: 1,
-        content: 'root review',
-        replyCount: 2,
-        replies: [
-          _json(id: 2, parentId: 1, author: 'Ana', content: 'first reply'),
-          _json(id: 3, parentId: 2, author: 'Ben', content: 'answering Ana', replyToName: 'Ana'),
-        ],
-      ));
+      final review = Review.fromJson(
+        _json(
+          id: 1,
+          content: 'root review',
+          replyCount: 2,
+          replies: [
+            _json(id: 2, parentId: 1, author: 'Ana', content: 'first reply'),
+            _json(
+              id: 3,
+              parentId: 2,
+              author: 'Ben',
+              content: 'answering Ana',
+              replyToName: 'Ana',
+            ),
+          ],
+        ),
+      );
 
-      await tester.pumpWidget(wrap(ReviewTile(
-        review: review,
-        onLike: (_) {},
-        onReply: (_) {},
-        onEdit: (_) {},
-        onDelete: (_) {},
-        onAuthorTap: (_) {},
-      )));
+      await tester.pumpWidget(
+        wrap(
+          ReviewTile(
+            review: review,
+            onLike: (_) {},
+            onReply: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onAuthorTap: (_) {},
+          ),
+        ),
+      );
 
       expect(find.text('root review'), findsOneWidget);
       expect(find.text('first reply'), findsOneWidget);
@@ -206,30 +252,47 @@ void main() {
 
       for (final row in rows) {
         expect(
-          find.descendant(of: find.byWidget(row), matching: find.byType(ReplyRow)),
+          find.descendant(
+            of: find.byWidget(row),
+            matching: find.byType(ReplyRow),
+          ),
           findsNothing,
           reason: 'a reply must not contain another ReplyRow',
         );
       }
     });
 
-    testWidgets('a reply answering another reply shows a blue @mention', (tester) async {
-      final review = Review.fromJson(_json(
-        id: 1,
-        replies: [
-          _json(id: 2, parentId: 1, author: 'Ana', content: 'plain reply'),
-          _json(id: 3, parentId: 2, author: 'Ben', content: 'answering', replyToName: 'Ana'),
-        ],
-      ));
+    testWidgets('a reply answering another reply shows a blue @mention', (
+      tester,
+    ) async {
+      final review = Review.fromJson(
+        _json(
+          id: 1,
+          replies: [
+            _json(id: 2, parentId: 1, author: 'Ana', content: 'plain reply'),
+            _json(
+              id: 3,
+              parentId: 2,
+              author: 'Ben',
+              content: 'answering',
+              replyToName: 'Ana',
+            ),
+          ],
+        ),
+      );
 
-      await tester.pumpWidget(wrap(ReviewTile(
-        review: review,
-        onLike: (_) {},
-        onReply: (_) {},
-        onEdit: (_) {},
-        onDelete: (_) {},
-        onAuthorTap: (_) {},
-      )));
+      await tester.pumpWidget(
+        wrap(
+          ReviewTile(
+            review: review,
+            onLike: (_) {},
+            onReply: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onAuthorTap: (_) {},
+          ),
+        ),
+      );
 
       final texts = tester.widgetList<RichText>(find.byType(RichText));
       final mentions = texts
@@ -247,7 +310,9 @@ void main() {
       );
     });
 
-    testWidgets('replying seeds the composer with the author @mention', (tester) async {
+    testWidgets('replying seeds the composer with the author @mention', (
+      tester,
+    ) async {
       // Mirrors what ReviewRepliesScreen._startReply does: swap the mention it
       // is carrying for the new one, keeping anything already typed.
       final controller = TextEditingController();
@@ -280,7 +345,9 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('tapping a name with a profile raises onAuthorTap', (tester) async {
+    testWidgets('tapping a name with a profile raises onAuthorTap', (
+      tester,
+    ) async {
       Review? tapped;
       final withScreen = Review.fromJson({
         ..._json(id: 1, author: 'Ana Cruz'),
@@ -288,31 +355,41 @@ void main() {
         'author_screen_params': {'student_id': 9},
       });
 
-      await tester.pumpWidget(wrap(ReviewTile(
-        review: withScreen,
-        onLike: (_) {},
-        onReply: (_) {},
-        onEdit: (_) {},
-        onDelete: (_) {},
-        onAuthorTap: (r) => tapped = r,
-      )));
+      await tester.pumpWidget(
+        wrap(
+          ReviewTile(
+            review: withScreen,
+            onLike: (_) {},
+            onReply: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onAuthorTap: (r) => tapped = r,
+          ),
+        ),
+      );
 
       await tester.tap(find.text('Ana Cruz'));
       expect(tapped?.id, 1);
     });
 
-    testWidgets('a name with no profile does not raise onAuthorTap', (tester) async {
+    testWidgets('a name with no profile does not raise onAuthorTap', (
+      tester,
+    ) async {
       var tapped = false;
       final review = Review.fromJson(_json(id: 1, author: 'Ghost'));
 
-      await tester.pumpWidget(wrap(ReviewTile(
-        review: review,
-        onLike: (_) {},
-        onReply: (_) {},
-        onEdit: (_) {},
-        onDelete: (_) {},
-        onAuthorTap: (_) => tapped = true,
-      )));
+      await tester.pumpWidget(
+        wrap(
+          ReviewTile(
+            review: review,
+            onLike: (_) {},
+            onReply: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onAuthorTap: (_) => tapped = true,
+          ),
+        ),
+      );
 
       await tester.tap(find.text('Ghost'));
       expect(tapped, isFalse);
@@ -322,14 +399,18 @@ void main() {
       Review? liked;
       final review = Review.fromJson(_json(id: 1));
 
-      await tester.pumpWidget(wrap(ReviewTile(
-        review: review,
-        onLike: (r) => liked = r,
-        onReply: (_) {},
-        onEdit: (_) {},
-        onDelete: (_) {},
-        onAuthorTap: (_) {},
-      )));
+      await tester.pumpWidget(
+        wrap(
+          ReviewTile(
+            review: review,
+            onLike: (r) => liked = r,
+            onReply: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onAuthorTap: (_) {},
+          ),
+        ),
+      );
 
       await tester.tap(find.byIcon(Icons.thumb_up_outlined));
       expect(liked?.id, 1);

@@ -309,3 +309,272 @@
   - Verified live with a company token: `q=skil` returns the same things the user's web screenshot shows — Laravel Developer and Product Design Intern (both `company_id` 1, so both tap through to the posting page) plus SkillMatch and Dr. Maria Santos from people search. The company finding itself resolves to `profile`, which is already role-aware and lands on the company profile.
   - The new tests inspect the pushed route's builder rather than mounting the destination: those screens make their own real services, and a widget test has no business reaching the network.
   - 269 tests pass; `flutter analyze` clean; PHP lint clean; probe token removed.
+
+## 2026-08-20 — Chatbot on mobile: could not reproduce, so made it report the cause
+- Task: "the ai chatbot works in the web, but it is not working in mobile."
+- Files:
+  - `lib/core/api_client.dart` (modified) — a 2xx whose body can't be parsed as a JSON object now raises instead of returning an empty map.
+  - `lib/screens/chatbot/matcha_chat_screen.dart` (modified) — a failed reply names the real cause via `messageForError`, and offers "Try again" which resends the question without it being retyped.
+  - Tests: `test/matcha_chat_test.dart` (+3).
+- Notes:
+  - **I could not reproduce this, and I am not claiming it is fixed.** I verified the whole server path against the exact URL the phone uses (`http://192.168.100.51/SkillMatch/SkillMatch/public/api/chatbot`, not localhost): company token 200 in 2.9s with a real answer, student token 200 in 3.3s, a second turn carrying history 200 in 2.0s. Route, Sanctum auth, controller, the external AI endpoint, the LAN path, the client's 90s timeout and the reply parsing all check out.
+  - **The one real defect I did find** is in `ApiClient._decode`: a 200 response whose body was not a JSON object was silently turned into `{}`. For the chat that surfaces as Matcha answering "I didn't get a response. Please try again." — which looks exactly like the chatbot not working, with nothing in the logs. Any screen doing this would have shown an empty state rather than an error. That is now an error. It may or may not be what is happening here; PHP printing a warning ahead of the JSON is the usual way a 200 body becomes unreadable, and it would not affect the website's own panel the same way.
+  - The chat's catch used to flatten every non-API failure into "I couldn't reach the server. Please check your connection" — the same swallow that hid the pipeline bug for three rounds. It now names a refused connection, a timeout, or an unreadable reply distinctly. **If it still fails, the bubble will say why, and that text is what I need.**
+  - 272 tests pass; `flutter analyze` clean; probe tokens removed.
+
+## 2026-08-20 — Google sign-in: the silent path
+- Task: "I am trying to login using google account, but nothing is happening."
+- Files:
+  - `lib/services/auth_service.dart` (modified) — an instant "cancel" from the Android plugin is now reported as a probable configuration problem instead of being swallowed. Added `AppIdentity.androidPackage` so the message can name the package.
+  - `lib/screens/auth/widgets/login_form.dart` (modified) — a genuinely cancelled sign-in now says so; also moved a `mounted` check ahead of the `setState` it guards.
+- Notes:
+  - **The silence was the bug, and it is in one place.** `GoogleSignInException(canceled)` with an empty description was treated as a user dismissal and returned null, and the form returned early with no message — so tapping the button did nothing visible. The existing comment in that method already recorded that Android reports *real* configuration failures under the same `canceled` code, which is exactly the case that was being swallowed.
+  - The two are told apart by timing: nobody sees an account picker and dismisses it inside 1.2 seconds, so a "cancel" that fast is the picker never having appeared. That case now raises a message naming the likely cause; a slower one is still treated as a real dismissal, and now shows a quiet "Google sign-in was cancelled."
+  - **What I verified is fine, so it is not the cause:** `POST /api/auth/google` is routed, `Api\AuthController::googleLogin` validates the token against `services.google.client_id`, and that value in `.env` matches `ApiConfig.googleServerClientId` character for character (`1066842512355-4b43vtle1psfm58vk50757916447ng7r...`).
+  - **What is almost certainly the real cause is not code and I cannot do it** — an Android OAuth client has to exist in Google Cloud Console for package `edu.psu.skillmatch` with this machine's debug signing certificate. Debug SHA-1 read from `~/.android/debug.keystore`: `A4:32:DF:B1:70:BA:E6:81:8B:E8:B5:2C:9F:03:B3:E3:6B:4A:74:D1`. The signing-in account also has to be a test user on the consent screen while it is in testing.
+  - 272 tests pass; `flutter analyze` clean.
+
+## 2026-08-20 — Google sign-in completes but the app doesn't move until a restart
+- Task: "when I login using my google account, nothing happens, then when I hot restart it, it is working."
+- Files:
+  - `lib/screens/auth/widgets/login_form.dart` (modified) — the Navigator and the ScaffoldMessenger are now captured before the native account picker takes over, so the post-sign-in navigation no longer depends on this State surviving it.
+- Notes:
+  - **The symptom locates the fault precisely: the session IS created.** The token only ever gets written in `_persistSession`, so if a hot restart lands the user on their screen, that method ran — which means `currentUser` was set and `notifyListeners()` fired. What did not happen is the root `_SessionGate` re-routing in that same run.
+  - The fix removes the one real fragility on that path: `_submitGoogle` did `if (!mounted) return;` after the await. Android can dispose this State while the native picker owns the screen, and the navigation would then be skipped even though the sign-in succeeded — which looks exactly like the button having done nothing. Resolving both objects up front is the standard fix and costs nothing.
+  - **Everything else on that path I checked and it is fine, so I am not claiming this is definitely the cause.** `POST /api/auth/google` returns the same `serializeUser` shape `/auth/me` does (so the parse in `_persistSession` cannot be the difference), the client IDs match, and `/api/student/setup/state` — the call the gate waits on before routing — answers in 0.27s over the LAN. Email/password login goes through the identical `_persistSession` → notifyListeners → gate mechanism and works, which is what rules the mechanism itself out.
+  - **If it still happens, the answer is one command away.** `loginWithGoogle` already prints `[Google]` lines at each step for exactly this. Running `flutter run` and sending the `[Google]` output would show whether `_persistSession` is reached, and that settles it.
+  - 272 tests pass; `flutter analyze` clean; probe tokens removed.
+
+## 2026-08-20 — Login with a new account, and the setup wizard
+- Task: "trying to login using the fields using my newly created account, but nothing happened. Also check if the profile setup wizard works."
+- Files:
+  - `lib/main.dart` (modified) — `SkillMatchApp` and the launch gate take an injectable `AuthService` / `ProfileSetupService`, so the routing can be tested without a real session. Behaviour is unchanged when they aren't passed.
+  - `lib/screens/auth/widgets/login_form.dart` (modified) — a failed login now shows as a snack bar as well as the inline red line, and names the real cause via `messageForError`.
+  - Tests: `test/session_gate_test.dart` (new, 6 tests).
+- Notes:
+  - **The setup wizard works — verified against the real DB, not just status codes.** Registered a probe account, then walked the whole thing over the LAN: step 1, 2 and 3 all 200, review 200, finish 200, and `needs_setup` flipped to false afterwards. The data really landed: `course` became "BSIT, major in Web", skills saved as `["Laravel","Flutter","Teamwork"]` (technical and soft merged), and step 2 wrote a `student_education` row (PSU / BSIT / Web). Probe account and its rows deleted afterwards; DB back to 12 users / 7 students.
+  - **Login with a new account also works at the API level**: register returned 201 and login returned 200 with a `token` string and a `user` object whose every field matches what `AppUser.fromJson` expects, so `_persistSession` cannot be failing to parse it.
+  - **And the routing gate is now proven correct by test**, which is what I could not check before: signed-out shows login; signing in with setup done lands on Home; a brand-new student lands on the setup wizard; a company skips the student-only setup check; a failed setup check still lets the student in rather than stranding them on the splash; and signing out then back in re-runs the check instead of reusing the previous answer. All six pass.
+  - **So I could not reproduce "nothing happened", and I am not claiming a fix for it.** What I changed is that a failed login can no longer be missed: the old inline red line above the button is easy to overlook on a full screen, and "These credentials do not match our records" looks like nothing happening if you don't see it. It now also raises a snack bar. If the account was created on the website rather than in the app, or the password differs, that is the message that will appear.
+  - Also worth knowing: `SetupReviewScreen._save` finishes with `pushAndRemoveUntil(HomeScreen)`, which removes the launch gate from the tree entirely. It works, but from then on nothing is governing routing for that session. Left alone for now — flagging it rather than changing behaviour mid-report.
+  - 278 tests pass; `flutter analyze` clean; probe account and tokens removed.
+
+## 2026-08-20 — Setup wizard: a Skip button that's always there, and a Back that works
+- Task: "in the profile setup, can you add a skip button also the back button is not working."
+- Files:
+  - `lib/screens/student/setup/setup_scaffold.dart` (modified) — the shared wizard chrome gained an `onSkip`, rendered as "Skip for now" in the blue header.
+  - `lib/screens/student/setup/setup_wizard_screen.dart` (modified) — passes `_skip` to the scaffold, fixed `_back()` on step 1, added a `PopScope` so the system back gesture behaves like the Back button, and removed the old buried skip link.
+  - `lib/screens/student/setup/setup_entry_screen.dart` (modified) — same "Skip for now" in its header, calling the same endpoint.
+  - Tests: `test/setup_wizard_test.dart` (new, 7 tests).
+- Notes:
+  - **Skip already existed, but you could barely reach it.** `_skip()` and `POST /student/setup/skip` were both there and working; the only way in was a small "I'll do this later" link at the *bottom of step 1's form*, below the fields, and it vanished on steps 2-5 and on the entry screen entirely. It is now "Skip for now" in the header of every setup screen, so it is reachable without scrolling and from any step.
+  - **Back on step 1 genuinely did nothing, and the reason is worth recording.** It called `Navigator.maybePop()` — but the entry screen reaches the wizard with `pushReplacement`, so the entry screen is no longer on the stack and there is nothing to pop. Step 1 now pushes the entry screen back explicitly. Steps 2-5 were fine (they just decrement the step).
+  - The Android system back gesture had the same problem for the same reason, and worse: on steps 2-5 it would have left setup entirely instead of stepping back. A `PopScope` now routes it through the same `_back()`.
+  - Tests cover both: skip is present on the entry screen and on steps 1, 2 and 3; skipping calls the service and reports failure without leaving the screen; Back steps 2 → 1; Back on step 1 lands on the entry screen; and the system back gesture steps the wizard rather than leaving it.
+  - 285 tests pass; `flutter analyze` clean.
+
+## 2026-08-20 — Back button on the setup entry screen
+- Task: "add back button in the set up your profile where you can upload or fill in manually."
+- Files:
+  - `lib/screens/student/setup/setup_entry_screen.dart` (modified) — a `CircleBackButton` in the header (in place of the logo, matching the wizard's own header), plus a `PopScope` so the system back gesture does the same thing.
+  - `test/setup_wizard_test.dart` (+2 tests, harness updated).
+- Notes:
+  - **Judgement call worth flagging:** this screen is the first thing after signing in, so there is no earlier screen to go back to — the only thing behind it is the login page. Back therefore signs out, and asks first ("Leave setup?" / Stay / Sign out) because that is not what Back normally means. Nothing is lost: each wizard step saves as it is completed, so signing in again picks up where it left off. If you meant it should go to Home instead, that is a one-line change — but Skip for now already does exactly that, which is why I did not duplicate it.
+  - It also closes a real gap: a new student was previously stuck in setup with no way back to the login screen to sign in as someone else.
+  - **A trap avoided:** `CircleBackButton` falls back to `Navigator.maybePop()` when handed a null `onPressed`, so disabling it the usual way (`_isUploading ? null : _leaveSetup`) would have made it pop the route instead of doing nothing. It is always given the callback, which ignores taps while a resume scan is in flight.
+  - 287 tests pass; `flutter analyze` clean.
+
+## 2026-08-20 — Setup wizard state now agrees on web and mobile
+- Task: "If any of the platform haven't finished setting the wizard, it should be the same in the web or mobile. I haven't set it up in mobile but the web seems to have skipped it."
+- Files:
+  - `app/Services/ProfileSetupService.php` (modified) — `needsSetup()` is now a pure read of `setup_complete` / `setup_skipped`; `hasExistingProfile()` and its database write are gone.
+  - `tests/Unit/ProfileSetupServiceTest.php` (new, 6 tests).
+- Notes:
+  - **Both platforms were already asking the same shared method — the method itself was the bug.** `needsSetup()` also decided that a student who "already had profile data" (a student number, a resume, an education / certification / experience row) didn't need the wizard, and **persisted `setup_skipped = true` for them** so the check would stop running. Wrong twice over:
+    - Those are the wizard's own outputs. Uploading a resume, or finishing step 2, created exactly the data that made it conclude the wizard was unnecessary — so *starting* the wizard is what made it disappear.
+    - It wrote that conclusion from a read. Whichever platform asked first silently marked the student as skipped, and the other then disagreed forever. That is precisely the drift the shared-service pattern exists to prevent.
+  - Now only two things end the wizard: finishing it, or the student choosing to skip. `setup_skipped` is written by the skip endpoint alone.
+  - **Proven live, both directions, with a probe account:** a fresh student got `needs_setup: true` from the API *and* a web redirect to `/student/setup`. Completing step 2 from mobile left both unchanged (previously this is exactly what cancelled it on the web, and wrote the flag). Tapping Skip on mobile immediately cleared it on the web — the dashboard stopped redirecting. Probe account and its rows deleted; DB back to 12 users / 7 students.
+  - **One real account looks affected and I have not touched it.** `jabyy6349@gmail.com` (student id 3) has `setup_complete = 0` but `setup_skipped = 1` while having profile data — the signature of the old auto-skip. If that is the account in question, the flag is already written and the wizard will still not appear on either platform until it is cleared. Say the word and I will reset it. (`fionah@gmail.com` and `penn@gmail.com` are also complete=0/skipped=1 but have no profile data, so they genuinely chose to skip — those should be left alone.)
+  - 6 PHP unit tests pass, including a regression test asserting `needsSetup()` leaves the student unmodified; Flutter suite still at 287.
+
+## 2026-08-20 — Login succeeds on the server but never reaches the UI
+- Task: "trying to login with google and with email/password, nothing is happening."
+- Files:
+  - `lib/core/token_storage.dart` (rewritten) — the token is now held in memory as the session's source of truth and written to secure storage as a best-effort background step, behind a `TokenStore` interface so it can be faked in tests.
+  - `lib/services/auth_service.dart` (modified) — `_persistSession` no longer waits on the device keystore before publishing the session.
+  - Tests: `test/token_storage_test.dart` (new, 5 tests).
+- Notes:
+  - **The server log settled what four rounds of guessing could not.** Apache's access log shows every attempt from the phone (192.168.100.76) returning **200**: logins at 18:06:35, 18:06:47, 18:08:30 and `POST /api/auth/google` at 18:07:37. Authentication was never failing. The session is created every time and the app simply doesn't move — which is why it looked identical for both sign-in methods.
+  - Also ruled out on the way: the phone is on the same Wi-Fi (192.168.100.76), pings the server with 0% loss, and reaches Apache on port 80 (verified over adb from the device itself); nobody is rate-limited; every account is active with a student/company row and a password set.
+  - **The only await between "200 received" and "the UI is told" was `TokenStorage.saveToken`,** which awaited the Android Keystore through flutter_secure_storage. If that write hangs, `currentUser` is never set, `notifyListeners()` never fires, and nothing happens — while the login has already succeeded server-side. That someone had already wrapped `readToken()` in a try/catch says this store has misbehaved here before.
+  - **I could not prove the keystore is what hangs** — logcat shows keystore2 activity but no error against this app's UID, only Samsung's cloud app. So this is the one candidate left on a path where everything else is verified, not a confirmed root cause. What is certain is that the session no longer depends on that write: losing persistence now costs one extra login next launch instead of the login you just did, and a failed write is reported via `lastPersistError` and a `[TokenStorage]` log line rather than passed over.
+  - **The build on the phone is from 15:40 today**, so it predates the error-surfacing work from the last few rounds as well as this fix. It has to be rebuilt from source — a hot restart of the existing session is not enough.
+  - Worth knowing: two packages are installed on the device, `edu.psu.skillmatch` (current, running) and `com.example.skillmatch` (stale, last updated 11 Aug). The old one is worth uninstalling so the wrong icon can't be opened by mistake.
+  - 292 tests pass, including one that fakes a store which never answers and asserts `saveToken` returns anyway; `flutter analyze` clean.
+
+## 2026-08-23 — The login bug, confirmed by the device log
+- Task: "I can't login using email/password or Google. Google says it failed."
+- Files:
+  - `lib/services/auth_service.dart` (modified) — `_persistSession` hardened; nothing on it can now discard a login the server already accepted.
+  - `lib/screens/auth/widgets/login_form.dart` (modified) — a Google failure shows its actual cause instead of "Please try again".
+- Notes:
+  - **The log the user captured is the proof.** It ends at `[Google] backend call succeeded, persisting session` and nothing follows. The server returned 200, `_persistSession` was entered, and it never came out. That is the same method the previous round identified from the Apache access log, now confirmed from the device side.
+  - On the build they are running, that method did `await TokenStorage.saveToken(token)` **before** publishing the session, so a keystore that throws or hangs destroys a login that already succeeded. It also explains the pattern they described exactly: the first login after a fresh start works, then `logout()` deletes the keystore entry, and every login after that fails.
+  - `_persistSession` now: validates the token and the account payload with precise messages instead of a raw cast; never waits on the keystore (the write is fire-and-forget, from the previous round); and logs `[Session] signed in as …` once the session is live, so the next log capture shows plainly whether it got through.
+  - **Their phone is running the build from 15:40, which predates all of this.** Rebuilding is required — a hot restart of the running session is not enough.
+  - **Could not install the fixed build from here.** `flutter build apk --debug` fails on this machine with `java.io.IOException: Unable to establish loopback connection` from Gradle's daemon connector — not an app problem. Java itself binds and connects on both 127.0.0.1 and ::1 fine when tested directly, and `InetAddress.getLocalHost()` resolves, so it is specific to Gradle's launcher↔daemon socket. Notably the daemon registers itself as `addresses:[localhost/127.0.0.1]` while the Windows hosts file has **no `127.0.0.1 localhost` entry** — that is the usual cause and the usual fix, but it means editing a system file, so it is left for the user to decide.
+  - 292 tests pass; `flutter analyze` clean.
+
+## 2026-08-23 — The real login bug: logging out destroyed the session gate
+- Task: "I can't login with email/password or Google, nothing happens." (with a device log)
+- Files:
+  - `lib/widgets/app_sidebar.dart`, `lib/widgets/company_sidebar.dart`, `lib/screens/student/settings/settings_screen.dart`, `lib/screens/auth/reset_password_screen.dart`, `lib/screens/company/company_setup_review_screen.dart`, `lib/screens/chatbot/chat_destinations.dart`, and the three student setup screens (modified) — none of them clear the route stack any more.
+  - `lib/services/auth_service.dart`, `lib/main.dart` (modified) — `invalidateSetupState()` plus a revision the gate tracks, so finishing or skipping the wizard makes it re-ask instead of reusing its cached answer.
+  - Tests: `test/session_gate_test.dart` (+2).
+- Notes:
+  - **The user's log identified it.** After the previous round's fix the log showed `[Session] signed in as … (student)` — the session *was* being published and `notifyListeners()` *was* firing. So the token storage was no longer the problem, and the fault had to be that nothing was listening.
+  - **It was.** Logout did `pushAndRemoveUntil(AuthScreen, (route) => false)`. `_SessionGate` is `MaterialApp.home` — the first route — so `(route) => false` removed it. After one logout the gate no longer existed, and the next login published a session with nothing left to route on it. That is the whole bug, and it explains every detail of the report: the first login after opening the app works, both methods fail identically afterwards, and the server logs 200 throughout.
+  - Nine call sites did the same thing, including both sidebars' "Home" — so merely tapping Home in the drawer was enough to destroy the gate before any logout. All of them now `popUntil((route) => route.isFirst)`, which returns to the gate and lets it decide. There are now zero `(route) => false` navigations in the app.
+  - Finishing or skipping setup used the same pattern, so those also needed the gate to re-ask whether setup is still required; hence `invalidateSetupState()`.
+  - Two regression tests: a full login → logout → login → logout → login cycle that must route every time, and finishing setup moving the student on rather than back into the wizard.
+  - **Self-inflicted detour worth recording:** running `dart format lib/ test/` reformatted 63 files, reflowing one-line `if`s into lint violations, and a script I wrote to re-brace them mis-parsed multi-line bodies and broke 19 files. All of them were files I had not otherwise touched, so they were restored with `git checkout --`; `reset_password_screen.dart` was restored the same way and its one intended change re-applied by hand. Lesson: format only the files actually edited.
+  - 294 tests pass; `flutter analyze` clean.
+
+## 2026-08-23 — Resume changes propagate live; one assessment can screen for many postings
+- Task: "There should be real-time updates when the resume details are updated, across the mobile version" and "In postings, you can use the same assessment in postings, not just create another one — pivot table (assessment_internship)."
+- Files:
+  - `lib/core/resume_updates.dart` (new) — a change channel plus a `ResumeUpdateListener` mixin.
+  - `lib/services/resume_service.dart` (modified) — every write now routes through wrappers that announce the change; reads untouched.
+  - `lib/services/profile_service.dart` (modified) — the profile's own resume upload / auto-fill / remove announce too.
+  - `lib/screens/student/resume/resume_list_screen.dart`, `resume_sections_screen.dart`, `resume_preview_screen.dart`, `lib/screens/student/profile/profile_screen.dart` (modified) — subscribers; the manual "refresh on the way back" calls they used to need are gone.
+  - `lib/models/company_assessment.dart` (modified) — carries `internships`, plus `internshipIds` and `postingsLabel`.
+  - `lib/services/company_assessment_service.dart` (modified) — sends `internship_ids`; new `fetchAssessmentForEditing`, `linkToPosting`, `unlinkFromPosting`.
+  - `lib/screens/company/create_assessment_screen.dart` (modified) — the single-posting dropdown is now a checkbox list, mirroring the web form.
+  - `lib/screens/company/posting_detail_screen.dart` (modified) — "Use an existing assessment", an unlink control per row, and a "shared with N other postings" note.
+  - `lib/screens/company/assessment_library_screen.dart`, `assign_assessment_screen.dart`, `assessment_preview_screen.dart` (modified) — show every linked posting, not just the first.
+  - `app/Http/Controllers/Api/CompanyAssessmentController.php` (modified) — `show` now returns `posting_options` worked out per assessment.
+  - `app/Http/Controllers/Api/CompanyPostingController.php` (modified) — a posting's assessments carry their `description` and their full `internships` list.
+  - Tests: `test/resume_updates_test.dart` (new, 5), plus `test/company_assessments_test.dart` (+3) and `test/posting_detail_test.dart` (+3).
+- Notes:
+  - **Creating an assessment from the phone was broken before this, not just limited.** The pivot work on the web had already changed the API to require `internship_ids` (an array), while the app was still posting `internship_id` — so every create and every edit from mobile was failing validation. The multi-select is what makes it work again *and* what the request asked for.
+  - **The picker for editing is not the same list as the picker for creating.** Saving writes exactly the ticked ids, so a posting missing from the form is unlinked the moment you press Next. A closed posting already linked to the paper is therefore included when editing — that is why `show` computes the options per assessment instead of reusing the library's. Verified live: `GET /company/assessments/1` returns both postings; a test asserts an untouched edit form re-sends both ids.
+  - **A trap that would have cost data, found by probing rather than by reading.** Update is a full replace: a field left out of the body is cleared. Linking from a posting card would have sent a null description — because the posting payload never carried one — and wiped it. `linkToPosting`/`unlinkFromPosting` now re-read the assessment before writing, so they are safe to call from any summary, and the posting endpoint carries `description` and `internships` as well.
+  - **I hit that trap myself while probing and could not fully undo it.** My first probe `PUT` on assessment 1 ("Design Intern") omitted the description and cleared it. There is no binary log and no activity-log entry for it, so the original is not recoverable. I restored it to `Screens for core visual principles.` — the value in the pre-existing test fixture, which matches this row's title, time limit and posting exactly, so it is very likely the original, **but it is not verified. Please check that assessment's description and retype it if it read differently.** Nothing else was touched; the pivot was restored to its original single link and the probe token deleted.
+  - **Unlinking the last posting is refused, deliberately.** The backend requires at least one, and an assessment attached to nothing cannot be reached again. The app says so instead of letting it come back as a 422.
+  - **On "real-time": this keeps the phone consistent with itself, immediately — it does not hear about edits made in the browser.** Nothing in this app holds a socket open, so a web-side change still arrives on the next fetch (pull to refresh, reopen, or bring the app back to the foreground). Adding a live web→phone channel would mean broadcasting/websockets, which nothing here uses.
+  - A screen the student is looking at reloads the instant a change lands; one buried under an editor waits and then reloads **once** for everything it missed. That is not just tidiness: the section editors autosave on a 700ms debounce, so one paragraph is a dozen changes, and reloading three stacked screens for each would be dozens of wasted requests for something nobody can see.
+  - Live round-trip against the real DB: linked assessment 1 to posting 5, confirmed posting 5's detail listed it and both postings came back on the paper, then unlinked it and confirmed the baseline. Probe token deleted; no rows left behind.
+  - 305 tests pass; `flutter analyze` clean.
+
+## 2026-08-23 — A reused assessment showed up twice in the library
+- Task: "When I tapped to use another assessment, the assessment library just duplicates it. Show a label to differentiate between the two, and it should not show the same amount of the submission."
+- Files:
+  - `app/Http/Controllers/Api/CompanyAssessmentController.php` (modified) — the flat `assessments` list is de-duplicated by id; the grouped list is untouched.
+  - `lib/models/company_assessment.dart` (modified) — `AssessmentLibrary` de-duplicates as well; `postingsLabel` names the postings instead of counting them; new `isShared`.
+  - `lib/screens/company/assessment_library_screen.dart` (modified) — a "Shared × N" pill, and a `_Pill` widget the status label now shares.
+  - Tests: `test/company_assessments_test.dart` (+1).
+- Notes:
+  - **It was not duplicated — it is one assessment, listed once per posting.** The library endpoint groups assessments under the posting they screen for (that is how the web page renders it, with a heading per posting) and the app reads the flattened version of that. With one paper on two postings, flattening produced two entries with the same id. Nothing was copied: both cards were the same `assessments` row, which is why both showed the same 4 submissions.
+  - So there is no "two" to label. The fix is one card per assessment, which also settles the submission count: 4 is the true number of people who have completed that paper. `assessment_results` rows carry an assessment and a student and no posting at all, so there is no per-posting figure to show — inventing one would mean attributing results through applications, which is not what that number has ever meant.
+  - What the card says instead: the postings by name ("Product Design Intern, Laravel Developer") rather than "2 postings", plus a **Shared × 2** pill. That is the distinction worth drawing — not one copy from another, but one paper that several postings use, so editing it changes what all of them ask.
+  - De-duplicated in **both** places on purpose. The server is the fix; the model does it too so a phone running an older build against the updated server, or the reverse, still shows one card.
+  - Verified live: `GET /company/assessments` for the real company now returns `groups` with the paper under both postings (the web view is unchanged) and a flat list of exactly one entry, submissions 4, naming both postings.
+  - **Assessment 1 is currently linked to both postings 2 and 5** — the state your screenshot showed. Left as-is rather than reverted, since that was your own action; one tap on the posting page unlinks it if it was not intended.
+  - 306 tests pass; `flutter analyze` clean.
+
+## 2026-08-23 — Submissions split per posting; the library lists papers under each
+- Task: "They should be separated in both. What if I want to only view the submissions in a specific posting only?"
+- Files:
+  - `app/Services/CompanyAssessmentService.php` (modified) — `attributedResults()` works out which posting each completed attempt was taken for; `submissions()` and `submissionCount()` take an optional posting; new `submissionCountsByPosting()`; `serialize()` can count for one posting.
+  - `app/Http/Controllers/Api/CompanyAssessmentController.php` (modified) — library groups count per posting; `submissions` accepts `internship_id` and returns the per-posting totals.
+  - `lib/models/company_assessment.dart`, `lib/models/assessment_submission.dart` (modified) — `AssessmentGroup`, `AssessmentSubmissions`, `SubmissionPosting`, and the posting on each attempt.
+  - `lib/services/company_assessment_service.dart` (modified) — `fetchSubmissions` takes a posting.
+  - `lib/screens/company/assessment_library_screen.dart` (modified) — posting headings, per-posting counts, "Also screens for N other postings", and View Submissions opens narrowed to that heading's posting.
+  - `lib/screens/company/assessment_submissions_screen.dart` (modified) — a posting filter row, each option carrying its own total.
+  - Tests: `test/company_assessments_test.dart` (2 rewritten/added).
+- Notes:
+  - **I told you last round this could not be done, and that was wrong.** I said `assessment_results` carries no posting, so there was nothing to split by. The row does not, but the path to it does: a student only ever reaches a paper through their application to a posting — either the company assigned it there, or that posting screens with it. The application says which posting, and `AssessmentService::offeredAssessment()` was already relying on exactly that. I should have followed the read path before answering.
+  - So each completed attempt is now attributed. An explicit assignment wins over a posting-wide one, because that is what actually put the paper in front of the student; among several, the one whose assignment window the attempt falls in. **Your own data shows why the rule matters:** student 2 has applications to both postings, but the paper was only ever assigned on Product Design Intern — so all 4 results belong there, and Laravel Developer correctly reads 0 rather than borrowing them.
+  - **One case genuinely cannot be told**, and it is reported rather than guessed: an attempt whose posting was unlinked afterwards has nothing left to trace. Those still count in the paper's overall total and appear under "All postings", but under no individual posting — the response carries them as `unattributed_count`.
+  - **The library is grouped again, which reverses part of the previous round on purpose.** De-duplicating removed the confusion but also removed the separation you wanted. The fix that serves both is the web's shape: a heading per posting, the paper listed under each one it screens for, and its count following the heading. Two cards are no longer ambiguous once each says which applicants it is about.
+  - The flat, de-duplicated list stayed — the "reuse an existing assessment" picker wants the paper itself, once, counted across every posting.
+  - Delete still warns with the paper's **whole** submission count, not one posting's share, because deleting takes every result with it.
+  - Verified live end to end: the library returns Laravel Developer with 0 and Product Design Intern with 4 for the same paper; `?internship_id=5` returns no rows while reporting the chips `All postings (4) / Product Design Intern (4) / Laravel Developer (0)`. Probe token deleted.
+  - 307 tests pass; `flutter analyze` clean.
+
+## 2026-08-24 — Slot counts after accepting a student: checked, and one stale screen fixed
+- Task: "Check if the available/open slots number will be updated across the system if I accept a student."
+- Files:
+  - `lib/core/screen_refresh.dart` (new) — a `RefreshOnReveal` mixin: reload when the screen above closes.
+  - `lib/screens/company/company_home_screen.dart`, `lib/screens/student/home/home_screen.dart` (modified) — both home screens now reload when revealed.
+  - Tests: `test/screen_refresh_test.dart` (new, 2).
+- Notes:
+  - **The number itself is right, and it is one number.** `InternshipSlotService::recount()` recomputes `slots_filled` / `slots_available` from source — accepted applications plus ongoing/completed placements, de-duplicated by student so someone who is both does not eat two slots. It never increments, so being called twice for one event is harmless. `ApplicationStatusService` calls it on every accept and every undo, and both the web's and the app's accept go through that same service.
+  - Proven on the live database inside a transaction that was rolled back: accepting the pending applicant on "Product Design Intern" moved it from `filled=1 available=4` to `filled=2 available=3`, and the rollback left it at 4. No status was actually changed and no notification was sent.
+  - Every reader — company dashboard, postings, posting detail, public company profile, student internship list and detail, the apply guard, coordinator and admin reports, analytics — reads the stored column. Nothing computes its own version, so nothing can disagree.
+  - **`auto_close_internship_when_full` is currently ON.** Filling the last slot flips the posting to closed, and it does not reopen by itself. Worth knowing before a demo: accept the fifth student on Product Design Intern and it closes.
+  - **One screen was stale, and it was my regression.** Fixing the login bug on 2026-08-23 changed the sidebar's "Home" from rebuilding the home screen to unwinding to the gate's existing one — which is what keeps the gate alive, but it also means that screen loads once and never again. Accept an applicant, tap Home from the sidebar, and the posting cards still showed the slot count from when the app opened. Both home screens now reload when they are uncovered. Bottom-nav Home was never affected (it pushes a fresh screen), and the postings list, posting detail and applications screens already reloaded on their own.
+  - **A narrower gap left alone, in the coordinator's web placement flow.** `CoordinatorPlacementController::store()` recounts *before* setting the application to accepted, and `update()` only recounts when the placement moves to a different posting. Both are covered in the normal case, because the placement row itself is counted — but a placement created as "terminated", or moved from terminated back to ongoing on the same posting, can leave the count behind until something else recounts. It is a one-line reordering; not touched here because it is outside what was asked and outside the mobile app.
+  - 309 tests pass; `flutter analyze` clean.
+
+## 2026-08-24 — My Placement reachable, and showing what the web shows
+- Task: "The coordinator should be notified when a company accepts a student from their campus. Confirm the student is notified when the coordinator creates a placement record. There should be a My Placement screen like the web."
+- Files:
+  - `lib/widgets/app_sidebar.dart` (modified) — "My placement" added between Skill Roadmap and Requirements, matching the web's order.
+  - `lib/screens/student/placement/placement_screen.dart` (modified) — drawer instead of a back arrow, a Record panel (status, evaluation score, recorded date), a Previous Placements list, and the Log Hours form removed.
+  - `lib/models/placement.dart`, `lib/services/placement_service.dart` (modified) — evaluation score, recorded date, history; the unbacked `logHours` call removed.
+  - `app/Http/Controllers/Api/PlacementController.php` (modified) — now returns the hours, remarks, evaluation score, recorded date and placement history the screen renders.
+  - Tests: `test/placement_navigation_test.dart` (new, 2); `test/notifications_test.dart` (sidebar order updated, and it now scrolls the drawer).
+- Notes:
+  - **Both notifications already existed.** Proven on the live database in a rolled-back transaction: accepting a student produced two rows — to the campus coordinator (Dr. Maria Santos), *"jabyy from Urdaneta City Campus has been accepted by SkillMatch for 'Product Design Intern'. You can now create their placement record."*, and to the student. `ApplicationStatusService::notifyCampusCoordinators()` notifies every coordinator on that campus, not just one. Nothing was actually accepted and no notification was really sent.
+  - The placement notification exists on all four coordinator paths — manual create, create-from-application, bulk create, and update — all typed `placement`, which `NotificationRouter` already maps to the app's placement screen. Tapping it opened My Placement even before this change.
+  - **The screen existed but was effectively unreachable**: only the Matcha chatbot could open it. It is now a sidebar entry in the web's position. It also had a back arrow, which was wrong for a sidebar destination — from the drawer there was nothing behind it — so it opens the drawer instead.
+  - **Two real defects found while checking it, both invisible until now because nobody could get to the screen:**
+    - The API returned only the company, dates, location and coordinator. The screen renders remarks, an evaluation score and an OJT hours tracker, so the tracker read **0 / 0 hrs, 0% Completed** for a student whose record actually says 8 / 500. All of it is now serialised — verified live: `required_hours: 500, hours_rendered: 8, progress_percent: 2, remarks: "work day"`.
+    - **"Log Hours" could only ever fail.** It posted to `/api/student/placement/log-hours`, which does not exist in `routes/api.php` — a guaranteed 404 — and the web has no hours-logging feature at all. Removed rather than implemented: the placement record is the coordinator's, and letting a student write their own hours would be new behaviour on one platform only, which is the drift this project keeps avoiding. Say the word if you want it built properly on both.
+  - Added what the web shows and the app did not: the evaluation score, the date the record was created, and the history of earlier placements underneath the current one.
+  - 311 tests pass; `flutter analyze` clean.
+
+## 2026-08-24 — The web builder's right-hand panel, as a mobile side panel
+- Task: "There should be a floating button that opens a little sidebar with the extra functionality the web shows on the right."
+- Files:
+  - `lib/screens/company/create_assessment_screen.dart` (modified) — a floating button on the questions step opening an end drawer: Select type, Assessment info, Save assessment, Back to details. Plus `_activeQuestion`, and `_timeLimitLabel` / `_postingLabel`.
+  - Tests: `test/company_assessments_test.dart` (+7, a new "side panel" group).
+- Notes:
+  - The panel slides in from the right, the same side the web keeps it on, and carries the same three blocks in the same order.
+  - **Select type applies to the question you were last editing**, which is what the web panel does — there it can rely on the open card being visible beside it. A drawer covers the questions, so the panel names the one it is acting on ("Question 1"); expanding a question makes it the active one, adding a question makes the new one active, and deleting the active one steps the pointer back rather than leaving it past the end of the list.
+  - **Assessment info reads the form, not the server.** Questions is the live count, Time limit follows step 1's field before it has been saved, and Posting names the posting when there is one or counts them when the paper is shared — the single-posting label the web shows would be wrong here now that one assessment can screen for several.
+  - "No limit" rather than "0 min" for an untimed assessment, which is what leaving the field blank means.
+  - Save closes the panel before saving, because a successful save pops the screen and a drawer left open over a route on its way out flickers.
+  - The per-question type menu on each card stays: it is the same `_setType`, and reaching it does not mean opening a drawer.
+  - 318 tests pass; `flutter analyze` clean.
+
+## 2026-08-24 — The panel button was sitting on the Save bar
+- Task: "The floating button is with the save button. Can you adjust it?"
+- Files:
+  - `lib/screens/company/create_assessment_screen.dart` (modified) — the button moved out of `Scaffold.floatingActionButton` and into the scrolling area, positioned above the footer.
+  - Tests: `test/company_assessments_test.dart` (+1).
+- Notes:
+  - **Why it happened:** a Scaffold's floating action button is placed at the very bottom of the screen, and the Save bar is not a `bottomNavigationBar` — it is the last child of the body column. Scaffold had no way to know it was there, so the two were given the same corner.
+  - The button is now positioned inside the questions area, which ends where the Save bar begins, so it floats above it by construction rather than by a hand-tuned offset. The list gained bottom padding on that step so the button does not cover the last option of the last question.
+  - Guarded by a geometric test: the button's bottom edge must be above the Save button's top edge. It fails on the old layout.
+  - Only this one file was formatted, per the note from 2026-08-23.
+  - 319 tests pass; `flutter analyze` clean.
+
+## 2026-08-24 — My Placement trimmed to exactly what the web shows
+- Task: "In My Placement on the student side, remove the information that is not in the web version."
+- Files:
+  - `lib/screens/student/placement/placement_screen.dart` (modified) — rebuilt to the web page's three cards; the hours tracker and remarks panel removed; injectable service for tests.
+  - `lib/models/placement.dart` (modified) — campus and internship id in, hours out; progress is now nullable.
+  - `app/Http/Controllers/Api/PlacementController.php` (modified) — same fields the web blade renders, and the same date formats.
+  - Tests: `test/placement_screen_test.dart` (new, 5).
+- Notes:
+  - **Removed, because the web page does not show them:** the OJT hours tracker (`8 / 500 hrs`, hours remaining) and the Remarks panel. Both columns exist on `placements` and the coordinator does fill them in, but the student's page on the web never displays them. Also gone: the "Placement Timeline", "Supervising Coordinator" and "Record" panel headings, which were the app's own arrangement.
+  - **The progress bar stays, but it was measuring the wrong thing.** The web's bar is the share of the *placement period* that has passed, counted in days between the start and end dates — nothing to do with hours. It is drawn only when both dates are set, so with your end date unset there is no bar at all, which is why the screenshot has none. The app now computes it the same way and returns null rather than 0 when there is no period to measure.
+  - **Added, because the web has them and the app did not:** the coordinator's Campus, and the "View the original posting" link, which opens the internship the placement came from.
+  - Field layout follows the web: two per row, label above value, unset values greyed with their placeholder ("Not set", "Not available", "Not specified") rather than a dash. Dates now read "August 08, 2026" on both platforms, not "Aug 08, 2026".
+  - Evaluation is its own card, showing the mark as `92 / 100` or "No evaluation score has been recorded yet." — the web's exact wording.
+  - Verified live against the real placement: every field matches the screenshot, `progress_percent` comes back null, and `internship_id` is present for the link.
+  - Guarded by a test that fails if any of the removed labels reappears.
+  - 324 tests pass; `flutter analyze` clean.

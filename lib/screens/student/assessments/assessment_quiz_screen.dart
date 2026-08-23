@@ -22,7 +22,11 @@ import 'assessment_result_screen.dart';
 ///
 /// Pops `true` once an attempt has been submitted.
 class AssessmentQuizScreen extends StatefulWidget {
-  const AssessmentQuizScreen({super.key, required this.assessmentId, this.service});
+  const AssessmentQuizScreen({
+    super.key,
+    required this.assessmentId,
+    this.service,
+  });
 
   final int assessmentId;
 
@@ -37,7 +41,8 @@ class AssessmentQuizScreen extends StatefulWidget {
 /// enough that finishing the same test on the web stops this one promptly.
 const _statedPollInterval = Duration(seconds: 8);
 
-class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with WidgetsBindingObserver {
+class _AssessmentQuizScreenState extends State<AssessmentQuizScreen>
+    with WidgetsBindingObserver {
   late final AssessmentService _service = widget.service ?? AssessmentService();
   late final QuizStateStore _store = QuizStateStore(widget.assessmentId);
   final _scrollController = ScrollController();
@@ -74,7 +79,10 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _load();
-    _statePoll = Timer.periodic(_statedPollInterval, (_) => _checkAttemptStillOpen());
+    _statePoll = Timer.periodic(
+      _statedPollInterval,
+      (_) => _checkAttemptStillOpen(),
+    );
   }
 
   @override
@@ -120,8 +128,9 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
 
       for (final question in quiz.questions) {
         if (question.type.isFreeText) {
-          _textControllers[question.id] =
-              TextEditingController(text: _answers[question.id] as String? ?? '');
+          _textControllers[question.id] = TextEditingController(
+            text: _answers[question.id] as String? ?? '',
+          );
         }
       }
 
@@ -129,7 +138,9 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
 
       setState(() {
         _quiz = quiz;
-        _step = restoredStep >= 0 && restoredStep < quiz.questions.length ? restoredStep : 0;
+        _step = restoredStep >= 0 && restoredStep < quiz.questions.length
+            ? restoredStep
+            : 0;
         _isLoading = false;
       });
 
@@ -226,7 +237,10 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
           'recorded, so this one has been closed.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('View result')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('View result'),
+          ),
         ],
       ),
     );
@@ -241,7 +255,10 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
 
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => AssessmentResultScreen(assessmentId: widget.assessmentId, service: _service),
+        builder: (_) => AssessmentResultScreen(
+          assessmentId: widget.assessmentId,
+          service: _service,
+        ),
       ),
     );
   }
@@ -254,13 +271,19 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
     _persist();
 
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
     }
   }
 
   void _setAnswer(AssessmentQuestion question, Object? value) {
     setState(() {
-      if (value == null || (value is List && value.isEmpty) || (value is String && value.trim().isEmpty)) {
+      if (value == null ||
+          (value is List && value.isEmpty) ||
+          (value is String && value.trim().isEmpty)) {
         _answers.remove(question.id);
       } else {
         _answers[question.id] = value;
@@ -274,13 +297,20 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
     setState(() => _isSubmitting = true);
 
     try {
-      final result = await _service.submit(widget.assessmentId, _answers, timedOut: timedOut);
+      final result = await _service.submit(
+        widget.assessmentId,
+        _answers,
+        timedOut: timedOut,
+      );
       await _store.clear();
       if (!mounted) return;
 
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => AssessmentResultScreen(assessmentId: widget.assessmentId, result: result),
+          builder: (_) => AssessmentResultScreen(
+            assessmentId: widget.assessmentId,
+            result: result,
+          ),
         ),
       );
     } catch (e) {
@@ -295,11 +325,18 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
         return;
       }
 
-      final message = e is ApiException ? e.message : 'Could not submit your assessment.';
+      final message = e is ApiException
+          ? e.message
+          : 'Could not submit your assessment.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(timedOut ? 'Time is up, but submitting failed: $message' : message),
-          action: SnackBarAction(label: 'Retry', onPressed: () => _submit(timedOut: timedOut)),
+          content: Text(
+            timedOut ? 'Time is up, but submitting failed: $message' : message,
+          ),
+          action: SnackBarAction(
+            label: 'Retry',
+            onPressed: () => _submit(timedOut: timedOut),
+          ),
         ),
       );
     }
@@ -315,12 +352,18 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
         content: Text(
           unanswered > 0
               ? "You still have $unanswered ${unanswered == 1 ? 'question' : 'questions'} unanswered. "
-                  'They will be marked as incorrect.'
+                    'They will be marked as incorrect.'
               : 'Your answers will be sent to the employer and cannot be changed.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Keep going')),
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Submit')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep going'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Submit'),
+          ),
         ],
       ),
     );
@@ -343,8 +386,14 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
               : 'Your answers are saved and you can come back to finish later.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Stay')),
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Leave')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Leave'),
+          ),
         ],
       ),
     );
@@ -375,12 +424,12 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
             // the student sits on this screen.
             ? _ClosedElsewhere(onViewResult: _goToRecordedResult)
             : _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? _QuizError(error: _error!, onRetry: _load)
-                    : quiz == null || quiz.questions.isEmpty
-                        ? const _EmptyQuiz()
-                        : _buildQuiz(quiz),
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? _QuizError(error: _error!, onRetry: _load)
+            : quiz == null || quiz.questions.isEmpty
+            ? const _EmptyQuiz()
+            : _buildQuiz(quiz),
       ),
     );
   }
@@ -415,12 +464,16 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
                   if (_step > 0) ...[
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _isSubmitting ? null : () => _goToStep(_step - 1),
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => _goToStep(_step - 1),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(52),
                           foregroundColor: AppColors.primary,
                           side: const BorderSide(color: AppColors.border),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         child: const Text('Back'),
                       ),
@@ -430,15 +483,24 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> with Widget
                   Expanded(
                     flex: _step > 0 ? 1 : 2,
                     child: ElevatedButton(
-                      onPressed: _isSubmitting ? null : (isLast ? _confirmSubmit : () => _goToStep(_step + 1)),
+                      onPressed: _isSubmitting
+                          ? null
+                          : (isLast
+                                ? _confirmSubmit
+                                : () => _goToStep(_step + 1)),
                       style: isLast
-                          ? ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A7F4B))
+                          ? ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1A7F4B),
+                            )
                           : null,
                       child: _isSubmitting
                           ? const SizedBox(
                               width: 22,
                               height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
                             )
                           : Text(isLast ? 'Submit Assessment' : 'Next'),
                     ),
@@ -473,7 +535,9 @@ class _QuizHeader extends StatelessWidget {
 
   /// Stand-in listenable for an untimed assessment, so the builder doesn't
   /// allocate a throwaway notifier on every build.
-  static final ValueNotifier<Duration?> _untimed = ValueNotifier<Duration?>(null);
+  static final ValueNotifier<Duration?> _untimed = ValueNotifier<Duration?>(
+    null,
+  );
 
   static String _clock(Duration? value) {
     if (value == null) return '--:--';
@@ -523,12 +587,19 @@ class _QuizHeader extends StatelessWidget {
                           builder: (context, value, _) {
                             // Under a minute left, the pill turns red.
                             final isUrgent =
-                                remaining != null && value != null && value.inSeconds <= 60;
+                                remaining != null &&
+                                value != null &&
+                                value.inSeconds <= 60;
 
                             return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
-                                color: isUrgent ? const Color(0xFFE03E3E) : Colors.white,
+                                color: isUrgent
+                                    ? const Color(0xFFE03E3E)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Row(
@@ -537,13 +608,17 @@ class _QuizHeader extends StatelessWidget {
                                   Icon(
                                     Icons.access_time,
                                     size: 15,
-                                    color: isUrgent ? Colors.white : AppColors.primary,
+                                    color: isUrgent
+                                        ? Colors.white
+                                        : AppColors.primary,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     _clock(remaining == null ? null : value),
                                     style: TextStyle(
-                                      color: isUrgent ? Colors.white : AppColors.primary,
+                                      color: isUrgent
+                                          ? Colors.white
+                                          : AppColors.primary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
@@ -563,7 +638,11 @@ class _QuizHeader extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         'Question $current / $total',
-                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -625,13 +704,23 @@ class _QuestionCard extends StatelessWidget {
         children: [
           Text(
             question.text,
-            style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: AppColors.textDark, height: 1.45),
+            style: const TextStyle(
+              fontSize: 15.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+              height: 1.45,
+            ),
           ),
-          if (question.description != null && question.description!.trim().isNotEmpty) ...[
+          if (question.description != null &&
+              question.description!.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
               question.description!,
-              style: const TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.45),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textMuted,
+                height: 1.45,
+              ),
             ),
           ],
           if (question.imageUrl != null) ...[
@@ -639,7 +728,12 @@ class _QuestionCard extends StatelessWidget {
             _QuestionImage(url: question.imageUrl!),
           ],
           const SizedBox(height: 18),
-          _AnswerInput(question: question, answer: answer, textController: textController, onChanged: onChanged),
+          _AnswerInput(
+            question: question,
+            answer: answer,
+            textController: textController,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -676,7 +770,9 @@ class _AnswerInput extends StatelessWidget {
                 isCheckbox: true,
                 onTap: () {
                   final next = Set<int>.from(selected);
-                  next.contains(choice.id) ? next.remove(choice.id) : next.add(choice.id);
+                  next.contains(choice.id)
+                      ? next.remove(choice.id)
+                      : next.add(choice.id);
                   onChanged(next.toList()..sort());
                 },
               ),
@@ -690,7 +786,10 @@ class _AnswerInput extends StatelessWidget {
           hint: const Text('Select an answer'),
           items: [
             for (final choice in question.choices)
-              DropdownMenuItem(value: choice.id, child: Text(choice.text, overflow: TextOverflow.ellipsis)),
+              DropdownMenuItem(
+                value: choice.id,
+                child: Text(choice.text, overflow: TextOverflow.ellipsis),
+              ),
           ],
           onChanged: onChanged,
         );
@@ -800,16 +899,22 @@ class _Indicator extends StatelessWidget {
       decoration: BoxDecoration(
         shape: isCheckbox ? BoxShape.rectangle : BoxShape.circle,
         borderRadius: isCheckbox ? BorderRadius.circular(5) : null,
-        border: Border.all(color: selected ? AppColors.primary : const Color(0xFFC5CBD8), width: 2),
+        border: Border.all(
+          color: selected ? AppColors.primary : const Color(0xFFC5CBD8),
+          width: 2,
+        ),
         color: selected && isCheckbox ? AppColors.primary : Colors.transparent,
       ),
       child: selected
           ? (isCheckbox
-              ? const Icon(Icons.check, size: 14, color: Colors.white)
-              : const DecoratedBox(
-                  decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                  child: SizedBox(width: 11, height: 11),
-                ))
+                ? const Icon(Icons.check, size: 14, color: Colors.white)
+                : const DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: SizedBox(width: 11, height: 11),
+                  ))
           : null,
     );
   }
@@ -847,7 +952,10 @@ class _QuestionImage extends StatelessWidget {
     final bytes = _decodeDataUri(url);
     const broken = Padding(
       padding: EdgeInsets.all(12),
-      child: Text('Image unavailable', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+      child: Text(
+        'Image unavailable',
+        style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+      ),
     );
 
     if (bytes != null) {
@@ -926,7 +1034,11 @@ class _QuizError extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 40, color: AppColors.textMuted),
+            const Icon(
+              Icons.error_outline,
+              size: 40,
+              color: AppColors.textMuted,
+            ),
             const SizedBox(height: 12),
             Text(
               apiError?.message ?? 'Could not load this assessment.',
@@ -963,7 +1075,11 @@ class _ClosedElsewhere extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.lock_outline, size: 44, color: AppColors.textMuted),
+            const Icon(
+              Icons.lock_outline,
+              size: 44,
+              color: AppColors.textMuted,
+            ),
             const SizedBox(height: 14),
             Text(
               'Assessment already submitted',
@@ -978,7 +1094,10 @@ class _ClosedElsewhere extends StatelessWidget {
               style: TextStyle(color: AppColors.textMuted, height: 1.5),
             ),
             const SizedBox(height: 22),
-            ElevatedButton(onPressed: onViewResult, child: const Text('View result')),
+            ElevatedButton(
+              onPressed: onViewResult,
+              child: const Text('View result'),
+            ),
           ],
         ),
       ),
@@ -997,7 +1116,11 @@ class _EmptyQuiz extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.help_outline, size: 40, color: AppColors.textMuted),
+            const Icon(
+              Icons.help_outline,
+              size: 40,
+              color: AppColors.textMuted,
+            ),
             const SizedBox(height: 12),
             const Text(
               'This assessment has no questions yet. Please check back later.',
@@ -1005,7 +1128,10 @@ class _EmptyQuiz extends StatelessWidget {
               style: TextStyle(color: AppColors.textMuted),
             ),
             const SizedBox(height: 16),
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Go back')),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Go back'),
+            ),
           ],
         ),
       ),

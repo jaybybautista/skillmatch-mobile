@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:skillmatch/models/company_assessment.dart';
 import 'package:skillmatch/screens/company/company_posting.dart';
 import 'package:skillmatch/screens/company/posting_detail_screen.dart';
+import 'package:skillmatch/services/company_assessment_service.dart';
 import 'package:skillmatch/services/company_service.dart';
 
 class _FakeCompanyService extends CompanyService {
@@ -47,6 +48,48 @@ class _FakeCompanyService extends CompanyService {
   }
 }
 
+/// Stands in for the assessment builder's service, so linking and
+/// unlinking can be driven without a server.
+class _FakeAssessmentService extends CompanyAssessmentService {
+  _FakeAssessmentService({this.library, this.stored});
+
+  AssessmentLibrary? library;
+
+  /// What the server says the assessment is, as opposed to the summary the
+  /// posting page is holding. Linking re-reads this before writing.
+  CompanyAssessment? stored;
+
+  final calls = <String>[];
+  List<int>? lastInternshipIds;
+  String? lastDescription;
+
+  @override
+  Future<CompanyAssessment> fetchAssessment(int id) async {
+    calls.add('fetch:$id');
+    return stored ?? _assessment(id: id);
+  }
+
+  @override
+  Future<AssessmentLibrary> fetchLibrary() async {
+    calls.add('library');
+    return library ?? AssessmentLibrary.fromJson(const {});
+  }
+
+  @override
+  Future<CompanyAssessment> updateAssessment({
+    required int id,
+    required List<int> internshipIds,
+    required String title,
+    String? description,
+    int? timeLimitMinutes,
+  }) async {
+    calls.add('update:$id');
+    lastInternshipIds = internshipIds;
+    lastDescription = description;
+    return _assessment(id: id, title: title);
+  }
+}
+
 CompanyPosting _posting({
   int id = 4,
   String title = 'Laravel Developer',
@@ -76,13 +119,19 @@ CompanyAssessment _assessment({
   String title = 'PHP Fundamentals',
   int questions = 5,
   int? timeLimit = 20,
+  String? description = 'Screens for the PHP basics.',
+  List<Map<String, dynamic>> internships = const [
+    {'id': 4, 'title': 'Laravel Developer'},
+  ],
 }) {
   return CompanyAssessment.fromJson({
     'id': id,
     'title': title,
+    'description': description,
     'status': 'published',
     'time_limit': timeLimit,
     'question_count': questions,
+    'internships': internships,
   });
 }
 
@@ -103,9 +152,19 @@ Future<void> _scrollBack(WidgetTester tester) async {
   }
 }
 
-Future<void> _pump(WidgetTester tester, CompanyService service) async {
+Future<void> _pump(
+  WidgetTester tester,
+  CompanyService service, {
+  CompanyAssessmentService? assessments,
+}) async {
   await tester.pumpWidget(
-    MaterialApp(home: PostingDetailScreen(postingId: 4, service: service)),
+    MaterialApp(
+      home: PostingDetailScreen(
+        postingId: 4,
+        service: service,
+        assessmentService: assessments,
+      ),
+    ),
   );
   await tester.pumpAndSettle();
 }
@@ -244,7 +303,136 @@ void main() {
     await _scrollTo(tester, find.text('No skills listed yet.'));
     expect(find.text('No skills listed yet.'), findsOneWidget);
 
-    await _scrollTo(tester, find.textContaining('No assessments linked.'));
-    expect(find.textContaining('No assessments linked.'), findsOneWidget);
+    await _scrollTo(
+      tester,
+      find.textContaining('No assessments screen for this posting yet.'),
+    );
+    expect(
+      find.textContaining('No assessments screen for this posting yet.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('an assessment already written can be reused here', (
+    tester,
+  ) async {
+    final service = _FakeCompanyService(assessments: [_assessment()]);
+    final assessments = _FakeAssessmentService(
+      // What the server holds for the paper being reused: it is on posting 9
+      // and has a description the posting page's summary never carried.
+      stored: _assessment(
+        id: 8,
+        title: 'General Aptitude',
+        description: 'Numeracy and reading.',
+        internships: const [
+          {'id': 9, 'title': 'QA Intern'},
+        ],
+      ),
+      library: AssessmentLibrary.fromJson({
+        'assessments': [
+          // Already on this posting, so it must not be offered again.
+          {
+            'id': 2,
+            'title': 'PHP Fundamentals',
+            'question_count': 5,
+            'internships': [
+              {'id': 4, 'title': 'Laravel Developer'},
+            ],
+          },
+          // Written for another posting — this is the one to reuse.
+          {
+            'id': 8,
+            'title': 'General Aptitude',
+            'question_count': 10,
+            'internships': [
+              {'id': 9, 'title': 'QA Intern'},
+            ],
+          },
+        ],
+      }),
+    );
+
+    await _pump(tester, service, assessments: assessments);
+
+    await _scrollTo(tester, find.text('Use an existing assessment'));
+    await tester.ensureVisible(find.text('Use an existing assessment'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Use an existing assessment'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('General Aptitude'), findsOneWidget);
+    expect(
+      find.widgetWithText(ListTile, 'PHP Fundamentals'),
+      findsNothing,
+      reason: 'it already screens for this posting',
+    );
+
+    await tester.tap(find.text('General Aptitude'));
+    await tester.pumpAndSettle();
+
+    // The posting is added to what the paper already screens for, rather
+    // than replacing it — reuse is a link, never a move.
+    expect(assessments.calls, contains('update:8'));
+    expect(assessments.lastInternshipIds, [9, 4]);
+
+    // Update is a full replace, so it is read back first. Without that, the
+    // summary this page holds would send a null description and wipe it.
+    expect(assessments.calls.indexOf('fetch:8'), lessThan(
+      assessments.calls.indexOf('update:8'),
+    ));
+    expect(assessments.lastDescription, 'Numeracy and reading.');
+  });
+
+  testWidgets('the last posting cannot be unlinked, and says why', (
+    tester,
+  ) async {
+    final service = _FakeCompanyService(assessments: [_assessment()]);
+    final assessments = _FakeAssessmentService();
+
+    await _pump(tester, service, assessments: assessments);
+
+    await _scrollTo(tester, find.byTooltip('Stop using this assessment here'));
+    await tester.ensureVisible(find.byTooltip('Stop using this assessment here'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Stop using this assessment here'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+
+    // Nothing was written: an assessment linked to no posting at all cannot
+    // be reached again, and the backend refuses it anyway.
+    expect(assessments.calls, isNot(contains('update:2')));
+    expect(assessments.lastInternshipIds, isNull);
+    expect(find.textContaining('only posting using this'), findsOneWidget);
+  });
+
+  testWidgets('a shared assessment can be taken off just this posting', (
+    tester,
+  ) async {
+    final onTwoPostings = _assessment(
+      internships: const [
+        {'id': 4, 'title': 'Laravel Developer'},
+        {'id': 9, 'title': 'QA Intern'},
+      ],
+    );
+    final service = _FakeCompanyService(assessments: [onTwoPostings]);
+    final assessments = _FakeAssessmentService(stored: onTwoPostings);
+
+    await _pump(tester, service, assessments: assessments);
+
+    await _scrollTo(tester, find.textContaining('shared with 1 other posting'));
+    expect(find.textContaining('shared with 1 other posting'), findsOneWidget);
+
+    await tester.ensureVisible(find.byTooltip('Stop using this assessment here'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Stop using this assessment here'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+
+    // Only this posting goes; the other keeps screening with the same paper.
+    expect(assessments.lastInternshipIds, [9]);
   });
 }

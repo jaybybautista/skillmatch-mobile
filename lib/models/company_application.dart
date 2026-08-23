@@ -120,9 +120,7 @@ class ApplicationCounts {
   int operator [](String key) => _counts[key] ?? 0;
 
   factory ApplicationCounts.fromJson(Map<String, dynamic> json) {
-    return ApplicationCounts(
-      json.map((k, v) => MapEntry(k, asInt(v))),
-    );
+    return ApplicationCounts(json.map((k, v) => MapEntry(k, asInt(v))));
   }
 }
 

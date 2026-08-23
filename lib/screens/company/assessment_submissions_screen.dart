@@ -20,10 +20,19 @@ class AssessmentSubmissionsScreen extends StatefulWidget {
   const AssessmentSubmissionsScreen({
     super.key,
     required this.assessment,
+    this.internshipId,
     this.service,
   });
 
   final CompanyAssessment assessment;
+
+  /// Opens showing only the applicants who took this paper for one posting.
+  ///
+  /// Set when the screen is reached from a posting's block in the library:
+  /// the question being asked there is "how did *these* applicants do", not
+  /// "how has this paper done everywhere". Null shows everyone.
+  final int? internshipId;
+
   final CompanyAssessmentService? service;
 
   @override
@@ -41,6 +50,14 @@ class _AssessmentSubmissionsScreenState
   bool _isLoading = true;
   Object? _error;
   List<AssessmentSubmission> _submissions = const [];
+  List<SubmissionPosting> _postings = const [];
+  int _unattributed = 0;
+
+  late int? _internshipId = widget.internshipId;
+
+  /// The filter is only worth showing when the paper is used in more than
+  /// one place, or when some attempts cannot be placed at all.
+  bool get _canFilter => _postings.length > 1 || _unattributed > 0;
 
   @override
   void initState() {
@@ -61,13 +78,18 @@ class _AssessmentSubmissionsScreenState
       _error = null;
     });
     try {
-      final submissions = await _service.fetchSubmissions(
+      final result = await _service.fetchSubmissions(
         widget.assessment.id,
         query: _searchController.text,
+        internshipId: _internshipId,
       );
       if (!mounted) return;
       setState(() {
-        _submissions = submissions;
+        _submissions = result.submissions;
+        // The totals come back whole even when the list is filtered, so the
+        // options can say how many are behind each without asking again.
+        _postings = result.postings;
+        _unattributed = result.unattributedCount;
         _isLoading = false;
       });
     } catch (e) {
@@ -84,6 +106,20 @@ class _AssessmentSubmissionsScreenState
     _debounce = Timer(const Duration(milliseconds: 400), _load);
   }
 
+  void _filterBy(int? internshipId) {
+    if (_internshipId == internshipId) return;
+    setState(() => _internshipId = internshipId);
+    _load();
+  }
+
+  /// What the header says this list is: the whole paper, or one posting.
+  String? get _scopeLabel => _internshipId == null
+      ? null
+      : _postings
+            .where((p) => p.id == _internshipId)
+            .map((p) => p.title)
+            .firstOrNull;
+
   @override
   Widget build(BuildContext context) {
     final count = _isLoading ? null : _submissions.length;
@@ -97,7 +133,8 @@ class _AssessmentSubmissionsScreenState
             subtitle: count == null
                 ? 'Submissions'
                 : '${count.toString().padLeft(2, '0')} '
-                      'Submission${count == 1 ? '' : 's'}',
+                          'Submission${count == 1 ? '' : 's'}'
+                      '${_scopeLabel != null ? ' \u00b7 $_scopeLabel' : ''}',
             onBack: () => Navigator.of(context).maybePop(),
           ),
           Expanded(
@@ -119,6 +156,7 @@ class _AssessmentSubmissionsScreenState
                       ),
                     ),
                   ),
+                  if (_canFilter) _postingFilter(),
                   Expanded(
                     child: RefreshIndicator(
                       onRefresh: _load,
@@ -129,6 +167,37 @@ class _AssessmentSubmissionsScreenState
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// One row of choices: everyone, then each posting with its own total.
+  ///
+  /// A paper shared between postings is one set of questions asked of
+  /// different people, and "how did the applicants for *this* posting do" is
+  /// a different question from "how has this paper done overall".
+  Widget _postingFilter() {
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        children: [
+          _FilterChip(
+            label: 'All postings',
+            count: _postings.fold<int>(0, (sum, p) => sum + p.submissionCount) +
+                _unattributed,
+            selected: _internshipId == null,
+            onTap: () => _filterBy(null),
+          ),
+          for (final posting in _postings)
+            _FilterChip(
+              label: posting.title,
+              count: posting.submissionCount,
+              selected: _internshipId == posting.id,
+              onTap: () => _filterBy(posting.id),
+            ),
         ],
       ),
     );
@@ -160,6 +229,7 @@ class _AssessmentSubmissionsScreenState
 
     if (_submissions.isEmpty) {
       final isSearching = _searchController.text.trim().isNotEmpty;
+      final scope = _scopeLabel;
 
       return ListView(
         children: [
@@ -187,6 +257,12 @@ class _AssessmentSubmissionsScreenState
                 Text(
                   isSearching
                       ? 'No one by that name has completed this assessment.'
+                      : scope != null
+                      // Not "nobody has taken this paper" — nobody has taken
+                      // it *here*, which for a shared paper is a different
+                      // and much more useful thing to be told.
+                      ? 'No one has completed this assessment for $scope yet. '
+                            'Other postings using it may still have results.'
                       : 'Results appear here once a candidate completes this assessment.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
@@ -209,6 +285,55 @@ class _AssessmentSubmissionsScreenState
           bottom: index == _submissions.length - 1 ? 0 : 16,
         ),
         child: _SubmissionCard(submission: _submissions[index]),
+      ),
+    );
+  }
+}
+
+/// One choice in the posting filter, carrying its own total so you can see
+/// where the results are without tapping through every option.
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8, top: 4, bottom: 8),
+      child: Material(
+        color: selected ? AppColors.primary : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: selected ? AppColors.primary : AppColors.border,
+              ),
+            ),
+            child: Text(
+              '$label ($count)',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : AppColors.textDark,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

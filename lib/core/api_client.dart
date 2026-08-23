@@ -191,17 +191,34 @@ class ApiClient {
 
   Map<String, dynamic> _decode(http.Response response) {
     Map<String, dynamic> data = {};
+    bool bodyIsReadable = true;
+
     if (response.body.isNotEmpty) {
       try {
         final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) data = decoded;
+        if (decoded is Map<String, dynamic>) {
+          data = decoded;
+        } else {
+          bodyIsReadable = false;
+        }
       } catch (_) {
-        // Non-JSON response (e.g. a raw 500 HTML page) — fall through to the
-        // generic error message below.
+        // Non-JSON response (e.g. a raw 500 HTML page, or PHP printing a
+        // warning ahead of the JSON) — fall through to the error below.
+        bodyIsReadable = false;
       }
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      // A 200 whose body can't be read is not a success. Returning an empty
+      // map here made every caller render its own "nothing came back" state
+      // instead, which reads as a feature quietly doing nothing rather than
+      // as the server problem it actually is.
+      if (!bodyIsReadable) {
+        throw ApiException(
+          'The server replied with something the app could not read.',
+          statusCode: response.statusCode,
+        );
+      }
       return data;
     }
 

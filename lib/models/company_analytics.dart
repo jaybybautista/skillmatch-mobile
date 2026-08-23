@@ -335,8 +335,7 @@ class CompanyAnalytics {
     Map<String, dynamic> section(String key) =>
         json[key] as Map<String, dynamic>? ?? const {};
 
-    int from(String key, String field) =>
-        asInt(section(key)[field]);
+    int from(String key, String field) => asInt(section(key)[field]);
 
     final pipeline = section('pipeline');
 

@@ -371,10 +371,10 @@ class _SelectableAssessmentCard extends StatelessWidget {
                     ),
                 ],
               ),
-              if (assessment.internshipTitle != null) ...[
+              if (assessment.postingsLabel != null) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'For ${assessment.internshipTitle}',
+                  'For ${assessment.postingsLabel}',
                   style: const TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 12.5,

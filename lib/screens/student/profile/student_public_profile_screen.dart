@@ -15,18 +15,27 @@ import 'profile_screen.dart';
 /// web controller does, so tapping your own name in a review or search
 /// result never shows you a stripped-down copy of your own profile.
 class StudentPublicProfileScreen extends StatefulWidget {
-  const StudentPublicProfileScreen({super.key, required this.studentId, this.service});
+  const StudentPublicProfileScreen({
+    super.key,
+    required this.studentId,
+    this.service,
+  });
 
   final int studentId;
   final PublicProfileService? service;
 
   @override
-  State<StudentPublicProfileScreen> createState() => _StudentPublicProfileScreenState();
+  State<StudentPublicProfileScreen> createState() =>
+      _StudentPublicProfileScreenState();
 }
 
-class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen> {
-  late final PublicProfileService _service = widget.service ?? PublicProfileService();
-  late Future<StudentPublicProfile> _future = _service.fetchStudent(widget.studentId);
+class _StudentPublicProfileScreenState
+    extends State<StudentPublicProfileScreen> {
+  late final PublicProfileService _service =
+      widget.service ?? PublicProfileService();
+  late Future<StudentPublicProfile> _future = _service.fetchStudent(
+    widget.studentId,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +44,10 @@ class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen>
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text('Student Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Student Profile',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: FutureBuilder<StudentPublicProfile>(
         future: _future,
@@ -52,11 +64,17 @@ class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen>
             return ListView(
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
               children: [
-                Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
                 const SizedBox(height: 12),
                 Center(
                   child: TextButton(
-                    onPressed: () => setState(() => _future = _service.fetchStudent(widget.studentId)),
+                    onPressed: () => setState(
+                      () => _future = _service.fetchStudent(widget.studentId),
+                    ),
                     child: const Text('Retry'),
                   ),
                 ),
@@ -101,11 +119,15 @@ class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen>
           subtitle: tagline,
           chips: [
             if (profile.campus != null)
-              ProfileMetaChip(icon: Icons.apartment_outlined, label: profile.campus!),
+              ProfileMetaChip(
+                icon: Icons.apartment_outlined,
+                label: profile.campus!,
+              ),
             if (profile.isOnOjt)
               ProfileMetaChip(
                 icon: Icons.check_circle_outline,
-                label: 'On OJT${profile.placementCompany != null ? ' at ${profile.placementCompany}' : ''}',
+                label:
+                    'On OJT${profile.placementCompany != null ? ' at ${profile.placementCompany}' : ''}',
                 color: const Color(0xFF16A34A),
               ),
           ],
@@ -126,12 +148,21 @@ class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen>
                         children: [
                           for (final skill in profile.skills)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.chipBackground,
                                 borderRadius: BorderRadius.circular(999),
                               ),
-                              child: Text(skill, style: const TextStyle(fontSize: 12.5, color: AppColors.primary)),
+                              child: Text(
+                                skill,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.primary,
+                                ),
+                              ),
                             ),
                         ],
                       ),
@@ -150,15 +181,30 @@ class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(edu.institution ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
                                   Text(
-                                    [edu.degree, edu.fieldOfStudy].whereType<String>().join(', '),
-                                    style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                                    edu.institution ?? '',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13.5,
+                                    ),
+                                  ),
+                                  Text(
+                                    [
+                                      edu.degree,
+                                      edu.fieldOfStudy,
+                                    ].whereType<String>().join(', '),
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: AppColors.textMuted,
+                                    ),
                                   ),
                                   if (edu.startYear != null)
                                     Text(
                                       '${edu.startYear} to ${edu.endYear ?? 'Present'}',
-                                      style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: AppColors.textMuted,
+                                      ),
                                     ),
                                 ],
                               ),
@@ -179,8 +225,20 @@ class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(cert.title ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                              Text(cert.issuingOrganization ?? '', style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
+                              Text(
+                                cert.title ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                              Text(
+                                cert.issuingOrganization ?? '',
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -200,12 +258,31 @@ class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(exp.position ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                              Text(exp.organization ?? '', style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
-                              if (exp.description != null && exp.description!.isNotEmpty)
+                              Text(
+                                exp.position ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                              Text(
+                                exp.organization ?? '',
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              if (exp.description != null &&
+                                  exp.description!.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
-                                  child: Text(exp.description!, style: const TextStyle(fontSize: 12.5, height: 1.4)),
+                                  child: Text(
+                                    exp.description!,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      height: 1.4,
+                                    ),
+                                  ),
                                 ),
                             ],
                           ),
@@ -220,9 +297,17 @@ class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ProfileInfoRow(label: 'Course', value: profile.course),
-                    ProfileInfoRow(label: 'Year Level', value: profile.yearLevel != null ? 'Year ${profile.yearLevel}' : null),
+                    ProfileInfoRow(
+                      label: 'Year Level',
+                      value: profile.yearLevel != null
+                          ? 'Year ${profile.yearLevel}'
+                          : null,
+                    ),
                     ProfileInfoRow(label: 'Campus', value: profile.campus),
-                    ProfileInfoRow(label: 'Status', value: profile.isOnOjt ? 'On OJT' : 'Available'),
+                    ProfileInfoRow(
+                      label: 'Status',
+                      value: profile.isOnOjt ? 'On OJT' : 'Available',
+                    ),
                   ],
                 ),
               ),
@@ -234,9 +319,14 @@ class _StudentPublicProfileScreenState extends State<StudentPublicProfileScreen>
   }
 
   String _initialsFor(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '??';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 }

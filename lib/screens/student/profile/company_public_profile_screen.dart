@@ -13,18 +13,27 @@ import '../reviews/reviews_section.dart';
 /// About, contact info, open postings, and the same reviews thread the
 /// internship detail screen's Reviews tab uses.
 class CompanyPublicProfileScreen extends StatefulWidget {
-  const CompanyPublicProfileScreen({super.key, required this.companyId, this.service});
+  const CompanyPublicProfileScreen({
+    super.key,
+    required this.companyId,
+    this.service,
+  });
 
   final int companyId;
   final PublicProfileService? service;
 
   @override
-  State<CompanyPublicProfileScreen> createState() => _CompanyPublicProfileScreenState();
+  State<CompanyPublicProfileScreen> createState() =>
+      _CompanyPublicProfileScreenState();
 }
 
-class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen> {
-  late final PublicProfileService _service = widget.service ?? PublicProfileService();
-  late Future<CompanyPublicProfile> _future = _service.fetchCompany(widget.companyId);
+class _CompanyPublicProfileScreenState
+    extends State<CompanyPublicProfileScreen> {
+  late final PublicProfileService _service =
+      widget.service ?? PublicProfileService();
+  late Future<CompanyPublicProfile> _future = _service.fetchCompany(
+    widget.companyId,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +42,10 @@ class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen>
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text('Company Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Company Profile',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: FutureBuilder<CompanyPublicProfile>(
         future: _future,
@@ -50,11 +62,17 @@ class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen>
             return ListView(
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
               children: [
-                Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
                 const SizedBox(height: 12),
                 Center(
                   child: TextButton(
-                    onPressed: () => setState(() => _future = _service.fetchCompany(widget.companyId)),
+                    onPressed: () => setState(
+                      () => _future = _service.fetchCompany(widget.companyId),
+                    ),
                     child: const Text('Retry'),
                   ),
                 ),
@@ -74,19 +92,31 @@ class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen>
       children: [
         PublicProfileHeader(
           name: company.name,
-          initials: company.name.isNotEmpty ? company.name.substring(0, company.name.length.clamp(0, 2)).toUpperCase() : 'C',
+          initials: company.name.isNotEmpty
+              ? company.name
+                    .substring(0, company.name.length.clamp(0, 2))
+                    .toUpperCase()
+              : 'C',
           avatarUrl: company.logoUrl,
           coverUrl: company.coverUrl,
           isSquareAvatar: true,
           subtitle: company.industry ?? 'Industry not specified',
           chips: [
-            if ((company.city ?? '').isNotEmpty || (company.province ?? '').isNotEmpty)
+            if ((company.city ?? '').isNotEmpty ||
+                (company.province ?? '').isNotEmpty)
               ProfileMetaChip(
                 icon: Icons.place_outlined,
-                label: [company.city, company.province].whereType<String>().where((s) => s.isNotEmpty).join(', '),
+                label: [
+                  company.city,
+                  company.province,
+                ].whereType<String>().where((s) => s.isNotEmpty).join(', '),
               ),
             if (company.isVerified)
-              const ProfileMetaChip(icon: Icons.verified_outlined, label: 'Verified', color: Color(0xFF16A34A)),
+              const ProfileMetaChip(
+                icon: Icons.verified_outlined,
+                label: 'Verified',
+                color: Color(0xFF16A34A),
+              ),
           ],
         ),
         Padding(
@@ -99,7 +129,10 @@ class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen>
                 title: 'About the Company',
                 child: (company.description ?? '').isEmpty
                     ? const NoDataText('No company description added yet.')
-                    : Text(company.description!, style: const TextStyle(fontSize: 13.5, height: 1.5)),
+                    : Text(
+                        company.description!,
+                        style: const TextStyle(fontSize: 13.5, height: 1.5),
+                      ),
               ),
               ProfileSectionCard(
                 icon: Icons.mail_outline,
@@ -108,16 +141,25 @@ class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ProfileInfoRow(label: 'Address', value: company.address),
-                    ProfileInfoRow(label: 'Contact Email', value: company.contactEmail),
-                    ProfileInfoRow(label: 'Contact Number', value: company.contactNumber),
+                    ProfileInfoRow(
+                      label: 'Contact Email',
+                      value: company.contactEmail,
+                    ),
+                    ProfileInfoRow(
+                      label: 'Contact Number',
+                      value: company.contactNumber,
+                    ),
                   ],
                 ),
               ),
               ProfileSectionCard(
                 icon: Icons.work_outline,
-                title: 'Available Internships (${company.openInternships.length})',
+                title:
+                    'Available Internships (${company.openInternships.length})',
                 child: company.openInternships.isEmpty
-                    ? const NoDataText('This company has no open internship postings right now.')
+                    ? const NoDataText(
+                        'This company has no open internship postings right now.',
+                      )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -125,7 +167,11 @@ class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen>
                             _OpenJobCard(
                               job: job,
                               onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => InternshipDetailScreen(internshipId: job.id)),
+                                MaterialPageRoute(
+                                  builder: (_) => InternshipDetailScreen(
+                                    internshipId: job.id,
+                                  ),
+                                ),
                               ),
                             ),
                         ],
@@ -168,7 +214,10 @@ class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen>
               borderRadius: BorderRadius.circular(14),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => CompanyReviewsScreen(companyId: company.id, companyName: company.name),
+                  builder: (_) => CompanyReviewsScreen(
+                    companyId: company.id,
+                    companyName: company.name,
+                  ),
                 ),
               ),
               child: Container(
@@ -182,7 +231,13 @@ class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen>
                     const Icon(Icons.star_outline, color: Color(0xFFF5A623)),
                     const SizedBox(width: 10),
                     const Expanded(
-                      child: Text('Reviews & Feedback', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      child: Text(
+                        'Reviews & Feedback',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
                     const Icon(Icons.chevron_right, color: AppColors.textMuted),
                   ],
@@ -200,7 +255,11 @@ class _CompanyPublicProfileScreenState extends State<CompanyPublicProfileScreen>
 /// [ReviewsSection] the internship detail page uses, just reached from the
 /// company profile instead of an internship posting.
 class CompanyReviewsScreen extends StatelessWidget {
-  const CompanyReviewsScreen({super.key, required this.companyId, required this.companyName});
+  const CompanyReviewsScreen({
+    super.key,
+    required this.companyId,
+    required this.companyName,
+  });
 
   final int companyId;
   final String companyName;
@@ -212,7 +271,13 @@ class CompanyReviewsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: Text('$companyName · Reviews', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(
+          '$companyName · Reviews',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: ReviewsSection(reviewableType: 'company', reviewableId: companyId),
     );
@@ -245,17 +310,30 @@ class _OpenJobCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(job.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                    child: Text(
+                      job.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.5,
+                      ),
+                    ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.chipBackground,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
                       '${job.slotsAvailable} ${job.slotsAvailable == 1 ? 'slot' : 'slots'}',
-                      style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -263,7 +341,13 @@ class _OpenJobCard extends StatelessWidget {
               if ((job.location ?? '').isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text(job.location!, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  child: Text(
+                    job.location!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
                 ),
               if (job.skills.isNotEmpty)
                 Padding(
@@ -274,12 +358,21 @@ class _OpenJobCard extends StatelessWidget {
                     children: [
                       for (final skill in job.skills)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.chipBackground,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(skill, style: const TextStyle(fontSize: 10.5, color: AppColors.primary)),
+                          child: Text(
+                            skill,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -293,7 +386,12 @@ class _OpenJobCard extends StatelessWidget {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.icon, required this.color, required this.value, required this.label});
+  const _StatTile({
+    required this.icon,
+    required this.color,
+    required this.value,
+    required this.label,
+  });
 
   final IconData icon;
   final Color color;
@@ -307,15 +405,24 @@ class _StatTile extends StatelessWidget {
         Container(
           width: 38,
           height: 38,
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Icon(icon, size: 18, color: color),
         ),
         const SizedBox(width: 10),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+            ),
           ],
         ),
       ],

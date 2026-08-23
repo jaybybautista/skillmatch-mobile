@@ -5,31 +5,39 @@ import 'package:skillmatch/screens/student/setup/setup_wizard_screen.dart';
 
 /// The exact shape GeminiAiService::parseResumeText promises.
 Map<String, dynamic> _aiResponse() => {
-      'parsed': {
-        'basic_info': {
-          'full_name': 'Godfrey Javier',
-          'address': 'Sta.Maria, Pangasinan',
-          'zip_code': '2240',
-          'phone_number': '09263408919',
-          'email': 'godfreyjavier@gmail.com',
-        },
-        'education': [
-          {'degree': 'BS Information Technology', 'school_name': 'PSU Urdaneta'},
-        ],
-        'experience': [
-          {'job_title': 'IT Support', 'company': 'TechCorp Inc', 'responsibilities': 'Helpdesk'},
-        ],
-        'achievements': [
-          {'title': 'Google IT Support', 'category': 'Coursera', 'date_text': '2023'},
-          {'title': ''},
-        ],
-        'skills': {
-          'technical': ['React', 'Python'],
-          'soft': ['Communication'],
-        },
+  'parsed': {
+    'basic_info': {
+      'full_name': 'Godfrey Javier',
+      'address': 'Sta.Maria, Pangasinan',
+      'zip_code': '2240',
+      'phone_number': '09263408919',
+      'email': 'godfreyjavier@gmail.com',
+    },
+    'education': [
+      {'degree': 'BS Information Technology', 'school_name': 'PSU Urdaneta'},
+    ],
+    'experience': [
+      {
+        'job_title': 'IT Support',
+        'company': 'TechCorp Inc',
+        'responsibilities': 'Helpdesk',
       },
-      'resume_name': 'Sample_resume.pdf',
-    };
+    ],
+    'achievements': [
+      {
+        'title': 'Google IT Support',
+        'category': 'Coursera',
+        'date_text': '2023',
+      },
+      {'title': ''},
+    ],
+    'skills': {
+      'technical': ['React', 'Python'],
+      'soft': ['Communication'],
+    },
+  },
+  'resume_name': 'Sample_resume.pdf',
+};
 
 void main() {
   group('ParsedResume', () {
@@ -84,10 +92,14 @@ void main() {
     });
   });
 
-  testWidgets('the wizard prefills step 1 from the scanned resume', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: SetupWizardScreen(parsed: ParsedResume.fromJson(_aiResponse())),
-    ));
+  testWidgets('the wizard prefills step 1 from the scanned resume', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SetupWizardScreen(parsed: ParsedResume.fromJson(_aiResponse())),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // Everything the scan understood is on screen for review before saving.
@@ -97,18 +109,21 @@ void main() {
     expect(find.text('09263408919'), findsOneWidget);
     expect(find.text('godfreyjavier@gmail.com'), findsOneWidget);
     expect(find.text('Step 1'), findsOneWidget);
-    expect(find.text('About you'), findsNWidgets(2)); // progress label + heading
+    expect(
+      find.text('About you'),
+      findsNWidgets(2),
+    ); // progress label + heading
   });
 
   group('Experience', () {
     test('formats a period from whichever dates exist', () {
       Experience make(String? start, String? end) => Experience.fromJson({
-            'id': 1,
-            'position': 'IT Support',
-            'organization': 'TechCorp',
-            'start_date': start,
-            'end_date': end,
-          });
+        'id': 1,
+        'position': 'IT Support',
+        'organization': 'TechCorp',
+        'start_date': start,
+        'end_date': end,
+      });
 
       expect(make('Jun 2021', 'Aug 2024').period, 'Jun 2021–Aug 2024');
       expect(make('Jun 2021', null).period, 'Jun 2021');

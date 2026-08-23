@@ -15,7 +15,11 @@ import 'reviews_section.dart' show replaceInTree, showEditReviewSheet;
 /// Replies here are the same `reviews` rows the website threads, so a reply
 /// written on the phone appears in the web thread and vice versa.
 class ReviewRepliesScreen extends StatefulWidget {
-  const ReviewRepliesScreen({super.key, required this.rootReviewId, this.service});
+  const ReviewRepliesScreen({
+    super.key,
+    required this.rootReviewId,
+    this.service,
+  });
 
   final int rootReviewId;
   final ReviewService? service;
@@ -85,7 +89,9 @@ class _ReviewRepliesScreenState extends State<ReviewRepliesScreen> {
 
   void _notify(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _send() async {
@@ -122,7 +128,8 @@ class _ReviewRepliesScreenState extends State<ReviewRepliesScreen> {
         _root = replaceInTree(
           [_root!],
           review.id,
-          (r) => r.copyWith(hasLiked: result.liked, likeCount: result.likeCount),
+          (r) =>
+              r.copyWith(hasLiked: result.liked, likeCount: result.likeCount),
         ).first;
       });
     } on ApiException catch (e) {
@@ -155,7 +162,9 @@ class _ReviewRepliesScreenState extends State<ReviewRepliesScreen> {
       _replyingTo = isRoot ? null : review;
       _mention = mention;
       _composer.text = mention + typed;
-      _composer.selection = TextSelection.collapsed(offset: _composer.text.length);
+      _composer.selection = TextSelection.collapsed(
+        offset: _composer.text.length,
+      );
     });
 
     _composerFocus.requestFocus();
@@ -194,14 +203,20 @@ class _ReviewRepliesScreenState extends State<ReviewRepliesScreen> {
         content: Text(
           review.replyCount > 0
               ? 'This will also remove the ${review.replyCount} '
-                  '${review.replyCount == 1 ? 'reply' : 'replies'} underneath it.'
+                    '${review.replyCount == 1 ? 'reply' : 'replies'} underneath it.'
               : 'This cannot be undone.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -252,8 +267,9 @@ class _ReviewRepliesScreenState extends State<ReviewRepliesScreen> {
               focusNode: _composerFocus,
               isSending: _isSending,
               hintText: 'Add a reply or @mention…',
-              contextLabel:
-                  _replyingTo == null ? null : 'Replying to ${_replyingTo!.authorName}',
+              contextLabel: _replyingTo == null
+                  ? null
+                  : 'Replying to ${_replyingTo!.authorName}',
               onCancel: _cancelReply,
               onSubmit: _send,
             ),
@@ -271,9 +287,15 @@ class _ReviewRepliesScreenState extends State<ReviewRepliesScreen> {
       return ListView(
         padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
         children: [
-          Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+          Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textMuted),
+          ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }

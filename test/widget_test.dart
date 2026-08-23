@@ -8,7 +8,9 @@ import 'package:skillmatch/screens/auth/auth_screen.dart';
 import 'package:skillmatch/services/auth_service.dart';
 
 void main() {
-  testWidgets('Auth screen shows the login/register tab toggle', (WidgetTester tester) async {
+  testWidgets('Auth screen shows the login/register tab toggle', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       ChangeNotifierProvider(
         create: (_) => AuthService(),

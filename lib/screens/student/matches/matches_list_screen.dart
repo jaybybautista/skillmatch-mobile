@@ -24,10 +24,12 @@ class MatchesListScreen extends StatefulWidget {
 }
 
 class _MatchesListScreenState extends State<MatchesListScreen> {
-  late final InternshipService _internshipService = widget.service ?? InternshipService();
+  late final InternshipService _internshipService =
+      widget.service ?? InternshipService();
   final _searchController = TextEditingController();
 
-  late Future<List<Internship>> _internshipsFuture = _internshipService.fetchAll(filter: _filter);
+  late Future<List<Internship>> _internshipsFuture = _internshipService
+      .fetchAll(filter: _filter);
   Timer? _debounce;
 
   /// Same three orderings as the web's internships page.
@@ -44,7 +46,10 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       setState(() {
-        _internshipsFuture = _internshipService.fetchAll(query: value.trim(), filter: _filter);
+        _internshipsFuture = _internshipService.fetchAll(
+          query: value.trim(),
+          filter: _filter,
+        );
       });
     });
   }
@@ -81,7 +86,10 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
               padding: const EdgeInsets.fromLTRB(8, 8, 20, 20),
               child: Row(
                 children: [
-                  _HeaderIconButton(icon: Icons.arrow_back, onTap: () => Navigator.of(context).pop()),
+                  _HeaderIconButton(
+                    icon: Icons.arrow_back,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -116,14 +124,21 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                           hintText: 'Search internships...',
                           filled: true,
                           fillColor: Colors.white,
-                          prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: AppColors.textMuted,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: AppColors.border),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: AppColors.border),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
                           ),
                         ),
                       ),
@@ -131,7 +146,8 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                       FutureBuilder<List<Internship>>(
                         future: _internshipsFuture,
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState != ConnectionState.done) {
+                          if (snapshot.connectionState !=
+                              ConnectionState.done) {
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 40),
                               child: Center(child: CircularProgressIndicator()),
@@ -142,7 +158,10 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                             final message = snapshot.error is ApiException
                                 ? (snapshot.error as ApiException).message
                                 : 'Could not load internships.';
-                            return _InlineMessage(text: message, onRetry: _refresh);
+                            return _InlineMessage(
+                              text: message,
+                              onRetry: _refresh,
+                            );
                           }
 
                           final items = snapshot.data!;
@@ -163,16 +182,24 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                                 // is the only time it's what's being sorted on.
                                 if (internship.distanceLabel != null)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 6, left: 4),
+                                    padding: const EdgeInsets.only(
+                                      top: 6,
+                                      left: 4,
+                                    ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.place_outlined,
-                                            size: 14, color: AppColors.textMuted),
+                                        const Icon(
+                                          Icons.place_outlined,
+                                          size: 14,
+                                          color: AppColors.textMuted,
+                                        ),
                                         const SizedBox(width: 4),
                                         Text(
                                           internship.distanceLabel!,
                                           style: const TextStyle(
-                                              fontSize: 12, color: AppColors.textMuted),
+                                            fontSize: 12,
+                                            color: AppColors.textMuted,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -207,7 +234,11 @@ class _InlineMessage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
-          Text(text, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textMuted),
+          ),
           if (onRetry != null) ...[
             const SizedBox(height: 12),
             TextButton(onPressed: onRetry, child: const Text('Retry')),
@@ -231,7 +262,10 @@ class _HeaderIconButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(10),
-        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
         child: Icon(icon, color: AppColors.primaryDark, size: 20),
       ),
     );

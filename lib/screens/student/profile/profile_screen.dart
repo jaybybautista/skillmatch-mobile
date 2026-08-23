@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
+import '../../../core/resume_updates.dart';
 import '../../../models/student_profile.dart';
 import '../../../services/profile_service.dart';
 import '../../../widgets/status_badge.dart';
@@ -21,11 +22,18 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen>
+    with ResumeUpdateListener {
   final _service = ProfileService();
   late Future<StudentProfile> _future = _service.fetchStudentProfile();
 
   void _refresh() => setState(() => _future = _service.fetchStudentProfile());
+
+  /// Importing a resume auto-fills this page's skills, education and
+  /// experience from what the parser read, so a resume change is a profile
+  /// change — the profile has to hear about it too.
+  @override
+  void onResumeChanged() => _refresh();
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +43,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator(color: Colors.white));
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            );
           }
 
           if (snapshot.hasError || !snapshot.hasData) {
@@ -49,11 +59,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white),
+                    ),
                     const SizedBox(height: 16),
                     OutlinedButton(
-                      style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white), foregroundColor: Colors.white),
-                      onPressed: () => setState(() => _future = _service.fetchStudentProfile()),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white),
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => setState(
+                        () => _future = _service.fetchStudentProfile(),
+                      ),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -87,7 +106,9 @@ class _CurrentPlacementCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlacementScreen())),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const PlacementScreen())),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -113,7 +134,8 @@ class _CurrentPlacementCard extends StatelessWidget {
                           width: 44,
                           height: 44,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => _initial(),
+                          errorBuilder: (context, error, stackTrace) =>
+                              _initial(),
                         )
                       : _initial(),
                 ),
@@ -149,7 +171,10 @@ class _CurrentPlacementCard extends StatelessWidget {
                       placement.roleTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -163,13 +188,23 @@ class _CurrentPlacementCard extends StatelessWidget {
   }
 
   Widget _initial() => Text(
-        placement.companyName.isNotEmpty ? placement.companyName[0].toUpperCase() : 'C',
-        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 18),
-      );
+    placement.companyName.isNotEmpty
+        ? placement.companyName[0].toUpperCase()
+        : 'C',
+    style: const TextStyle(
+      color: AppColors.primary,
+      fontWeight: FontWeight.bold,
+      fontSize: 18,
+    ),
+  );
 }
 
 class _ProfileBody extends StatefulWidget {
-  const _ProfileBody({required this.profile, required this.onBack, required this.onRefresh});
+  const _ProfileBody({
+    required this.profile,
+    required this.onBack,
+    required this.onRefresh,
+  });
 
   final StudentProfile profile;
   final VoidCallback onBack;
@@ -237,54 +272,63 @@ class _ProfileBodyState extends State<_ProfileBody> {
                   width: double.infinity,
                   decoration: const BoxDecoration(
                     color: AppColors.background,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
                   ),
                   child: ListView(
                     controller: _scrollController,
-                    padding: EdgeInsets.fromLTRB(20, _avatarSize - _avatarOverlap + 22, 20, 32),
-                  children: [
-                    if (profile.placement != null) ...[
-                      _CurrentPlacementCard(placement: profile.placement!),
-                      const SizedBox(height: 16),
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      _avatarSize - _avatarOverlap + 22,
+                      20,
+                      32,
+                    ),
+                    children: [
+                      if (profile.placement != null) ...[
+                        _CurrentPlacementCard(placement: profile.placement!),
+                        const SizedBox(height: 16),
+                      ],
+                      _ContactCard(profile: profile),
+                      const SizedBox(height: 24),
+                      const _SectionTitle('Resume'),
+                      const SizedBox(height: 10),
+                      _ResumeCard(profile: profile),
+                      const SizedBox(height: 24),
+                      const _SectionTitle('Professional Summary'),
+                      const SizedBox(height: 10),
+                      _SummaryCard(profile: profile),
+                      const SizedBox(height: 24),
+                      const _SectionTitle('Skills'),
+                      const SizedBox(height: 10),
+                      _SkillsCard(profile: profile),
+                      const SizedBox(height: 24),
+                      const _SectionTitle('Education'),
+                      const SizedBox(height: 10),
+                      _EducationCard(profile: profile),
+                      const SizedBox(height: 24),
+                      const _SectionTitle('Certification'),
+                      const SizedBox(height: 10),
+                      if (profile.certifications.isEmpty)
+                        const _EmptyStateCard(
+                          text: 'No certifications added yet.',
+                        )
+                      else
+                        for (final cert in profile.certifications) ...[
+                          _CertificationCard(certification: cert),
+                          const SizedBox(height: 12),
+                        ],
+                      const SizedBox(height: 12),
+                      const _SectionTitle('Experience'),
+                      const SizedBox(height: 10),
+                      if (profile.experiences.isEmpty)
+                        const _EmptyStateCard(text: 'No experience added yet.')
+                      else
+                        for (final exp in profile.experiences) ...[
+                          _ExperienceCard(experience: exp),
+                          const SizedBox(height: 12),
+                        ],
                     ],
-                    _ContactCard(profile: profile),
-                    const SizedBox(height: 24),
-                    const _SectionTitle('Resume'),
-                    const SizedBox(height: 10),
-                    _ResumeCard(profile: profile),
-                    const SizedBox(height: 24),
-                    const _SectionTitle('Professional Summary'),
-                    const SizedBox(height: 10),
-                    _SummaryCard(profile: profile),
-                    const SizedBox(height: 24),
-                    const _SectionTitle('Skills'),
-                    const SizedBox(height: 10),
-                    _SkillsCard(profile: profile),
-                    const SizedBox(height: 24),
-                    const _SectionTitle('Education'),
-                    const SizedBox(height: 10),
-                    _EducationCard(profile: profile),
-                    const SizedBox(height: 24),
-                    const _SectionTitle('Certification'),
-                    const SizedBox(height: 10),
-                    if (profile.certifications.isEmpty)
-                      const _EmptyStateCard(text: 'No certifications added yet.')
-                    else
-                      for (final cert in profile.certifications) ...[
-                        _CertificationCard(certification: cert),
-                        const SizedBox(height: 12),
-                      ],
-                    const SizedBox(height: 12),
-                    const _SectionTitle('Experience'),
-                    const SizedBox(height: 10),
-                    if (profile.experiences.isEmpty)
-                      const _EmptyStateCard(text: 'No experience added yet.')
-                    else
-                      for (final exp in profile.experiences) ...[
-                        _ExperienceCard(experience: exp),
-                        const SizedBox(height: 12),
-                      ],
-                  ],
                   ),
                 ),
               ),
@@ -295,7 +339,11 @@ class _ProfileBodyState extends State<_ProfileBody> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _Avatar(profile: profile, size: _avatarSize, onPhotoChanged: widget.onRefresh),
+                    _Avatar(
+                      profile: profile,
+                      size: _avatarSize,
+                      onPhotoChanged: widget.onRefresh,
+                    ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Padding(
@@ -314,7 +362,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
                               profile.education?.major ?? profile.course ?? '',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),
@@ -338,7 +389,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
           borderRadius: BorderRadius.circular(20),
           child: Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
             child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
           ),
         ),
@@ -351,20 +405,28 @@ class _ProfileBodyState extends State<_ProfileBody> {
         ),
         InkWell(
           onTap: () async {
-            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+            await Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
             widget.onRefresh();
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
-            child: const Icon(Icons.settings_outlined, color: Colors.white, size: 20),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.settings_outlined,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ),
       ],
     );
   }
-
 }
 
 /// Rounded-square profile photo with a camera badge. Tapping the photo opens
@@ -372,7 +434,11 @@ class _ProfileBodyState extends State<_ProfileBody> {
 /// badge — or the placeholder, when there's no photo yet — goes straight to
 /// picking a new one.
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.profile, required this.size, required this.onPhotoChanged});
+  const _Avatar({
+    required this.profile,
+    required this.size,
+    required this.onPhotoChanged,
+  });
 
   final StudentProfile profile;
   final double size;
@@ -391,12 +457,21 @@ class _Avatar extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white, width: 3),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 10,
+          ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(17),
         child: url != null
-            ? Image.network(url, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => _initials())
+            ? Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => _initials(),
+              )
             : _initials(),
       ),
     );
@@ -418,7 +493,11 @@ class _Avatar extends StatelessWidget {
               }
               final changed = await Navigator.of(context).push<bool>(
                 MaterialPageRoute(
-                  builder: (_) => ImageViewerScreen(imageUrl: url, heroTag: _heroTag, title: profile.name),
+                  builder: (_) => ImageViewerScreen(
+                    imageUrl: url,
+                    heroTag: _heroTag,
+                    title: profile.name,
+                  ),
                 ),
               );
               if (changed == true) onPhotoChanged();
@@ -440,7 +519,11 @@ class _Avatar extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
-                child: const Icon(Icons.photo_camera_outlined, color: Colors.white, size: 14),
+                child: const Icon(
+                  Icons.photo_camera_outlined,
+                  color: Colors.white,
+                  size: 14,
+                ),
               ),
             ),
           ),
@@ -453,14 +536,23 @@ class _Avatar extends StatelessWidget {
     final trimmed = profile.name.trim();
     final initials = trimmed.isEmpty
         ? '?'
-        : trimmed.split(RegExp(r'\s+')).map((w) => w[0]).take(2).join().toUpperCase();
+        : trimmed
+              .split(RegExp(r'\s+'))
+              .map((w) => w[0])
+              .take(2)
+              .join()
+              .toUpperCase();
 
     return Container(
       color: AppColors.chipBackground,
       alignment: Alignment.center,
       child: Text(
         initials,
-        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 26),
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.bold,
+          fontSize: 26,
+        ),
       ),
     );
   }
@@ -504,7 +596,9 @@ class _EmptyStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Card(child: Text(text, style: const TextStyle(color: AppColors.textMuted)));
+    return _Card(
+      child: Text(text, style: const TextStyle(color: AppColors.textMuted)),
+    );
   }
 }
 
@@ -519,10 +613,14 @@ class _ContactCard extends StatelessWidget {
       _ContactRow(icon: Icons.email_outlined, value: profile.email),
     ];
     if (profile.contactNumber != null && profile.contactNumber!.isNotEmpty) {
-      rows.add(_ContactRow(icon: Icons.phone_outlined, value: profile.contactNumber!));
+      rows.add(
+        _ContactRow(icon: Icons.phone_outlined, value: profile.contactNumber!),
+      );
     }
     if (profile.location != null && profile.location!.isNotEmpty) {
-      rows.add(_ContactRow(icon: Icons.location_on_outlined, value: profile.location!));
+      rows.add(
+        _ContactRow(icon: Icons.location_on_outlined, value: profile.location!),
+      );
     }
 
     return _Card(
@@ -550,11 +648,19 @@ class _ContactRow extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: AppColors.chipBackground, borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(
+            color: AppColors.chipBackground,
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Icon(icon, color: AppColors.primary, size: 18),
         ),
         const SizedBox(width: 12),
-        Expanded(child: Text(value, style: const TextStyle(color: AppColors.textDark, fontSize: 14))),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(color: AppColors.textDark, fontSize: 14),
+          ),
+        ),
       ],
     );
   }
@@ -576,8 +682,14 @@ class _ResumeCard extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: const Color(0xFFFFEAEA), borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.danger),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEAEA),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.picture_as_pdf_outlined,
+              color: AppColors.danger,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -588,9 +700,15 @@ class _ResumeCard extends StatelessWidget {
                   profile.resume!.filename,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
-                const Text('Uploaded Resume', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                const Text(
+                  'Uploaded Resume',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -611,7 +729,16 @@ class _SummaryCard extends StatelessWidget {
     if (summary == null || summary.isEmpty) {
       return const _EmptyStateCard(text: 'No professional summary added yet.');
     }
-    return _Card(child: Text(summary, style: const TextStyle(color: AppColors.textDark, fontSize: 14, height: 1.5)));
+    return _Card(
+      child: Text(
+        summary,
+        style: const TextStyle(
+          color: AppColors.textDark,
+          fontSize: 14,
+          height: 1.5,
+        ),
+      ),
+    );
   }
 }
 
@@ -634,8 +761,18 @@ class _SkillsCard extends StatelessWidget {
           for (final skill in profile.skills)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(color: AppColors.chipBackground, borderRadius: BorderRadius.circular(20)),
-              child: Text(skill, style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w500)),
+              decoration: BoxDecoration(
+                color: AppColors.chipBackground,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                skill,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
         ],
       ),
@@ -656,12 +793,22 @@ class _LabelValueRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 100, child: Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 13))),
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+            ),
+          ),
           Expanded(
             child: Text(
               (value == null || value!.isEmpty) ? '—' : value!,
               textAlign: TextAlign.right,
-              style: const TextStyle(color: AppColors.textDark, fontSize: 14, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: AppColors.textDark,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -686,7 +833,10 @@ class _EducationCard extends StatelessWidget {
       child: Column(
         children: [
           _LabelValueRow(label: 'School', value: education.school),
-          _LabelValueRow(label: 'School Address', value: education.schoolAddress),
+          _LabelValueRow(
+            label: 'School Address',
+            value: education.schoolAddress,
+          ),
           _LabelValueRow(label: 'Program', value: education.program),
           _LabelValueRow(label: 'Major', value: education.major),
         ],
@@ -706,7 +856,10 @@ class _CertificationCard extends StatelessWidget {
       child: Column(
         children: [
           _LabelValueRow(label: 'Certificate', value: certification.title),
-          _LabelValueRow(label: 'Organization', value: certification.issuingOrganization),
+          _LabelValueRow(
+            label: 'Organization',
+            value: certification.issuingOrganization,
+          ),
           _LabelValueRow(label: 'Issued', value: certification.issueDate),
         ],
       ),
@@ -727,7 +880,10 @@ class _ExperienceCard extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: AppColors.chipBackground, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: AppColors.chipBackground,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: const Icon(Icons.work_outline, color: AppColors.primary),
           ),
           const SizedBox(width: 12),
@@ -735,13 +891,28 @@ class _ExperienceCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(experience.position ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(
+                  experience.position ?? '',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
                 if (experience.organization != null)
-                  Text(experience.organization!, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                  Text(
+                    experience.organization!,
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                    ),
+                  ),
                 const SizedBox(height: 4),
                 Text(
                   '${experience.startDate ?? ''}${experience.startDate != null ? ' - ' : ''}${experience.endDate ?? ''}',
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),

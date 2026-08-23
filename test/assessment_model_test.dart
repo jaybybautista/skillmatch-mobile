@@ -5,7 +5,10 @@ import 'package:skillmatch/models/assessment.dart';
 void main() {
   group('QuestionType', () {
     test('maps every type the backend can send', () {
-      expect(QuestionType.parse('multiple_choice'), QuestionType.multipleChoice);
+      expect(
+        QuestionType.parse('multiple_choice'),
+        QuestionType.multipleChoice,
+      );
       expect(QuestionType.parse('checkbox'), QuestionType.checkbox);
       expect(QuestionType.parse('dropdown'), QuestionType.dropdown);
       expect(QuestionType.parse('identification'), QuestionType.identification);
@@ -68,7 +71,12 @@ void main() {
       final quiz = AssessmentQuiz.fromJson({
         'assessment': {'id': 2, 'title': 'Untimed', 'time_limit': null},
         'questions': [
-          {'id': 1, 'question_text': 'Q', 'question_type': 'checkbox', 'choices': []},
+          {
+            'id': 1,
+            'question_text': 'Q',
+            'question_type': 'checkbox',
+            'choices': [],
+          },
         ],
       });
 
@@ -104,7 +112,12 @@ void main() {
 
     test('drops the separator when the internship has no location', () {
       final intro = AssessmentIntro.fromJson({
-        'assessment': {'id': 1, 'title': 'T', 'company_name': 'Acme', 'location': null},
+        'assessment': {
+          'id': 1,
+          'title': 'T',
+          'company_name': 'Acme',
+          'location': null,
+        },
         'instructions': const [],
         'already_completed': true,
       });

@@ -6,7 +6,6 @@ import '../../core/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/primary_button.dart';
-import 'auth_screen.dart';
 
 /// Step 3 of password recovery: set a new password. The email/code pair is
 /// re-validated server-side (App\Http\Controllers\Api\AuthController::resetPassword)
@@ -56,10 +55,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Your password has been changed. You can now sign in.')),
       );
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthScreen()),
-        (route) => false,
-      );
+      // The gate is underneath showing the login screen already; unwind to it
+      // instead of clearing the stack out from under it — clearing it removes
+      // the gate, and then nothing routes the next login.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       setState(() => _errorText = e.message);
     } catch (_) {

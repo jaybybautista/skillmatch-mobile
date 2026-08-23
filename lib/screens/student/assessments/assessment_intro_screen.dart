@@ -49,7 +49,10 @@ class _AssessmentIntroScreenState extends State<AssessmentIntroScreen> {
       // student retake something that's already recorded.
       if (intro.alreadyCompleted) {
         await Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => AssessmentResultScreen(assessmentId: widget.assessmentId)),
+          MaterialPageRoute(
+            builder: (_) =>
+                AssessmentResultScreen(assessmentId: widget.assessmentId),
+          ),
         );
         return;
       }
@@ -69,7 +72,9 @@ class _AssessmentIntroScreenState extends State<AssessmentIntroScreen> {
 
   Future<void> _start() async {
     final submitted = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => AssessmentQuizScreen(assessmentId: widget.assessmentId)),
+      MaterialPageRoute(
+        builder: (_) => AssessmentQuizScreen(assessmentId: widget.assessmentId),
+      ),
     );
 
     if (submitted == true && mounted) {
@@ -84,8 +89,8 @@ class _AssessmentIntroScreenState extends State<AssessmentIntroScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _ErrorState(error: _error!, onRetry: _load)
-              : _buildContent(_intro!),
+          ? _ErrorState(error: _error!, onRetry: _load)
+          : _buildContent(_intro!),
     );
   }
 
@@ -103,14 +108,19 @@ class _AssessmentIntroScreenState extends State<AssessmentIntroScreen> {
               ],
               Text(
                 'Brief explanation about the assessment',
-                style: AppFonts.title(fontSize: 15.5, color: AppColors.textDark),
+                style: AppFonts.title(
+                  fontSize: 15.5,
+                  color: AppColors.textDark,
+                ),
               ),
               const SizedBox(height: 20),
               _SpecRow(
                 icon: Icons.description_outlined,
-                label: '${intro.questionCount} '
+                label:
+                    '${intro.questionCount} '
                     '${intro.questionCount == 1 ? 'Question' : 'Questions'}',
-                sub: '${intro.totalPoints} ${intro.totalPoints == 1 ? 'point' : 'points'} in total',
+                sub:
+                    '${intro.totalPoints} ${intro.totalPoints == 1 ? 'point' : 'points'} in total',
               ),
               const SizedBox(height: 18),
               _SpecRow(
@@ -126,7 +136,8 @@ class _AssessmentIntroScreenState extends State<AssessmentIntroScreen> {
                 style: TextStyle(fontSize: 13.5, color: AppColors.textMuted),
               ),
               const SizedBox(height: 14),
-              for (final instruction in intro.instructions) _Bullet(text: instruction),
+              for (final instruction in intro.instructions)
+                _Bullet(text: instruction),
               if (intro.attemptHistory.isNotEmpty) ...[
                 const SizedBox(height: 22),
                 _AttemptHistory(attempts: intro.attemptHistory),
@@ -186,7 +197,12 @@ class _ReassignedNotice extends StatelessWidget {
           Expanded(
             child: Text(
               'This assessment was reassigned to you. Your new attempt replaces the previous result.',
-              style: TextStyle(color: _retakeText, fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.45),
+              style: TextStyle(
+                color: _retakeText,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                height: 1.45,
+              ),
             ),
           ),
         ],
@@ -229,14 +245,21 @@ class _AttemptHistory extends StatelessWidget {
                     children: [
                       Text(
                         '${attempt.score}/${attempt.totalPoints} (${attempt.percentage}%)',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         attempt.isCurrent
                             ? attempt.submittedAtLabel
                             : '${attempt.submittedAtLabel} · Before reassignment',
-                        style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -245,12 +268,14 @@ class _AttemptHistory extends StatelessWidget {
                   attempt.timedOut
                       ? 'Time expired'
                       : attempt.passed
-                          ? 'Passed'
-                          : 'Did not pass',
+                      ? 'Passed'
+                      : 'Did not pass',
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.bold,
-                    color: attempt.passed ? _retakeText : const Color(0xFFE03E3E),
+                    color: attempt.passed
+                        ? _retakeText
+                        : const Color(0xFFE03E3E),
                   ),
                 ),
               ],
@@ -293,19 +318,29 @@ class _Hero extends StatelessWidget {
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: TextButton.styleFrom(foregroundColor: Colors.white),
-                    child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 28),
               Text(
                 title,
-                style: AppFonts.title(color: Colors.white, fontSize: 21, height: 1.25),
+                style: AppFonts.title(
+                  color: Colors.white,
+                  fontSize: 21,
+                  height: 1.25,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontSize: 13.5),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.88),
+                  fontSize: 13.5,
+                ),
               ),
             ],
           ),
@@ -353,7 +388,10 @@ class _SpecRow extends StatelessWidget {
           width: 44,
           height: 44,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(color: Color(0xFFE8EEFF), shape: BoxShape.circle),
+          decoration: const BoxDecoration(
+            color: Color(0xFFE8EEFF),
+            shape: BoxShape.circle,
+          ),
           child: Icon(icon, size: 21, color: const Color(0xFF1E4FD8)),
         ),
         const SizedBox(width: 14),
@@ -361,9 +399,22 @@ class _SpecRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(sub, style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
+              Text(
+                sub,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textMuted,
+                ),
+              ),
             ],
           ),
         ),
@@ -389,11 +440,23 @@ class _Bullet extends StatelessWidget {
             child: SizedBox(
               width: 5,
               height: 5,
-              child: DecoratedBox(decoration: BoxDecoration(color: AppColors.textDark, shape: BoxShape.circle)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.textDark,
+                  shape: BoxShape.circle,
+                ),
+              ),
             ),
           ),
           Expanded(
-            child: Text(text, style: const TextStyle(fontSize: 13.5, color: Color(0xFF475569), height: 1.5)),
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: Color(0xFF475569),
+                height: 1.5,
+              ),
+            ),
           ),
         ],
       ),
@@ -419,7 +482,10 @@ class _ErrorState extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.arrow_back)),
+            child: IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back),
+            ),
           ),
           Expanded(
             child: Padding(
@@ -427,9 +493,17 @@ class _ErrorState extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 40, color: AppColors.textMuted),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 40,
+                    color: AppColors.textMuted,
+                  ),
                   const SizedBox(height: 12),
-                  Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.textMuted),
+                  ),
                   const SizedBox(height: 16),
                   TextButton(onPressed: onRetry, child: const Text('Retry')),
                 ],

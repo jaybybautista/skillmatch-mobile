@@ -51,36 +51,39 @@ void main() {
   });
 
   group('destination resolution', () {
-    test('every screen key the backend can emit either resolves or explains', () {
-      // The keys NotificationRouter and ChatbotNavigationService produce.
-      const emitted = [
-        'home',
-        'internship_search',
-        'top_matches',
-        'bookmarks',
-        'applications',
-        'placement',
-        'resume_builder',
-        'profile',
-        'settings',
-        'notifications',
-        'internship_detail',
-        'review_thread',
-        'roadmap',
-        'requirements',
-      ];
+    test(
+      'every screen key the backend can emit either resolves or explains',
+      () {
+        // The keys NotificationRouter and ChatbotNavigationService produce.
+        const emitted = [
+          'home',
+          'internship_search',
+          'top_matches',
+          'bookmarks',
+          'applications',
+          'placement',
+          'resume_builder',
+          'profile',
+          'settings',
+          'notifications',
+          'internship_detail',
+          'review_thread',
+          'roadmap',
+          'requirements',
+        ];
 
-      for (final screen in emitted) {
-        final resolves = chatDestinationFor(screen) != null;
-        final explained = unavailableReasonFor(screen) != null;
+        for (final screen in emitted) {
+          final resolves = chatDestinationFor(screen) != null;
+          final explained = unavailableReasonFor(screen) != null;
 
-        expect(
-          resolves || explained,
-          isTrue,
-          reason: '"$screen" neither navigates nor says why it cannot',
-        );
-      }
-    });
+          expect(
+            resolves || explained,
+            isTrue,
+            reason: '"$screen" neither navigates nor says why it cannot',
+          );
+        }
+      },
+    );
 
     test('every screen the web has, the app now navigates to as well', () {
       expect(unavailableDestinations, isEmpty);
@@ -93,20 +96,32 @@ void main() {
     });
 
     test('id-carrying destinations need their id', () {
-      expect(chatDestinationFor('internship_detail', {'internship_id': 5}), isNotNull);
+      expect(
+        chatDestinationFor('internship_detail', {'internship_id': 5}),
+        isNotNull,
+      );
       expect(chatDestinationFor('review_thread', {'review_id': 12}), isNotNull);
     });
   });
 
   group('AppSidebar', () {
-    testWidgets('lists the same entries as the web sidebar, in order', (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(drawer: AppSidebar(current: SidebarItem.home), body: SizedBox()),
-      ));
+    testWidgets('lists the same entries as the web sidebar, in order', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            drawer: AppSidebar(current: SidebarItem.home),
+            body: SizedBox(),
+          ),
+        ),
+      );
 
       tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
       await tester.pumpAndSettle();
 
+      // The drawer scrolls, and the list is now long enough that the last
+      // entries start below the fold on a test-sized screen.
       for (final label in [
         'Home',
         'Notifications',
@@ -116,19 +131,33 @@ void main() {
         'Profile',
         'Resume Builder',
         'Skill Roadmap',
+        'My placement',
         'Requirements',
         'Settings',
       ]) {
-        expect(find.text(label), findsOneWidget, reason: 'missing "$label"');
+        final target = find.text(label);
+        for (var i = 0; i < 10 && target.evaluate().isEmpty; i++) {
+          await tester.drag(
+            find.byType(ListView).first,
+            const Offset(0, -160),
+          );
+          await tester.pumpAndSettle();
+        }
+        expect(target, findsOneWidget, reason: 'missing "$label"');
       }
 
       expect(find.text('Search'), findsOneWidget);
     });
 
     testWidgets('Skill Roadmap navigates to a real screen', (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(drawer: AppSidebar(current: SidebarItem.home), body: SizedBox()),
-      ));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            drawer: AppSidebar(current: SidebarItem.home),
+            body: SizedBox(),
+          ),
+        ),
+      );
 
       tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
       await tester.pumpAndSettle();

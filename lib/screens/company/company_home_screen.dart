@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/screen_refresh.dart';
 import '../../core/company_navigation.dart';
 import '../../models/company_profile.dart';
 import '../../services/company_service.dart';
@@ -31,7 +32,8 @@ class CompanyHomeScreen extends StatefulWidget {
   State<CompanyHomeScreen> createState() => _CompanyHomeScreenState();
 }
 
-class _CompanyHomeScreenState extends State<CompanyHomeScreen> {
+class _CompanyHomeScreenState extends State<CompanyHomeScreen>
+    with RefreshOnReveal {
   late final CompanyService _service = widget.service ?? CompanyService();
 
   CompanyProfile? _profile;
@@ -44,6 +46,13 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen> {
     NotificationService.instance.startPolling();
     _load();
   }
+
+  // The gate holds this screen for the whole session, so returning to it is
+  // the only chance it gets to notice anything. Accepting an applicant two
+  // screens up changes the open-slot count on every card here, and without
+  // this the carousel would still show the number from when the app opened.
+  @override
+  void onReveal() => _load();
 
   /// The header and carousel each degrade to a neutral state on failure, so a
   /// blip offline leaves the dashboard usable rather than blocking it behind

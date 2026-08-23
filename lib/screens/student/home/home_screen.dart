@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/api_client.dart';
 import '../../../core/app_navigation.dart';
 import '../../../core/app_theme.dart';
+import '../../../core/screen_refresh.dart';
 import '../../../models/internship.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/internship_service.dart';
@@ -25,7 +26,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RefreshOnReveal {
   final _internshipService = InternshipService();
   late Future<List<Internship>> _recommendationsFuture = _internshipService
       .fetchRecommendations(limit: 5);
@@ -35,6 +36,12 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _recommendationsFuture = future);
     await future;
   }
+
+  // This screen is the launch gate's own, so it outlives everything pushed
+  // over it. Coming back to it has to be a reload, or a posting that filled
+  // up while the student was reading it still shows its old open slots.
+  @override
+  void onReveal() => _refresh();
 
   @override
   Widget build(BuildContext context) {

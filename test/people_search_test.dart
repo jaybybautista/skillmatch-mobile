@@ -11,8 +11,7 @@ class _EmptyInternshipService extends InternshipService {
   Future<List<Internship>> fetchAll({
     String query = '',
     InternshipFilter filter = InternshipFilter.topMatches,
-  }) async =>
-      const [];
+  }) async => const [];
 }
 
 class _FakePeopleService extends PeopleSearchService {
@@ -61,12 +60,14 @@ Future<void> _type(WidgetTester tester, String text) async {
 
 void main() {
   testWidgets('defaults to the Internships tab', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: InternshipSearchScreen(
-        service: _EmptyInternshipService(),
-        peopleService: _FakePeopleService(const {}),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InternshipSearchScreen(
+          service: _EmptyInternshipService(),
+          peopleService: _FakePeopleService(const {}),
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Search internships'), findsOneWidget);
@@ -74,38 +75,57 @@ void main() {
     expect(find.byIcon(Icons.tune), findsOneWidget);
   });
 
-  testWidgets('switching to Students queries the people service, not internships', (tester) async {
-    final internships = _EmptyInternshipService();
+  testWidgets(
+    'switching to Students queries the people service, not internships',
+    (tester) async {
+      final internships = _EmptyInternshipService();
+      final people = _FakePeopleService({
+        PersonSearchType.student: [_person(type: 'student', title: 'Ana Cruz')],
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: InternshipSearchScreen(
+            service: internships,
+            peopleService: people,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Students'));
+      await tester.pumpAndSettle();
+
+      // The ordering menu disappears — it has no meaning for people.
+      expect(find.byIcon(Icons.tune), findsNothing);
+
+      await _type(tester, 'ana');
+
+      expect(people.calls, [('ana', PersonSearchType.student)]);
+      expect(find.text('Ana Cruz'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Companies and Coordinators each hit their own type filter', (
+    tester,
+  ) async {
     final people = _FakePeopleService({
-      PersonSearchType.student: [_person(type: 'student', title: 'Ana Cruz')],
+      PersonSearchType.company: [
+        _person(type: 'company', title: 'Creatix Studio'),
+      ],
+      PersonSearchType.coordinator: [
+        _person(type: 'coordinator', title: 'Mr. Santos'),
+      ],
     });
 
-    await tester.pumpWidget(MaterialApp(
-      home: InternshipSearchScreen(service: internships, peopleService: people),
-    ));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Students'));
-    await tester.pumpAndSettle();
-
-    // The ordering menu disappears — it has no meaning for people.
-    expect(find.byIcon(Icons.tune), findsNothing);
-
-    await _type(tester, 'ana');
-
-    expect(people.calls, [('ana', PersonSearchType.student)]);
-    expect(find.text('Ana Cruz'), findsOneWidget);
-  });
-
-  testWidgets('Companies and Coordinators each hit their own type filter', (tester) async {
-    final people = _FakePeopleService({
-      PersonSearchType.company: [_person(type: 'company', title: 'Creatix Studio')],
-      PersonSearchType.coordinator: [_person(type: 'coordinator', title: 'Mr. Santos')],
-    });
-
-    await tester.pumpWidget(MaterialApp(
-      home: InternshipSearchScreen(service: _EmptyInternshipService(), peopleService: people),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InternshipSearchScreen(
+          service: _EmptyInternshipService(),
+          peopleService: people,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Companies'));
@@ -133,9 +153,14 @@ void main() {
       PersonSearchType.student: [_person(type: 'student', title: 'Match')],
     });
 
-    await tester.pumpWidget(MaterialApp(
-      home: InternshipSearchScreen(service: _EmptyInternshipService(), peopleService: people),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InternshipSearchScreen(
+          service: _EmptyInternshipService(),
+          peopleService: people,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Students'));
@@ -152,12 +177,19 @@ void main() {
 
   testWidgets('a result with no destination is not tappable', (tester) async {
     final people = _FakePeopleService({
-      PersonSearchType.student: [_person(type: 'student', title: 'No Profile', screen: null)],
+      PersonSearchType.student: [
+        _person(type: 'student', title: 'No Profile', screen: null),
+      ],
     });
 
-    await tester.pumpWidget(MaterialApp(
-      home: InternshipSearchScreen(service: _EmptyInternshipService(), peopleService: people),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InternshipSearchScreen(
+          service: _EmptyInternshipService(),
+          peopleService: people,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Students'));
@@ -167,13 +199,17 @@ void main() {
     expect(find.byIcon(Icons.chevron_right), findsNothing);
   });
 
-  testWidgets('no matches shows the empty state named after the active tab', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: InternshipSearchScreen(
-        service: _EmptyInternshipService(),
-        peopleService: _FakePeopleService(const {}),
+  testWidgets('no matches shows the empty state named after the active tab', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InternshipSearchScreen(
+          service: _EmptyInternshipService(),
+          peopleService: _FakePeopleService(const {}),
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Coordinators'));

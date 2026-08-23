@@ -8,7 +8,12 @@ import 'package:skillmatch/screens/student/profile/student_public_profile_screen
 import 'package:skillmatch/services/public_profile_service.dart';
 
 class _FakeProfileService extends PublicProfileService {
-  _FakeProfileService({this.student, this.company, this.coordinator, this.error});
+  _FakeProfileService({
+    this.student,
+    this.company,
+    this.coordinator,
+    this.error,
+  });
 
   final StudentPublicProfile? student;
   final CompanyPublicProfile? company;
@@ -51,11 +56,14 @@ class _RecordingNavigatorObserver extends NavigatorObserver {
 
 void main() {
   group('models', () {
-    test('StudentPublicProfile.isSelf short-circuits the rest of the payload', () {
-      final profile = StudentPublicProfile.fromJson({'is_self': true});
-      expect(profile.isSelf, isTrue);
-      expect(profile.name, isNull);
-    });
+    test(
+      'StudentPublicProfile.isSelf short-circuits the rest of the payload',
+      () {
+        final profile = StudentPublicProfile.fromJson({'is_self': true});
+        expect(profile.isSelf, isTrue);
+        expect(profile.name, isNull);
+      },
+    );
 
     test('StudentPublicProfile parses a full peer record', () {
       final profile = StudentPublicProfile.fromJson({
@@ -68,7 +76,13 @@ void main() {
         'is_on_ojt': true,
         'placement_company': 'Creatix Studio',
         'education': [
-          {'institution': 'PSU', 'degree': 'BSIT', 'field_of_study': null, 'start_year': 2022, 'end_year': null},
+          {
+            'institution': 'PSU',
+            'degree': 'BSIT',
+            'field_of_study': null,
+            'start_year': 2022,
+            'end_year': null,
+          },
         ],
         'certifications': [],
         'experiences': [],
@@ -87,7 +101,13 @@ void main() {
         'name': 'Creatix Studio',
         'internship_count': 3,
         'open_internships': [
-          {'id': 1, 'title': 'Product Design Intern', 'location': 'Manila', 'slots_available': 2, 'skills': ['Figma']},
+          {
+            'id': 1,
+            'title': 'Product Design Intern',
+            'location': 'Manila',
+            'slots_available': 2,
+            'skills': ['Figma'],
+          },
         ],
       });
 
@@ -96,11 +116,14 @@ void main() {
       expect(profile.openInternships.single.skills, ['Figma']);
     });
 
-    test('CoordinatorPublicProfile.isSelf short-circuits the rest of the payload', () {
-      final profile = CoordinatorPublicProfile.fromJson({'is_self': true});
-      expect(profile.isSelf, isTrue);
-      expect(profile.department, isNull);
-    });
+    test(
+      'CoordinatorPublicProfile.isSelf short-circuits the rest of the payload',
+      () {
+        final profile = CoordinatorPublicProfile.fromJson({'is_self': true});
+        expect(profile.isSelf, isTrue);
+        expect(profile.department, isNull);
+      },
+    );
   });
 
   group('StudentPublicProfileScreen', () {
@@ -116,16 +139,24 @@ void main() {
           'is_on_ojt': true,
           'placement_company': 'Creatix Studio',
           'education': [
-            {'institution': 'PSU', 'degree': 'BSIT', 'field_of_study': null, 'start_year': 2022, 'end_year': null},
+            {
+              'institution': 'PSU',
+              'degree': 'BSIT',
+              'field_of_study': null,
+              'start_year': 2022,
+              'end_year': null,
+            },
           ],
           'certifications': [],
           'experiences': [],
         }),
       );
 
-      await tester.pumpWidget(MaterialApp(
-        home: StudentPublicProfileScreen(studentId: 1, service: service),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StudentPublicProfileScreen(studentId: 1, service: service),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Ana Cruz'), findsOneWidget);
@@ -136,33 +167,42 @@ void main() {
       expect(find.text('On OJT at Creatix Studio'), findsOneWidget);
     });
 
-    testWidgets('is_self triggers a pushReplacement to the editable profile screen', (tester) async {
-      // ProfileScreen makes its own real network call in initState, so this
-      // checks the navigation itself (via an observer) rather than pumping
-      // ProfileScreen to settle — that would leave a dangling HTTP timer.
-      final service = _FakeProfileService(student: StudentPublicProfile.fromJson({'is_self': true}));
-      final observer = _RecordingNavigatorObserver();
+    testWidgets(
+      'is_self triggers a pushReplacement to the editable profile screen',
+      (tester) async {
+        // ProfileScreen makes its own real network call in initState, so this
+        // checks the navigation itself (via an observer) rather than pumping
+        // ProfileScreen to settle — that would leave a dangling HTTP timer.
+        final service = _FakeProfileService(
+          student: StudentPublicProfile.fromJson({'is_self': true}),
+        );
+        final observer = _RecordingNavigatorObserver();
 
-      await tester.pumpWidget(MaterialApp(
-        navigatorObservers: [observer],
-        home: StudentPublicProfileScreen(studentId: 1, service: service),
-      ));
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [observer],
+            home: StudentPublicProfileScreen(studentId: 1, service: service),
+          ),
+        );
 
-      // Bounded pumps only — enough for the fake Future and the post-frame
-      // callback that fires the redirect, never real wall-clock I/O.
-      await tester.pump();
-      await tester.pump();
-      await tester.pump();
+        // Bounded pumps only — enough for the fake Future and the post-frame
+        // callback that fires the redirect, never real wall-clock I/O.
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
 
-      expect(observer.replacedWith, contains(ProfileScreen));
-    });
+        expect(observer.replacedWith, contains(ProfileScreen));
+      },
+    );
 
     testWidgets('a load failure shows a retryable error', (tester) async {
       final service = _FakeProfileService(error: Exception('offline'));
 
-      await tester.pumpWidget(MaterialApp(
-        home: StudentPublicProfileScreen(studentId: 1, service: service),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StudentPublicProfileScreen(studentId: 1, service: service),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Retry'), findsOneWidget);
@@ -170,7 +210,9 @@ void main() {
   });
 
   group('CompanyPublicProfileScreen', () {
-    testWidgets('renders about, contact info, and open postings', (tester) async {
+    testWidgets('renders about, contact info, and open postings', (
+      tester,
+    ) async {
       final service = _FakeProfileService(
         company: CompanyPublicProfile.fromJson({
           'id': 5,
@@ -180,14 +222,22 @@ void main() {
           'contact_email': 'hr@creatix.test',
           'internship_count': 2,
           'open_internships': [
-            {'id': 1, 'title': 'Product Design Intern', 'location': 'Manila', 'slots_available': 2, 'skills': []},
+            {
+              'id': 1,
+              'title': 'Product Design Intern',
+              'location': 'Manila',
+              'slots_available': 2,
+              'skills': [],
+            },
           ],
         }),
       );
 
-      await tester.pumpWidget(MaterialApp(
-        home: CompanyPublicProfileScreen(companyId: 5, service: service),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CompanyPublicProfileScreen(companyId: 5, service: service),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Creatix Studio'), findsWidgets);
@@ -200,14 +250,21 @@ void main() {
       expect(find.text('Reviews & Feedback'), findsOneWidget);
     });
 
-    testWidgets('tapping Reviews & Feedback opens the company reviews screen', (tester) async {
+    testWidgets('tapping Reviews & Feedback opens the company reviews screen', (
+      tester,
+    ) async {
       final service = _FakeProfileService(
-        company: CompanyPublicProfile.fromJson({'id': 5, 'name': 'Creatix Studio'}),
+        company: CompanyPublicProfile.fromJson({
+          'id': 5,
+          'name': 'Creatix Studio',
+        }),
       );
 
-      await tester.pumpWidget(MaterialApp(
-        home: CompanyPublicProfileScreen(companyId: 5, service: service),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CompanyPublicProfileScreen(companyId: 5, service: service),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.scrollUntilVisible(find.text('Reviews & Feedback'), 300);
@@ -234,9 +291,14 @@ void main() {
         }),
       );
 
-      await tester.pumpWidget(MaterialApp(
-        home: CoordinatorPublicProfileScreen(coordinatorId: 3, service: service),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CoordinatorPublicProfileScreen(
+            coordinatorId: 3,
+            service: service,
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Mr. Santos'), findsOneWidget);
@@ -244,20 +306,30 @@ void main() {
       expect(find.text('santos@psu.edu.ph'), findsOneWidget);
     });
 
-    testWidgets('is_self triggers a pushReplacement to the editable profile screen', (tester) async {
-      final service = _FakeProfileService(coordinator: CoordinatorPublicProfile.fromJson({'is_self': true}));
-      final observer = _RecordingNavigatorObserver();
+    testWidgets(
+      'is_self triggers a pushReplacement to the editable profile screen',
+      (tester) async {
+        final service = _FakeProfileService(
+          coordinator: CoordinatorPublicProfile.fromJson({'is_self': true}),
+        );
+        final observer = _RecordingNavigatorObserver();
 
-      await tester.pumpWidget(MaterialApp(
-        navigatorObservers: [observer],
-        home: CoordinatorPublicProfileScreen(coordinatorId: 3, service: service),
-      ));
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [observer],
+            home: CoordinatorPublicProfileScreen(
+              coordinatorId: 3,
+              service: service,
+            ),
+          ),
+        );
 
-      await tester.pump();
-      await tester.pump();
-      await tester.pump();
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
 
-      expect(observer.replacedWith, contains(ProfileScreen));
-    });
+        expect(observer.replacedWith, contains(ProfileScreen));
+      },
+    );
   });
 }

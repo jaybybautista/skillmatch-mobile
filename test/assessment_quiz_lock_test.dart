@@ -15,8 +15,13 @@ class _FakeAssessmentService extends AssessmentService {
   bool? lastSubmitTimedOut;
 
   @override
-  Future<AssessmentQuiz> fetchQuiz(int assessmentId) async => AssessmentQuiz.fromJson({
-        'assessment': {'id': assessmentId, 'title': 'Design Intern', 'time_limit': 5},
+  Future<AssessmentQuiz> fetchQuiz(int assessmentId) async =>
+      AssessmentQuiz.fromJson({
+        'assessment': {
+          'id': assessmentId,
+          'title': 'Design Intern',
+          'time_limit': 5,
+        },
         'questions': [
           {
             'id': 1,
@@ -44,7 +49,10 @@ class _FakeAssessmentService extends AssessmentService {
     submitCalls++;
     lastSubmitTimedOut = timedOut;
     if (!attemptOpen) {
-      throw ApiException('Already submitted on another device.', statusCode: 409);
+      throw ApiException(
+        'Already submitted on another device.',
+        statusCode: 409,
+      );
     }
     return AssessmentAttemptResult.fromJson({
       'assessment_title': 'Design Intern',
@@ -78,48 +86,58 @@ Future<void> _settle(WidgetTester tester, {int frames = 12}) async {
   }
 }
 
-Future<void> _pumpQuiz(WidgetTester tester, _FakeAssessmentService service) async {
-  await tester.pumpWidget(MaterialApp(
-    home: AssessmentQuizScreen(assessmentId: 1, service: service),
-  ));
+Future<void> _pumpQuiz(
+  WidgetTester tester,
+  _FakeAssessmentService service,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(home: AssessmentQuizScreen(assessmentId: 1, service: service)),
+  );
   await _settle(tester);
 }
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('submitting into a window closed on the web ends the quiz for good', (tester) async {
-    final service = _FakeAssessmentService();
-    await _pumpQuiz(tester, service);
+  testWidgets(
+    'submitting into a window closed on the web ends the quiz for good',
+    (tester) async {
+      final service = _FakeAssessmentService();
+      await _pumpQuiz(tester, service);
 
-    expect(find.text('Submit Assessment'), findsOneWidget);
+      expect(find.text('Submit Assessment'), findsOneWidget);
 
-    // The web submits in the background while this student is still answering.
-    service.attemptOpen = false;
+      // The web submits in the background while this student is still answering.
+      service.attemptOpen = false;
 
-    await tester.tap(find.text('Submit Assessment'));
-    await _settle(tester);
-    await tester.tap(find.text('Submit')); // confirmation dialog
-    await _settle(tester);
+      await tester.tap(find.text('Submit Assessment'));
+      await _settle(tester);
+      await tester.tap(find.text('Submit')); // confirmation dialog
+      await _settle(tester);
 
-    expect(find.text('Already submitted'), findsOneWidget);
-    // The paper is gone the moment the lock engages, dialog still up or not.
-    expect(find.text('Submit Assessment'), findsNothing);
+      expect(find.text('Already submitted'), findsOneWidget);
+      // The paper is gone the moment the lock engages, dialog still up or not.
+      expect(find.text('Submit Assessment'), findsNothing);
 
-    // Both the dialog and the locked screen behind it offer this, so be exact.
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('View result'),
-    ));
-    await _settle(tester);
+      // Both the dialog and the locked screen behind it offer this, so be exact.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('View result'),
+        ),
+      );
+      await _settle(tester);
 
-    // The student must land on the recorded result — never back on the paper.
-    expect(find.text('Submit Assessment'), findsNothing);
-    expect(find.text('Back to Applications'), findsOneWidget);
-    expect(find.textContaining('You scored'), findsOneWidget);
-  });
+      // The student must land on the recorded result — never back on the paper.
+      expect(find.text('Submit Assessment'), findsNothing);
+      expect(find.text('Back to Applications'), findsOneWidget);
+      expect(find.textContaining('You scored'), findsOneWidget);
+    },
+  );
 
-  testWidgets('the background poll closes the quiz even if nothing is tapped', (tester) async {
+  testWidgets('the background poll closes the quiz even if nothing is tapped', (
+    tester,
+  ) async {
     final service = _FakeAssessmentService();
     await _pumpQuiz(tester, service);
 
@@ -132,10 +150,12 @@ void main() {
     expect(find.text('Already submitted'), findsOneWidget);
 
     // Both the dialog and the locked screen behind it offer this, so be exact.
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('View result'),
-    ));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('View result'),
+      ),
+    );
     await _settle(tester);
 
     expect(find.text('Submit Assessment'), findsNothing);
@@ -153,10 +173,12 @@ void main() {
     final callsAfterLock = service.submitCalls;
 
     // Both the dialog and the locked screen behind it offer this, so be exact.
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('View result'),
-    ));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('View result'),
+      ),
+    );
     await _settle(tester);
 
     // No submit button survives, so there is nothing left to spam.
@@ -164,7 +186,9 @@ void main() {
     expect(service.submitCalls, callsAfterLock);
   });
 
-  testWidgets('an expired deadline auto-submits and is flagged as timed out', (tester) async {
+  testWidgets('an expired deadline auto-submits and is flagged as timed out', (
+    tester,
+  ) async {
     // The deadline is wall-clock and persisted, so this is what a student who
     // walked away and came back after the limit actually hits. (Pumping fake
     // time wouldn't expire it — DateTime.now() is the real clock.)
@@ -181,7 +205,9 @@ void main() {
     expect(service.lastSubmitTimedOut, isTrue);
   });
 
-  testWidgets('the countdown ticking does not rebuild the question card', (tester) async {
+  testWidgets('the countdown ticking does not rebuild the question card', (
+    tester,
+  ) async {
     final service = _FakeAssessmentService();
     await _pumpQuiz(tester, service);
 

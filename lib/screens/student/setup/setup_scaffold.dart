@@ -16,6 +16,7 @@ class SetupScaffold extends StatelessWidget {
     required this.child,
     required this.onNext,
     this.onBack,
+    this.onSkip,
     this.nextLabel = 'Next',
     this.isBusy = false,
   });
@@ -30,6 +31,11 @@ class SetupScaffold extends StatelessWidget {
   final Widget child;
   final Future<void> Function()? onNext;
   final VoidCallback? onBack;
+
+  /// Leaves setup for later. Lives in the header so it is reachable from
+  /// every step without scrolling to the bottom of the form.
+  final VoidCallback? onSkip;
+
   final String nextLabel;
   final bool isBusy;
 
@@ -39,7 +45,7 @@ class SetupScaffold extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          _SetupHeader(onBack: onBack),
+          _SetupHeader(onBack: onBack, onSkip: isBusy ? null : onSkip),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
             child: Column(
@@ -58,7 +64,10 @@ class SetupScaffold extends StatelessWidget {
                     ),
                     Text(
                       stepLabel,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -86,7 +95,10 @@ class SetupScaffold extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 13.5),
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13.5,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 child,
@@ -106,9 +118,10 @@ class SetupScaffold extends StatelessWidget {
 }
 
 class _SetupHeader extends StatelessWidget {
-  const _SetupHeader({this.onBack});
+  const _SetupHeader({this.onBack, this.onSkip});
 
   final VoidCallback? onBack;
+  final VoidCallback? onSkip;
 
   @override
   Widget build(BuildContext context) {
@@ -129,10 +142,26 @@ class _SetupHeader extends StatelessWidget {
                   child: Image(image: AssetImage('assets/logo.png'), width: 34),
                 ),
               const SizedBox(width: 6),
-              Text(
-                'Set up your profile',
-                style: AppFonts.title(fontSize: 18, color: Colors.white),
+              Expanded(
+                child: Text(
+                  'Set up your profile',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppFonts.title(fontSize: 18, color: Colors.white),
+                ),
               ),
+              if (onSkip != null)
+                TextButton(
+                  onPressed: onSkip,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  child: const Text(
+                    'Skip for now',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
             ],
           ),
         ),
@@ -170,7 +199,9 @@ class _SetupFooter extends StatelessWidget {
                     minimumSize: const Size.fromHeight(52),
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text('Back'),
                 ),
@@ -182,13 +213,18 @@ class _SetupFooter extends StatelessWidget {
                 onPressed: isBusy ? null : onNext,
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: isBusy
                     ? const SizedBox(
                         width: 22,
                         height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: Colors.white,
+                        ),
                       )
                     : Text(nextLabel),
               ),
@@ -222,7 +258,10 @@ class SetupField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
@@ -230,7 +269,10 @@ class SetupField extends StatelessWidget {
           maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hintText,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
           ),
         ),
       ],

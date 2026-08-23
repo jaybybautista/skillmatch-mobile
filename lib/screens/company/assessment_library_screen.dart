@@ -36,8 +36,12 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
 
   bool _isLoading = true;
   Object? _error;
-  List<CompanyAssessment> _assessments = const [];
+  List<AssessmentGroup> _groups = const [];
   List<AssessmentPostingOption> _postings = const [];
+
+  /// Every paper once, however many postings use it — for the counts in the
+  /// delete warning, which are about the paper rather than one posting.
+  List<CompanyAssessment> _assessments = const [];
 
   @override
   void initState() {
@@ -54,6 +58,7 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
       final library = await _service.fetchLibrary();
       if (!mounted) return;
       setState(() {
+        _groups = library.groups;
         _assessments = library.assessments;
         _postings = library.postingOptions;
         _isLoading = false;
@@ -118,18 +123,29 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
     );
   }
 
-  void _viewSubmissions(CompanyAssessment assessment) {
+  /// Opens the results for one paper, narrowed to the posting whose
+  /// heading it was tapped under — the whole point of listing it under each
+  /// one. Tapped from somewhere with no posting in mind, it shows all.
+  void _viewSubmissions(CompanyAssessment assessment, AssessmentGroup? group) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AssessmentSubmissionsScreen(
           assessment: assessment,
+          internshipId: group?.internshipId,
           service: widget.service,
         ),
       ),
     );
   }
 
-  Future<void> _confirmDelete(CompanyAssessment assessment) async {
+  Future<void> _confirmDelete(CompanyAssessment card) async {
+    // The card under a heading counts one posting's applicants; deleting
+    // takes every result with it, so the warning uses the paper's own total.
+    final assessment = _assessments.firstWhere(
+      (a) => a.id == card.id,
+      orElse: () => card,
+    );
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -237,7 +253,11 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
       );
     }
 
-    if (_assessments.isEmpty) {
+    // Postings with nothing under them are noise here; the library is a
+    // list of assessments, not of postings.
+    final groups = _groups.where((g) => g.assessments.isNotEmpty).toList();
+
+    if (groups.isEmpty) {
       return ListView(
         children: const [
           SizedBox(height: 40),
@@ -250,24 +270,61 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
       );
     }
 
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-      itemCount: _assessments.length,
-      itemBuilder: (_, index) {
-        final assessment = _assessments[index];
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: index == _assessments.length - 1 ? 0 : 16,
+      children: [
+        for (final group in groups) ...[
+          _PostingHeading(group: group),
+          const SizedBox(height: 12),
+          for (final assessment in group.assessments) ...[
+            _AssessmentCard(
+              assessment: assessment,
+              onTap: () => _preview(assessment),
+              onEdit: () => _edit(assessment),
+              onDelete: () => _confirmDelete(assessment),
+              onViewSubmissions: () => _viewSubmissions(assessment, group),
+            ),
+            const SizedBox(height: 16),
+          ],
+          const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+}
+
+/// The posting a run of cards belongs to, the way the web page heads each
+/// block. Without it, one paper listed under two postings looks duplicated.
+class _PostingHeading extends StatelessWidget {
+  const _PostingHeading({required this.group});
+
+  final AssessmentGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.work_outline, size: 17, color: AppColors.textDark),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            group.internshipTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppFonts.title(fontSize: 15),
           ),
-          child: _AssessmentCard(
-            assessment: assessment,
-            onTap: () => _preview(assessment),
-            onEdit: () => _edit(assessment),
-            onDelete: () => _confirmDelete(assessment),
-            onViewSubmissions: () => _viewSubmissions(assessment),
-          ),
-        );
-      },
+        ),
+        const SizedBox(width: 8),
+        _Pill(
+          text: group.isOpen ? 'Open' : 'Closed',
+          background: group.isOpen
+              ? const Color(0xFFEAFAF1)
+              : AppColors.border.withValues(alpha: 0.5),
+          foreground: group.isOpen
+              ? const Color(0xFF1A7F4B)
+              : AppColors.textMuted,
+        ),
+      ],
     );
   }
 }
@@ -331,20 +388,20 @@ class _AssessmentCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              // The posting an assessment screens for is part of what it is,
-              // so it sits right under the title as the web page has it.
-              if (assessment.internshipTitle != null)
-                Row(
+              // The heading above already names the posting this block is
+              // for. What the card adds is whether this same paper is also
+              // doing the job elsewhere, because that changes what editing
+              // it means.
+              Row(
                   children: [
-                    const Icon(
-                      Icons.work_outline,
-                      size: 14,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 5),
                     Expanded(
                       child: Text(
-                        assessment.internshipTitle!,
+                        assessment.isShared
+                            ? 'Also screens for '
+                                  '${assessment.internships.length - 1} other '
+                                  'posting'
+                                  '${assessment.internships.length == 2 ? '' : 's'}'
+                            : 'Only this posting',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -353,23 +410,21 @@ class _AssessmentCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
+                    // One paper, several postings — said out loud, because
+                    // the alternative reading is that it was copied, and
+                    // that changes what editing it means.
+                    if (assessment.isShared) ...[
+                      _Pill(
+                        text: 'Shared × ${assessment.internships.length}',
+                        background: const Color(0xFFE8F0FE),
+                        foreground: AppColors.primary,
                       ),
-                      decoration: BoxDecoration(
-                        color: statusColors.background,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        assessment.isPublished ? 'Published' : 'Draft',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.bold,
-                          color: statusColors.text,
-                        ),
-                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    _Pill(
+                      text: assessment.isPublished ? 'Published' : 'Draft',
+                      background: statusColors.background,
+                      foreground: statusColors.text,
                     ),
                   ],
                 ),
@@ -440,6 +495,39 @@ class _AssessmentCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The small rounded labels on a card: status, and whether the paper is
+/// shared between postings.
+class _Pill extends StatelessWidget {
+  const _Pill({
+    required this.text,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String text;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.bold,
+          color: foreground,
         ),
       ),
     );

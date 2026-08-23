@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../../core/app_theme.dart';
 import '../../../services/auth_service.dart';
-import '../../auth/auth_screen.dart';
 import 'edit_profile_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -16,10 +15,16 @@ class SettingsScreen extends StatelessWidget {
         title: const Text('Log out?'),
         content: const Text("You'll need to sign in again to use SkillMatch."),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Log Out', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Log Out',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -30,10 +35,10 @@ class SettingsScreen extends StatelessWidget {
     await context.read<AuthService>().logout();
     if (!context.mounted) return;
 
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthScreen()),
-      (route) => false,
-    );
+    // Back to the launch gate rather than pushing a login screen over a
+    // cleared stack: the gate already shows login when there is no session,
+    // and removing it would leave nothing to route the *next* login.
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
@@ -55,8 +60,15 @@ class SettingsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: const Icon(Icons.arrow_back, color: AppColors.primaryDark, size: 20),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          color: AppColors.primaryDark,
+                          size: 20,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -82,7 +94,9 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Edit Profile',
                   subtitle: 'Update your personal info and resume',
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen(),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -168,7 +182,10 @@ class _SettingsTile extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(color: iconBackground, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: iconBackground,
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
               const SizedBox(width: 14),
@@ -178,16 +195,27 @@ class _SettingsTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: titleColor),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: titleColor,
+                      ),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
-                      Text(subtitle!, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                      Text(
+                        subtitle!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
                     ],
                   ],
                 ),
               ),
-              if (showChevron) const Icon(Icons.chevron_right, color: AppColors.textMuted),
+              if (showChevron)
+                const Icon(Icons.chevron_right, color: AppColors.textMuted),
             ],
           ),
         ),

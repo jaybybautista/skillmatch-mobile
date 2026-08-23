@@ -1,4 +1,5 @@
 import '../core/api_client.dart';
+import '../core/resume_updates.dart';
 import '../models/editable_profile.dart';
 import '../models/student_profile.dart';
 
@@ -76,6 +77,9 @@ class ProfileService {
       fileFieldName: 'resume_file',
       authenticated: true,
     );
+    // The profile's resume card is not the only place this shows up, so the
+    // rest of the app is told rather than left to find out on its own.
+    ResumeUpdates.instance.changed();
     return _resumeResult(response);
   }
 
@@ -92,11 +96,15 @@ class ProfileService {
       fileFieldName: 'resume_file',
       authenticated: true,
     );
+    // This one also rewrites skills, education and experience from what the
+    // parser read, so more than the resume card is now out of date.
+    ResumeUpdates.instance.changed();
     return _resumeResult(response);
   }
 
   Future<void> removeResume() async {
     await _client.delete('/student/profile/resume', authenticated: true);
+    ResumeUpdates.instance.changed();
   }
 
   ({String message, ResumeInfo? resume}) _resumeResult(

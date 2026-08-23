@@ -10,18 +10,27 @@ import 'profile_screen.dart';
 /// A coordinator's public profile — the mobile twin of
 /// Student\StudentPeerController::showCoordinator / student.coordinators.show.
 class CoordinatorPublicProfileScreen extends StatefulWidget {
-  const CoordinatorPublicProfileScreen({super.key, required this.coordinatorId, this.service});
+  const CoordinatorPublicProfileScreen({
+    super.key,
+    required this.coordinatorId,
+    this.service,
+  });
 
   final int coordinatorId;
   final PublicProfileService? service;
 
   @override
-  State<CoordinatorPublicProfileScreen> createState() => _CoordinatorPublicProfileScreenState();
+  State<CoordinatorPublicProfileScreen> createState() =>
+      _CoordinatorPublicProfileScreenState();
 }
 
-class _CoordinatorPublicProfileScreenState extends State<CoordinatorPublicProfileScreen> {
-  late final PublicProfileService _service = widget.service ?? PublicProfileService();
-  late Future<CoordinatorPublicProfile> _future = _service.fetchCoordinator(widget.coordinatorId);
+class _CoordinatorPublicProfileScreenState
+    extends State<CoordinatorPublicProfileScreen> {
+  late final PublicProfileService _service =
+      widget.service ?? PublicProfileService();
+  late Future<CoordinatorPublicProfile> _future = _service.fetchCoordinator(
+    widget.coordinatorId,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +39,10 @@ class _CoordinatorPublicProfileScreenState extends State<CoordinatorPublicProfil
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text('Coordinator Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Coordinator Profile',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: FutureBuilder<CoordinatorPublicProfile>(
         future: _future,
@@ -47,11 +59,19 @@ class _CoordinatorPublicProfileScreenState extends State<CoordinatorPublicProfil
             return ListView(
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
               children: [
-                Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
                 const SizedBox(height: 12),
                 Center(
                   child: TextButton(
-                    onPressed: () => setState(() => _future = _service.fetchCoordinator(widget.coordinatorId)),
+                    onPressed: () => setState(
+                      () => _future = _service.fetchCoordinator(
+                        widget.coordinatorId,
+                      ),
+                    ),
                     child: const Text('Retry'),
                   ),
                 ),
@@ -72,10 +92,17 @@ class _CoordinatorPublicProfileScreenState extends State<CoordinatorPublicProfil
           }
 
           final name = profile.name ?? 'Coordinator';
-          final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+          final parts = name
+              .trim()
+              .split(RegExp(r'\s+'))
+              .where((p) => p.isNotEmpty)
+              .toList();
           final initials = parts.length >= 2
-              ? (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase()
-              : (parts.isNotEmpty ? parts.first.substring(0, 1).toUpperCase() : '?');
+              ? (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+                    .toUpperCase()
+              : (parts.isNotEmpty
+                    ? parts.first.substring(0, 1).toUpperCase()
+                    : '?');
 
           return ListView(
             padding: EdgeInsets.zero,
@@ -88,7 +115,10 @@ class _CoordinatorPublicProfileScreenState extends State<CoordinatorPublicProfil
                 subtitle: profile.department ?? 'OJT Coordinator',
                 chips: [
                   if (profile.campus != null)
-                    ProfileMetaChip(icon: Icons.apartment_outlined, label: profile.campus!),
+                    ProfileMetaChip(
+                      icon: Icons.apartment_outlined,
+                      label: profile.campus!,
+                    ),
                 ],
               ),
               Padding(
@@ -99,10 +129,16 @@ class _CoordinatorPublicProfileScreenState extends State<CoordinatorPublicProfil
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ProfileInfoRow(label: 'Department', value: profile.department),
+                      ProfileInfoRow(
+                        label: 'Department',
+                        value: profile.department,
+                      ),
                       ProfileInfoRow(label: 'Campus', value: profile.campus),
                       ProfileInfoRow(label: 'Email', value: profile.email),
-                      ProfileInfoRow(label: 'Contact Number', value: profile.contactNumber),
+                      ProfileInfoRow(
+                        label: 'Contact Number',
+                        value: profile.contactNumber,
+                      ),
                     ],
                   ),
                 ),

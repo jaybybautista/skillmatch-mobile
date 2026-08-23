@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_theme.dart';
-import '../screens/auth/auth_screen.dart';
 import '../screens/company/assessment_library_screen.dart';
 import '../screens/company/browse_candidates_screen.dart';
 import '../screens/company/company_analytics_screen.dart';
@@ -57,17 +56,16 @@ class CompanySidebar extends StatelessWidget {
     if (item == current) return;
 
     if (item == CompanySidebarItem.home) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const CompanyHomeScreen()),
-        (route) => false,
-      );
+      // Unwind to the gate, which is already showing the company home
+      // underneath — clearing the stack would take the gate with it.
+      Navigator.of(context).popUntil((route) => route.isFirst);
       return;
     }
 
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => build()));
   }
 
-  /// Signs out and returns to the login screen, clearing the whole stack so
+  /// Signs out and returns to the login screen, unwinding to the gate so
   /// Back can't walk into a company screen with no session behind it. Same
   /// confirm-then-logout flow the student side's Settings uses.
   Future<void> _confirmSignOut(BuildContext context) async {
@@ -106,10 +104,9 @@ class CompanySidebar extends StatelessWidget {
 
     await auth.logout();
 
-    navigator.pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthScreen()),
-      (route) => false,
-    );
+    // See the note in the student settings screen: the gate has to survive a
+    // logout, or the next login has nothing listening to route it.
+    navigator.popUntil((route) => route.isFirst);
   }
 
   @override

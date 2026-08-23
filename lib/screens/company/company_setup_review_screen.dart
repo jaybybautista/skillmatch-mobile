@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../services/auth_service.dart';
 import '../../core/app_theme.dart';
 import '../../widgets/circle_back_button.dart';
-import '../auth/auth_screen.dart';
 
 /// The last stop of the company wizard: everything just typed, laid out for
 /// a final check before "submitting" the profile.
@@ -39,10 +40,11 @@ class CompanySetupReviewScreen extends StatelessWidget {
       builder: (dialogContext) => _SubmittedForReviewDialog(
         onDone: () {
           Navigator.of(dialogContext).pop();
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const AuthScreen()),
-            (route) => false,
-          );
+          // Signing out is what actually returns them to the login screen -
+          // the gate shows it as soon as the session clears, and survives to
+          // route whoever signs in next.
+          context.read<AuthService>().logout();
+          Navigator.of(context).popUntil((route) => route.isFirst);
         },
       ),
     );

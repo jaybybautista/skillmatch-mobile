@@ -101,7 +101,7 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
         children: [
           CompanyScreenHeader(
             title: assessment?.title ?? widget.initialTitle ?? 'Assessment',
-            subtitle: assessment?.internshipTitle,
+            subtitle: assessment?.postingsLabel,
             onBack: () => Navigator.of(context).pop(),
             trailing: questions.isEmpty
                 ? null

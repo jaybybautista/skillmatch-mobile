@@ -22,7 +22,12 @@ SkillRoadmap _roadmap({
   List<String> possessed = const ['Laravel', 'Php'],
   List<String> suggested = const ['React', 'Docker'],
   List<String> trending = const ['Laravel', 'Php', 'React', 'Docker'],
-  Map<String, int> demand = const {'Laravel': 3, 'Php': 3, 'React': 2, 'Docker': 1},
+  Map<String, int> demand = const {
+    'Laravel': 3,
+    'Php': 3,
+    'React': 2,
+    'Docker': 1,
+  },
   List<Map<String, dynamic>> steps = const [
     {
       'timeframe': 'Weeks 1-3',
@@ -70,16 +75,24 @@ void main() {
     });
 
     test('masteryFraction is zero when there is no market data yet', () {
-      final roadmap = _roadmap(possessed: const [], trending: const [], demand: const {});
+      final roadmap = _roadmap(
+        possessed: const [],
+        trending: const [],
+        demand: const {},
+      );
       expect(roadmap.masteryFraction, 0);
     });
   });
 
   group('SkillRoadmapScreen', () {
-    testWidgets('shows suggested skills with their demand count', (tester) async {
+    testWidgets('shows suggested skills with their demand count', (
+      tester,
+    ) async {
       final service = _FakeSkillRoadmapService(roadmap: _roadmap());
 
-      await tester.pumpWidget(MaterialApp(home: SkillRoadmapScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: SkillRoadmapScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       // "React" appears twice by design — once as a suggested chip, once
@@ -88,19 +101,30 @@ void main() {
       expect(find.textContaining('2 postings'), findsOneWidget);
     });
 
-    testWidgets('shows the possessed-skills section when there are some', (tester) async {
+    testWidgets('shows the possessed-skills section when there are some', (
+      tester,
+    ) async {
       final service = _FakeSkillRoadmapService(roadmap: _roadmap());
-      await tester.pumpWidget(MaterialApp(home: SkillRoadmapScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: SkillRoadmapScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Already on your profile'), findsOneWidget);
     });
 
-    testWidgets('hides the possessed-skills section when there are none', (tester) async {
+    testWidgets('hides the possessed-skills section when there are none', (
+      tester,
+    ) async {
       final service = _FakeSkillRoadmapService(
-        roadmap: _roadmap(possessed: const [], trending: const ['React', 'Docker']),
+        roadmap: _roadmap(
+          possessed: const [],
+          trending: const ['React', 'Docker'],
+        ),
       );
-      await tester.pumpWidget(MaterialApp(home: SkillRoadmapScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: SkillRoadmapScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Already on your profile'), findsNothing);
@@ -109,21 +133,28 @@ void main() {
     testWidgets('renders the suggested plan as numbered steps', (tester) async {
       final service = _FakeSkillRoadmapService(roadmap: _roadmap());
 
-      await tester.pumpWidget(MaterialApp(home: SkillRoadmapScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: SkillRoadmapScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Learn the missing skills'), findsOneWidget);
       expect(find.text('Weeks 1-3'), findsOneWidget);
 
       // Below the fold in the default test viewport.
-      await tester.scrollUntilVisible(find.text('Apply to postings that fit'), 300);
+      await tester.scrollUntilVisible(
+        find.text('Apply to postings that fit'),
+        300,
+      );
       expect(find.text('Apply to postings that fit'), findsOneWidget);
     });
 
     testWidgets('a load failure shows a retryable error', (tester) async {
       final service = _FakeSkillRoadmapService(error: Exception('offline'));
 
-      await tester.pumpWidget(MaterialApp(home: SkillRoadmapScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: SkillRoadmapScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Retry'), findsOneWidget);

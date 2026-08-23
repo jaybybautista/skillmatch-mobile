@@ -16,7 +16,11 @@ void main() {
   void expectHorizontallyCentred(WidgetTester tester) {
     final screenCentre = tester.getSize(find.byType(MaterialApp)).width / 2;
 
-    for (final finder in [find.text(title), find.text(hint), find.byType(Icon)]) {
+    for (final finder in [
+      find.text(title),
+      find.text(hint),
+      find.byType(Icon),
+    ]) {
       final centre = tester.getCenter(finder).dx;
       expect(
         (centre - screenCentre).abs() < 1.0,
@@ -42,10 +46,14 @@ void main() {
     expectHorizontallyCentred(tester);
   });
 
-  testWidgets('is centred inside a Column, where a stray stretch would show', (tester) async {
+  testWidgets('is centred inside a Column, where a stray stretch would show', (
+    tester,
+  ) async {
     await pumpIn(
       tester,
-      const Column(children: [EmptyResults(title: title, hint: hint)]),
+      const Column(
+        children: [EmptyResults(title: title, hint: hint)],
+      ),
     );
     expectHorizontallyCentred(tester);
   });

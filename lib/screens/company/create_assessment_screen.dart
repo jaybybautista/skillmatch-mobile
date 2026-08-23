@@ -29,8 +29,9 @@ class CreateAssessmentScreen extends StatefulWidget {
     this.service,
   });
 
-  /// The open postings an assessment can screen for. The backend requires
-  /// one, and only open postings are offered — same as the web dropdown.
+  /// The open postings an assessment can screen for. At least one is
+  /// required; several are allowed, because one paper can screen for many
+  /// postings — same as the web's checkbox list.
   ///
   /// Null when the caller hasn't already loaded them (the home screen's
   /// shortcut), in which case this screen fetches them itself.
@@ -54,11 +55,20 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
   int _step = 1;
   bool _isSaving = false;
 
+  /// The question the side panel's type picker acts on.
+  ///
+  /// The web panel edits whichever question is open in the builder; here the
+  /// last one expanded plays that role, so tapping a question and then the
+  /// panel changes the one you were just looking at.
+  int _activeQuestion = 0;
+
   /// True once step 1 has been written to the server. From then on the
   /// assessment exists as a draft and step 1 edits become updates.
   int? _assessmentId;
 
-  int? _internshipId;
+  /// Every posting ticked in step 1. Saving writes exactly this set, so an
+  /// id dropped from here is unlinked from the assessment.
+  final Set<int> _internshipIds = {};
   late List<AssessmentPostingOption> _postings = widget.postings ?? const [];
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -75,7 +85,11 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
     final existing = widget.existing;
     if (existing != null) {
       _assessmentId = existing.id;
-      _internshipId = existing.internshipId;
+      _internshipIds.addAll(
+        existing.internships.isNotEmpty
+            ? existing.internshipIds
+            : [?existing.internshipId],
+      );
       _titleController.text = existing.title;
       _descriptionController.text = existing.description ?? '';
       _timeLimitController.text = existing.timeLimitMinutes?.toString() ?? '';
@@ -83,16 +97,15 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
 
     _preselectSinglePosting();
 
-    if (widget.postings == null) {
-      _loadPostings();
-    }
-
     if (_isEditing) {
-      // The library card carries no questions, so the paper is fetched in
-      // full before step 2 can show anything to edit.
-      _loadExistingQuestions();
+      // The library card carries neither the questions nor the full list of
+      // linked postings, so the paper is fetched in full — and that same
+      // call brings back the picker's options, including any closed posting
+      // already linked, which the library's list leaves out.
+      _loadExisting();
     } else {
       _questions.add(DraftQuestion());
+      if (widget.postings == null) _loadPostings();
     }
   }
 
@@ -110,7 +123,9 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
   /// A single posting is not a choice — preselect it so the picker is one
   /// less thing to tap through.
   void _preselectSinglePosting() {
-    _internshipId ??= _postings.length == 1 ? _postings.first.id : null;
+    if (_internshipIds.isEmpty && _postings.length == 1) {
+      _internshipIds.add(_postings.first.id);
+    }
   }
 
   /// Only runs for callers that didn't already have the list to hand.
@@ -133,17 +148,27 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
     }
   }
 
-  Future<void> _loadExistingQuestions() async {
+  Future<void> _loadExisting() async {
     try {
-      final full = await _service.fetchAssessment(widget.existing!.id);
+      final edit = await _service.fetchAssessmentForEditing(
+        widget.existing!.id,
+      );
       if (!mounted) return;
       setState(() {
+        _postings = edit.postingOptions;
+        // The server's answer wins over the library card's summary: it is
+        // the one that knows about closed postings still linked here.
+        _internshipIds
+          ..clear()
+          ..addAll(edit.assessment.internshipIds);
+        _preselectSinglePosting();
+
         for (final question in _questions) {
           question.dispose();
         }
         _questions
           ..clear()
-          ..addAll(full.questions.map(DraftQuestion.fromExisting));
+          ..addAll(edit.assessment.questions.map(DraftQuestion.fromExisting));
         if (_questions.isEmpty) _questions.add(DraftQuestion());
       });
     } catch (e) {
@@ -160,6 +185,28 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
     }
   }
 
+  /// "5 min", or that it runs untimed. Read from the field rather than from
+  /// the server, so it follows an edit made on step 1 without a save.
+  String get _timeLimitLabel {
+    final raw = _timeLimitController.text.trim();
+    final minutes = int.tryParse(raw);
+
+    return minutes == null || minutes <= 0 ? 'No limit' : '$minutes min';
+  }
+
+  /// Which postings this paper screens for. One reads as its title; several
+  /// as a count, because the panel is narrow.
+  String get _postingLabel {
+    if (_internshipIds.isEmpty) return 'None selected';
+    if (_internshipIds.length > 1) return '${_internshipIds.length} postings';
+
+    final id = _internshipIds.first;
+    for (final posting in _postings) {
+      if (posting.id == id) return posting.title;
+    }
+    return '1 posting';
+  }
+
   void _notify(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -167,12 +214,26 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _addQuestion() => setState(() => _questions.add(DraftQuestion()));
+  void _togglePosting(int id) {
+    setState(() {
+      if (!_internshipIds.remove(id)) _internshipIds.add(id);
+    });
+  }
+
+  void _addQuestion() {
+    setState(() {
+      _questions.add(DraftQuestion());
+      _activeQuestion = _questions.length - 1;
+    });
+  }
 
   void _removeQuestion(int index) {
     setState(() {
       _questions[index].dispose();
       _questions.removeAt(index);
+      // Deleting the question the panel was pointing at must not leave it
+      // pointing past the end of the list.
+      _activeQuestion = _activeQuestion.clamp(0, _questions.length - 1);
     });
   }
 
@@ -192,7 +253,10 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
   }
 
   void _toggleExpanded(int index) {
-    setState(() => _questions[index].expanded = !_questions[index].expanded);
+    setState(() {
+      _questions[index].expanded = !_questions[index].expanded;
+      if (_questions[index].expanded) _activeQuestion = index;
+    });
   }
 
   void _setType(DraftQuestion question, QuestionType type) {
@@ -239,8 +303,8 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
       _notify('Give the assessment a title first.');
       return;
     }
-    if (_internshipId == null) {
-      _notify('Choose which posting this assessment screens for.');
+    if (_internshipIds.isEmpty) {
+      _notify('Choose at least one posting this assessment screens for.');
       return;
     }
 
@@ -259,14 +323,14 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
       final description = _descriptionController.text.trim();
       final saved = _assessmentId == null
           ? await _service.createAssessment(
-              internshipId: _internshipId!,
+              internshipIds: _internshipIds.toList(),
               title: title,
               description: description.isEmpty ? null : description,
               timeLimitMinutes: timeLimit,
             )
           : await _service.updateAssessment(
               id: _assessmentId!,
-              internshipId: _internshipId!,
+              internshipIds: _internshipIds.toList(),
               title: title,
               description: description.isEmpty ? null : description,
               timeLimitMinutes: timeLimit,
@@ -334,8 +398,26 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Only step 2 has anything to put in it: the type picker needs a
+    // question, and Save/Back to details belong to the questions step.
+    final hasPanel = _step == 2 && _questions.isNotEmpty;
+
     return Scaffold(
       backgroundColor: Colors.white,
+      endDrawer: hasPanel
+          ? _AssessmentSidePanel(
+              questionNumber: _activeQuestion + 1,
+              selectedType: _questions[_activeQuestion].type,
+              onSelectType: (type) =>
+                  _setType(_questions[_activeQuestion], type),
+              questionCount: _questions.length,
+              timeLimitLabel: _timeLimitLabel,
+              postingLabel: _postingLabel,
+              isSaving: _isSaving,
+              onSave: _isSaving ? null : _saveQuestions,
+              onBackToDetails: () => setState(() => _step = 1),
+            )
+          : null,
       body: Column(
         children: [
           CompanyScreenHeader(
@@ -352,31 +434,49 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
                 : null,
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+            child: Stack(
               children: [
-                if (_step == 1)
-                  _DetailsStep(
-                    postings: _postings,
-                    internshipId: _internshipId,
-                    onPostingChanged: (id) =>
-                        setState(() => _internshipId = id),
-                    titleController: _titleController,
-                    descriptionController: _descriptionController,
-                    timeLimitController: _timeLimitController,
-                  )
-                else
-                  _QuestionsStep(
-                    questions: _questions,
-                    onToggleExpanded: _toggleExpanded,
-                    onRemove: _removeQuestion,
-                    onSetType: _setType,
-                    onSetCorrectOption: _setCorrectOption,
-                    onToggleCorrectOption: _toggleCorrectOption,
-                    onPickImage: _pickImage,
-                    onClearImage: _clearImage,
-                    onAddOption: _addOption,
-                    onRemoveOption: _removeOption,
+                ListView(
+                  // Room at the bottom for the button to float over without
+                  // covering the last option of the last question.
+                  padding: EdgeInsets.fromLTRB(20, 22, 20, hasPanel ? 88 : 24),
+                  children: [
+                    if (_step == 1)
+                      _DetailsStep(
+                        postings: _postings,
+                        selectedIds: _internshipIds,
+                        onPostingToggled: _togglePosting,
+                        titleController: _titleController,
+                        descriptionController: _descriptionController,
+                        timeLimitController: _timeLimitController,
+                      )
+                    else
+                      _QuestionsStep(
+                        questions: _questions,
+                        onToggleExpanded: _toggleExpanded,
+                        onRemove: _removeQuestion,
+                        onSetType: _setType,
+                        onSetCorrectOption: _setCorrectOption,
+                        onToggleCorrectOption: _toggleCorrectOption,
+                        onPickImage: _pickImage,
+                        onClearImage: _clearImage,
+                        onAddOption: _addOption,
+                        onRemoveOption: _removeOption,
+                      ),
+                  ],
+                ),
+                if (hasPanel)
+                  Positioned(
+                    right: 20,
+                    bottom: 20,
+                    child: Builder(
+                      builder: (context) => FloatingActionButton(
+                        onPressed: Scaffold.of(context).openEndDrawer,
+                        backgroundColor: AppColors.primary,
+                        tooltip: 'Assessment panel',
+                        child: const Icon(Icons.tune, color: Colors.white),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -440,16 +540,16 @@ class _CreateAssessmentFooter extends StatelessWidget {
 class _DetailsStep extends StatelessWidget {
   const _DetailsStep({
     required this.postings,
-    required this.internshipId,
-    required this.onPostingChanged,
+    required this.selectedIds,
+    required this.onPostingToggled,
     required this.titleController,
     required this.descriptionController,
     required this.timeLimitController,
   });
 
   final List<AssessmentPostingOption> postings;
-  final int? internshipId;
-  final ValueChanged<int?> onPostingChanged;
+  final Set<int> selectedIds;
+  final ValueChanged<int> onPostingToggled;
   final TextEditingController titleController;
   final TextEditingController descriptionController;
   final TextEditingController timeLimitController;
@@ -459,33 +559,44 @@ class _DetailsStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // An assessment always screens for one posting — the backend requires
-        // it, and the web asks for it first too.
+        // Tick every posting this paper screens for. A checkbox list rather
+        // than a dropdown for the same reason the web uses one: what is
+        // already selected has to stay visible, because saving writes
+        // exactly this set and anything unticked is unlinked.
         _FieldCard(
-          label: 'FOR WHICH POSTING',
-          child: DropdownButtonFormField<int>(
-            initialValue: internshipId,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: Color(0xFFEEF1F5),
-              border: OutlineInputBorder(borderSide: BorderSide.none),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 14,
-              ),
-              hintText: 'Select a posting',
-            ),
-            items: [
-              for (final posting in postings)
-                DropdownMenuItem(
-                  value: posting.id,
-                  child: Text(posting.title, overflow: TextOverflow.ellipsis),
+          label: 'LINKED POSTINGS',
+          child: postings.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    'You have no open postings yet. Create one first, then '
+                    'come back here.',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final posting in postings)
+                      _PostingCheckbox(
+                        posting: posting,
+                        selected: selectedIds.contains(posting.id),
+                        onChanged: () => onPostingToggled(posting.id),
+                      ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Pick every posting that should screen with this '
+                      'assessment. Reusing one assessment across several '
+                      'postings beats building it again — edit it once and '
+                      'every posting that uses it follows.',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ),
-            ],
-            onChanged: onPostingChanged,
-          ),
         ),
         const SizedBox(height: 16),
         _FieldCard(
@@ -599,6 +710,328 @@ class _DetailsStep extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The web builder's right-hand column, which a phone has no room for
+/// beside the questions — so it slides in from the same side instead.
+///
+/// Same three things it has there: the type of the question being edited,
+/// the assessment at a glance, and the two actions that finish the job.
+class _AssessmentSidePanel extends StatelessWidget {
+  const _AssessmentSidePanel({
+    required this.questionNumber,
+    required this.selectedType,
+    required this.onSelectType,
+    required this.questionCount,
+    required this.timeLimitLabel,
+    required this.postingLabel,
+    required this.isSaving,
+    required this.onSave,
+    required this.onBackToDetails,
+  });
+
+  final int questionNumber;
+  final QuestionType selectedType;
+  final ValueChanged<QuestionType> onSelectType;
+
+  final int questionCount;
+  final String timeLimitLabel;
+  final String postingLabel;
+
+  final bool isSaving;
+  final VoidCallback? onSave;
+  final VoidCallback onBackToDetails;
+
+  static const _types = [
+    (QuestionType.multipleChoice, Icons.radio_button_checked),
+    (QuestionType.checkbox, Icons.check),
+    (QuestionType.dropdown, Icons.keyboard_arrow_down),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: AppColors.background,
+      width: MediaQuery.of(context).size.width * 0.82,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 12, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Assessment',
+                      style: AppFonts.title(fontSize: 18),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, size: 20),
+                    color: AppColors.textMuted,
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                children: [
+                  _PanelCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Select type',
+                                style: AppFonts.title(fontSize: 14),
+                              ),
+                            ),
+                            // Which question this is about. The web panel
+                            // can rely on the open card being visible beside
+                            // it; a drawer covers the questions, so it says.
+                            Text(
+                              'Question $questionNumber',
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        for (final (type, icon) in _types) ...[
+                          _TypeOption(
+                            label: type.label,
+                            icon: icon,
+                            selected: type == selectedType,
+                            onTap: () => onSelectType(type),
+                          ),
+                          if (type != _types.last.$1) const SizedBox(height: 8),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _PanelCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Assessment info',
+                          style: AppFonts.title(fontSize: 14),
+                        ),
+                        const SizedBox(height: 12),
+                        _PanelStat(
+                          icon: Icons.notes_outlined,
+                          label: 'Questions',
+                          value: '$questionCount',
+                        ),
+                        const Divider(height: 20),
+                        _PanelStat(
+                          icon: Icons.schedule,
+                          label: 'Time limit',
+                          value: timeLimitLabel,
+                        ),
+                        const Divider(height: 20),
+                        _PanelStat(
+                          icon: Icons.work_outline,
+                          label: 'Posting',
+                          value: postingLabel,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: onSave == null
+                          ? null
+                          : () {
+                              // Close first: saving pops this screen on
+                              // success, and a drawer left open over a route
+                              // that is going away flickers on the way out.
+                              Navigator.of(context).pop();
+                              onSave!();
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: isSaving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check, size: 18),
+                      label: const Text('Save assessment'),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      onBackToDetails();
+                    },
+                    icon: const Icon(Icons.arrow_back, size: 16),
+                    label: const Text('Back to details'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One of the three question types, laid out as the web panel lays them out:
+/// an icon, the name, and a radio on the far right.
+class _TypeOption extends StatelessWidget {
+  const _TypeOption({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? const Color(0xFFE8F0FE) : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? AppColors.primary : AppColors.border,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: selected ? AppColors.primary : AppColors.textMuted,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: selected ? AppColors.primary : AppColors.textDark,
+                  ),
+                ),
+              ),
+              Icon(
+                selected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                size: 18,
+                color: selected ? AppColors.primary : AppColors.border,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One line of the assessment-info card: icon, label, and the value in blue
+/// on the right, matching the web.
+class _PanelStat extends StatelessWidget {
+  const _PanelStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 17, color: AppColors.textMuted),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13.5, color: AppColors.textDark),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PanelCard extends StatelessWidget {
+  const _PanelCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: child,
     );
   }
 }
@@ -1019,6 +1452,48 @@ class _OptionLabelRow extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// One tickable posting in the linked-postings list.
+class _PostingCheckbox extends StatelessWidget {
+  const _PostingCheckbox({
+    required this.posting,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final AssessmentPostingOption posting;
+  final bool selected;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onChanged,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Checkbox(
+              value: selected,
+              onChanged: (_) => onChanged(),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              activeColor: AppColors.primary,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                posting.title,
+                style: const TextStyle(fontSize: 13.5),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

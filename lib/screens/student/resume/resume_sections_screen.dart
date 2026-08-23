@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
+import '../../../core/resume_updates.dart';
 import '../../../models/resume.dart';
 import '../../../services/resume_service.dart';
 import '../../../widgets/primary_button.dart';
@@ -26,7 +27,8 @@ class ResumeSectionsScreen extends StatefulWidget {
   State<ResumeSectionsScreen> createState() => _ResumeSectionsScreenState();
 }
 
-class _ResumeSectionsScreenState extends State<ResumeSectionsScreen> {
+class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
+    with ResumeUpdateListener {
   final _service = ResumeService();
   late Future<Resume> _future = _service.fetchResume(widget.resumeId);
 
@@ -35,6 +37,9 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen> {
     setState(() => _future = future);
     await future;
   }
+
+  @override
+  void onResumeChanged() => _refresh();
 
   Future<void> _openSection(ResumeSection section) async {
     Widget screen;
@@ -56,14 +61,14 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen> {
     }
 
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-    _refresh();
   }
 
   Future<void> _addSection() async {
-    final added = await Navigator.of(context).push<bool>(
+    // No refresh on the way back: adding goes through the service, which
+    // announces the change as it happens, so this list has already reloaded.
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => AddSectionScreen(resumeId: widget.resumeId)),
     );
-    if (added == true) _refresh();
   }
 
   void _openPreview() {

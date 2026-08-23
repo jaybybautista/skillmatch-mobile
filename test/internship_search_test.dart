@@ -23,11 +23,11 @@ class _FakeInternshipService extends InternshipService {
 }
 
 Internship _internship(String title) => Internship.fromJson({
-      'id': 1,
-      'title': title,
-      'company_name': 'Creatix Studio',
-      'location': 'Manila',
-    });
+  'id': 1,
+  'title': title,
+  'company_name': 'Creatix Studio',
+  'location': 'Manila',
+});
 
 Future<void> _type(WidgetTester tester, String text) async {
   await tester.enterText(find.byType(TextField), text);
@@ -39,9 +39,11 @@ Future<void> _type(WidgetTester tester, String text) async {
 
 void main() {
   testWidgets('starts with a prompt and no results list', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: InternshipSearchScreen(service: _FakeInternshipService(const {})),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InternshipSearchScreen(service: _FakeInternshipService(const {})),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Search internships'), findsOneWidget);
@@ -51,7 +53,9 @@ void main() {
   testWidgets('a query with no matches shows the empty state', (tester) async {
     final service = _FakeInternshipService(const {});
 
-    await tester.pumpWidget(MaterialApp(home: InternshipSearchScreen(service: service)));
+    await tester.pumpWidget(
+      MaterialApp(home: InternshipSearchScreen(service: service)),
+    );
     await tester.pumpAndSettle();
 
     await _type(tester, 'zzzzz');
@@ -66,7 +70,9 @@ void main() {
       'design': [_internship('Product Design Intern')],
     });
 
-    await tester.pumpWidget(MaterialApp(home: InternshipSearchScreen(service: service)));
+    await tester.pumpWidget(
+      MaterialApp(home: InternshipSearchScreen(service: service)),
+    );
     await tester.pumpAndSettle();
 
     await _type(tester, 'design');
@@ -84,32 +90,38 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('the dropdown offers the three orderings, defaulting to Top Matches',
-        (tester) async {
-      final service = _FakeInternshipService(const {});
+    testWidgets(
+      'the dropdown offers the three orderings, defaulting to Top Matches',
+      (tester) async {
+        final service = _FakeInternshipService(const {});
 
-      await tester.pumpWidget(MaterialApp(home: InternshipSearchScreen(service: service)));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          MaterialApp(home: InternshipSearchScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
 
-      // Nothing is on screen until the button is tapped.
-      expect(find.text('Proximity Based'), findsNothing);
+        // Nothing is on screen until the button is tapped.
+        expect(find.text('Proximity Based'), findsNothing);
 
-      await openMenu(tester);
-      expect(find.text('All'), findsOneWidget);
-      expect(find.text('Top Matches'), findsOneWidget);
-      expect(find.text('Proximity Based'), findsOneWidget);
+        await openMenu(tester);
+        expect(find.text('All'), findsOneWidget);
+        expect(find.text('Top Matches'), findsOneWidget);
+        expect(find.text('Proximity Based'), findsOneWidget);
 
-      await tester.tapAt(const Offset(10, 10)); // dismiss
-      await tester.pumpAndSettle();
+        await tester.tapAt(const Offset(10, 10)); // dismiss
+        await tester.pumpAndSettle();
 
-      await _type(tester, 'design');
-      expect(service.filters.last, InternshipFilter.topMatches);
-    });
+        await _type(tester, 'design');
+        expect(service.filters.last, InternshipFilter.topMatches);
+      },
+    );
 
     testWidgets('picking a filter re-queries with it', (tester) async {
       final service = _FakeInternshipService(const {});
 
-      await tester.pumpWidget(MaterialApp(home: InternshipSearchScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: InternshipSearchScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       await _type(tester, 'design');
@@ -124,10 +136,14 @@ void main() {
       expect(service.queries.last, 'design');
     });
 
-    testWidgets('does not query on a filter change with an empty field', (tester) async {
+    testWidgets('does not query on a filter change with an empty field', (
+      tester,
+    ) async {
       final service = _FakeInternshipService(const {});
 
-      await tester.pumpWidget(MaterialApp(home: InternshipSearchScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: InternshipSearchScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       await openMenu(tester);
@@ -137,7 +153,9 @@ void main() {
       expect(service.queries, isEmpty);
     });
 
-    testWidgets('shows the distance the proximity ordering is based on', (tester) async {
+    testWidgets('shows the distance the proximity ordering is based on', (
+      tester,
+    ) async {
       final service = _FakeInternshipService({
         'design': [
           Internship.fromJson({
@@ -150,7 +168,9 @@ void main() {
         ],
       });
 
-      await tester.pumpWidget(MaterialApp(home: InternshipSearchScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: InternshipSearchScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       await _type(tester, 'design');
@@ -162,7 +182,9 @@ void main() {
   testWidgets('clearing the field returns to the prompt', (tester) async {
     final service = _FakeInternshipService(const {});
 
-    await tester.pumpWidget(MaterialApp(home: InternshipSearchScreen(service: service)));
+    await tester.pumpWidget(
+      MaterialApp(home: InternshipSearchScreen(service: service)),
+    );
     await tester.pumpAndSettle();
 
     await _type(tester, 'zzzzz');

@@ -13,6 +13,20 @@ import '../models/campus.dart';
 /// App\Http\Controllers\Api\AuthController) so anything that happens here —
 /// registering, logging in, resetting a password — updates the exact same
 /// `users`/`students` tables the web app reads from.
+/// How long the account picker has to be up before a "cancel" is believable
+/// as a human dismissal. Anything faster never showed a picker at all.
+const _pickerDismissFloor = Duration(milliseconds: 1200);
+
+/// Facts about this build that error messages need to name.
+class AppIdentity {
+  AppIdentity._();
+
+  /// Must match `applicationId` in android/app/build.gradle.kts — it is half
+  /// of what identifies the app to Google (the signing certificate is the
+  /// other half).
+  static const String androidPackage = 'edu.psu.skillmatch';
+}
+
 class AuthService extends ChangeNotifier {
   final ApiClient _client = ApiClient.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
@@ -20,6 +34,16 @@ class AuthService extends ChangeNotifier {
 
   AppUser? currentUser;
   bool isCheckingSession = true;
+
+  /// Bumped whenever something changes whether the profile-setup wizard is
+  /// still needed, so the launch gate re-asks the server instead of reusing
+  /// the answer it cached when the session started.
+  int setupRevision = 0;
+
+  void invalidateSetupState() {
+    setupRevision++;
+    notifyListeners();
+  }
 
   bool get isLoggedIn => currentUser != null;
 
@@ -116,6 +140,10 @@ class AuthService extends ChangeNotifier {
       );
     }
 
+    // Timed, because the Android plugin reports a configuration failure and a
+    // real dismissal under the same `canceled` code (see below).
+    final startedAt = DateTime.now();
+
     final GoogleSignInAccount account;
     try {
       account = await _googleSignIn.authenticate();
@@ -126,15 +154,31 @@ class AuthService extends ChangeNotifier {
       );
 
       // The Android plugin sometimes reports real configuration failures
-      // (e.g. "Account reauth failed" when the app's OAuth client isn't
-      // registered / isn't a test user on the consent screen) under the
-      // same `canceled` code as a genuine user dismissal. Only treat it as
-      // a silent cancel when there's no description — a real description
-      // means something actually went wrong and should be shown.
-      final isGenuineCancel =
+      // (e.g. the app's OAuth client isn't registered, or the account isn't a
+      // test user on the consent screen) under the same `canceled` code as a
+      // genuine user dismissal, with no description either way.
+      //
+      // What separates them is how fast it comes back: nobody sees an account
+      // picker and dismisses it inside a second, so a "cancel" that quick is
+      // the picker never having appeared at all. Reporting that as a silent
+      // cancel is what makes tapping the button look like it does nothing.
+      final looksCancelled =
           e.code == GoogleSignInExceptionCode.canceled &&
           (e.description?.isEmpty ?? true);
-      if (isGenuineCancel) return null;
+
+      if (looksCancelled) {
+        final elapsed = DateTime.now().difference(startedAt);
+        if (elapsed >= _pickerDismissFloor) return null;
+
+        throw ApiException(
+          'Google sign-in closed immediately, which usually means this app '
+          'build is not registered for Google sign-in yet: an Android OAuth '
+          'client for package ${AppIdentity.androidPackage} with this '
+          "machine's debug signing certificate has to exist in Google Cloud "
+          'Console, and the account has to be a test user on the consent '
+          'screen. Signing in with an email and password works either way.',
+        );
+      }
 
       throw ApiException(
         'Google sign-in failed: ${e.description ?? e.code.name}',
@@ -165,13 +209,42 @@ class AuthService extends ChangeNotifier {
     return _persistSession(response);
   }
 
+  /// Turns a successful auth response into a live session.
+  ///
+  /// By the time this runs the server has already accepted the credentials, so
+  /// nothing in here is allowed to throw away that success. Every step is
+  /// either guaranteed not to throw or is reported precisely — a login that
+  /// worked must never come back as "sign-in failed", which is what happened
+  /// when a device keystore refused the write.
   Future<AppUser> _persistSession(Map<String, dynamic> response) async {
-    final token = response['token'] as String;
+    final token = response['token'];
+    if (token is! String || token.isEmpty) {
+      debugPrint('[Session] the server returned no token: ${response.keys}');
+      throw ApiException(
+        'Signed in, but the server did not return a session token. '
+        'Please try again.',
+      );
+    }
+
+    final AppUser user;
+    try {
+      user = AppUser.fromJson(response['user'] as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('[Session] could not read the account from the response: $e');
+      throw ApiException(
+        'Signed in, but the account details could not be read. '
+        'Please try again.',
+      );
+    }
+
+    // Never awaited on the keystore: saveToken records the token in memory
+    // and persists in the background, so a store that refuses or hangs costs
+    // the next launch's auto-login, not this one.
     await TokenStorage.instance.saveToken(token);
 
-    final user = AppUser.fromJson(response['user'] as Map<String, dynamic>);
     currentUser = user;
     notifyListeners();
+    debugPrint('[Session] signed in as ${user.email} (${user.role})');
     return user;
   }
 

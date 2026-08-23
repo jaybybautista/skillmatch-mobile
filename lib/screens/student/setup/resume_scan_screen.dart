@@ -16,14 +16,19 @@ class ResumeScanScreen extends StatefulWidget {
   State<ResumeScanScreen> createState() => _ResumeScanScreenState();
 }
 
-class _ResumeScanScreenState extends State<ResumeScanScreen> with TickerProviderStateMixin {
+class _ResumeScanScreenState extends State<ResumeScanScreen>
+    with TickerProviderStateMixin {
   /// Drives the pulsing halo behind the scan badge.
-  late final AnimationController _pulse =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat();
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  )..repeat();
 
   /// Drives the line sweeping down the badge, like a document scanner.
-  late final AnimationController _sweep =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
+  late final AnimationController _sweep = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  )..repeat(reverse: true);
 
   @override
   void dispose() {
@@ -72,14 +77,20 @@ class _ResumeScanScreenState extends State<ResumeScanScreen> with TickerProvider
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
-                                const Icon(Icons.crop_free, size: 46, color: Colors.white),
+                                const Icon(
+                                  Icons.crop_free,
+                                  size: 46,
+                                  color: Colors.white,
+                                ),
                                 Align(
                                   alignment: Alignment(0, _sweep.value * 2 - 1),
                                   child: Container(
                                     width: 66,
                                     height: 2,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.85),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.85,
+                                      ),
                                       borderRadius: BorderRadius.circular(2),
                                     ),
                                   ),
@@ -94,7 +105,10 @@ class _ResumeScanScreenState extends State<ResumeScanScreen> with TickerProvider
                 ),
                 const SizedBox(height: 26),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 9,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(999),
@@ -102,7 +116,11 @@ class _ResumeScanScreenState extends State<ResumeScanScreen> with TickerProvider
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.description_outlined, size: 16, color: Colors.white),
+                      const Icon(
+                        Icons.description_outlined,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                       const SizedBox(width: 8),
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 200),
@@ -110,7 +128,10 @@ class _ResumeScanScreenState extends State<ResumeScanScreen> with TickerProvider
                           widget.fileName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -124,7 +145,10 @@ class _ResumeScanScreenState extends State<ResumeScanScreen> with TickerProvider
                 const SizedBox(height: 8),
                 Text(
                   'This usually takes a few seconds',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13.5),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 13.5,
+                  ),
                 ),
               ],
             ),
@@ -194,7 +218,10 @@ class ResumeDropZone extends StatelessWidget {
                     fileName!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   const Text(
@@ -206,7 +233,11 @@ class ResumeDropZone extends StatelessWidget {
             ),
             IconButton(
               onPressed: onClear,
-              icon: const Icon(Icons.close, size: 20, color: AppColors.textMuted),
+              icon: const Icon(
+                Icons.close,
+                size: 20,
+                color: AppColors.textMuted,
+              ),
             ),
           ],
         ),
@@ -226,7 +257,11 @@ class ResumeDropZone extends StatelessWidget {
         ),
         child: const Column(
           children: [
-            Icon(Icons.cloud_upload_outlined, size: 34, color: AppColors.primary),
+            Icon(
+              Icons.cloud_upload_outlined,
+              size: 34,
+              color: AppColors.primary,
+            ),
             SizedBox(height: 10),
             Text(
               'Tap to upload your resume',

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../core/error_message.dart';
 import '../../models/chat_message.dart';
 import '../../services/auth_service.dart';
 import '../../services/chatbot_service.dart';
@@ -31,6 +31,10 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
 
   final List<ChatMessage> _messages = [];
   bool _isSending = false;
+
+  /// The message behind the last failed reply, kept so "Try again" can resend
+  /// it without the user retyping.
+  String? _lastFailedMessage;
 
   /// Shown under the conversation. A company has none of a student's
   /// concerns - no resume, no match rate, no assessments to sit - so the two
@@ -70,6 +74,7 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
     // History must not include the message being sent, or the server sees it
     // twice.
     final history = List<ChatMessage>.from(_messages);
+    _lastFailedMessage = null;
 
     setState(() {
       _messages.add(
@@ -108,9 +113,14 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      final message = e is ApiException
-          ? e.message
-          : "I couldn't reach the server. Please check your connection and try again.";
+      // Names the real cause rather than always blaming the connection: a
+      // refused request, a timeout and an unreadable reply are three very
+      // different problems, and "check your connection" hides all three.
+      final message = messageForError(
+        e,
+        "I couldn't reach the server. Please check your connection and try "
+        "again.",
+      );
 
       setState(() {
         _messages
@@ -123,11 +133,31 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
               hasFailed: true,
             ),
           );
+        _lastFailedMessage = text;
         _isSending = false;
       });
     }
 
     _scrollToBottom();
+  }
+
+  /// Sends the failed message again, dropping the error bubble and the copy
+  /// of the question above it so the retry doesn't stack up duplicates.
+  void _retryLastMessage() {
+    final text = _lastFailedMessage;
+    if (text == null || _isSending) return;
+
+    setState(() {
+      if (_messages.isNotEmpty && _messages.last.hasFailed) {
+        _messages.removeLast();
+      }
+      if (_messages.isNotEmpty && _messages.last.isUser) {
+        _messages.removeLast();
+      }
+      _lastFailedMessage = null;
+    });
+
+    _send(text);
   }
 
   void _scrollToBottom() {
@@ -193,6 +223,7 @@ class _MatchaChatScreenState extends State<MatchaChatScreen> {
                         itemBuilder: (context, index) => _Bubble(
                           message: _messages[index],
                           onCardTap: _openCard,
+                          onRetry: _isSending ? null : _retryLastMessage,
                         ),
                       ),
               ),
@@ -275,10 +306,14 @@ class _Welcome extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.onCardTap});
+  const _Bubble({required this.message, required this.onCardTap, this.onRetry});
 
   final ChatMessage message;
   final ValueChanged<ChatCard> onCardTap;
+
+  /// Offered on a failed reply, so the question can be sent again without
+  /// being retyped.
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -337,6 +372,23 @@ class _Bubble extends StatelessWidget {
                               _DestinationCard(
                                 card: card,
                                 onTap: () => onCardTap(card),
+                              ),
+                            ],
+                            if (message.hasFailed && onRetry != null) ...[
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: onRetry,
+                                  icon: const Icon(Icons.refresh, size: 16),
+                                  label: const Text('Try again'),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
                               ),
                             ],
                           ],

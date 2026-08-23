@@ -17,18 +17,28 @@ void main() {
 }
 
 class SkillMatchApp extends StatelessWidget {
-  const SkillMatchApp({super.key});
+  const SkillMatchApp({super.key, this.auth, this.setupService});
+
+  /// Injectable so the launch routing can be tested without a real session.
+  /// The app makes its own when this is null, exactly as before.
+  final AuthService? auth;
+
+  /// Injectable for the same reason — the gate asks this before it can decide
+  /// between the setup wizard and Home.
+  final ProfileSetupService? setupService;
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthService()..restoreSession(),
+    final auth = this.auth;
+
+    return ChangeNotifierProvider<AuthService>(
+      create: (_) => auth ?? (AuthService()..restoreSession()),
       child: MaterialApp(
         title: 'SkillMatch',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         navigatorObservers: [routeObserver],
-        home: const _SessionGate(),
+        home: _SessionGate(setupService: setupService),
       ),
     );
   }
@@ -41,14 +51,17 @@ class SkillMatchApp extends StatelessWidget {
 /// the server whether setup is still needed — so the app never flashes through
 /// an intermediate screen.
 class _SessionGate extends StatefulWidget {
-  const _SessionGate();
+  const _SessionGate({this.setupService});
+
+  final ProfileSetupService? setupService;
 
   @override
   State<_SessionGate> createState() => _SessionGateState();
 }
 
 class _SessionGateState extends State<_SessionGate> {
-  final _setupService = ProfileSetupService();
+  late final ProfileSetupService _setupService =
+      widget.setupService ?? ProfileSetupService();
 
   /// Null until we know; set once the setup state has been resolved for the
   /// current session.
@@ -59,7 +72,12 @@ class _SessionGateState extends State<_SessionGate> {
   bool _resolvedForLoggedIn = false;
   bool _isResolving = false;
 
-  Future<void> _resolveSetupState() async {
+  /// The [AuthService.setupRevision] the cached answer belongs to. Finishing
+  /// or skipping the wizard bumps that, which is what makes this re-ask
+  /// instead of sending the student straight back into setup.
+  int _resolvedRevision = -1;
+
+  Future<void> _resolveSetupState(int revision) async {
     if (_isResolving) return;
     _isResolving = true;
 
@@ -87,6 +105,7 @@ class _SessionGateState extends State<_SessionGate> {
     setState(() {
       _needsSetup = needsSetup;
       _resolvedForLoggedIn = true;
+      _resolvedRevision = revision;
       _isResolving = false;
     });
   }
@@ -115,9 +134,12 @@ class _SessionGateState extends State<_SessionGate> {
       return const CompanyHomeScreen();
     }
 
-    if (_needsSetup == null) {
+    if (_needsSetup == null || _resolvedRevision != auth.setupRevision) {
       // Kick the check off after this frame so it doesn't setState mid-build.
-      WidgetsBinding.instance.addPostFrameCallback((_) => _resolveSetupState());
+      final revision = auth.setupRevision;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _resolveSetupState(revision),
+      );
       return const SplashScreen();
     }
 

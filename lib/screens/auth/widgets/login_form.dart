@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
+import '../../../core/error_message.dart';
 import '../../../services/auth_service.dart';
 import '../../../widgets/app_text_field.dart';
 import '../../../widgets/primary_button.dart';
@@ -44,18 +45,25 @@ class _LoginFormState extends State<LoginForm> {
 
     try {
       await context.read<AuthService>().login(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
       if (!mounted) return;
       // The session gate at the root routes to the setup wizard or Home, so a
       // student who never finished setup still lands there after signing in.
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
-      setState(() => _errorText = e.message);
-    } catch (_) {
-      setState(() => _errorText = 'Could not reach the server. Please check your connection.');
+      _showLoginError(e.message);
+    } catch (e) {
+      // Names the real cause rather than assuming the network: a timeout and
+      // an unreadable reply are different problems.
+      _showLoginError(
+        messageForError(
+          e,
+          'Could not reach the server. Please check your connection.',
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -67,37 +75,68 @@ class _LoginFormState extends State<LoginForm> {
       _errorText = null;
     });
 
+    // Both resolved before the await. The native account picker takes over the
+    // screen, and this State can be disposed while it is up; a `mounted` check
+    // afterwards would then skip the navigation even though the sign-in
+    // succeeded, which looks exactly like the button having done nothing.
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
       final user = await context.read<AuthService>().loginWithGoogle();
-      if (user == null) return; // User dismissed the account picker.
 
-      if (!mounted) return;
+      if (user == null) {
+        // The account picker was dismissed. Said out loud rather than passed
+        // over in silence: a button that visibly does nothing reads as broken
+        // even when it worked exactly as asked.
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Google sign-in was cancelled.')),
+        );
+        return;
+      }
+
       // The session gate at the root routes to the setup wizard or Home, so a
       // student who never finished setup still lands there after signing in.
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      navigator.popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       _showGoogleError(e.message);
     } catch (e) {
-      // Printed so `flutter run`'s console shows the real cause (e.g. a
-      // GoogleSignInException with a specific error code) even though the
-      // user only sees the friendly message below.
       debugPrint('Google sign-in failed: $e');
-      _showGoogleError('Google sign-in failed. Please try again.');
+      // The cause is shown, not just logged. "Please try again" on a sign-in
+      // that actually succeeded server-side is what made this take days to
+      // pin down.
+      _showGoogleError(
+        messageForError(e, 'Google sign-in failed. Please try again.'),
+      );
     } finally {
       if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
-  void _showGoogleError(String message) {
-    setState(() => _errorText = message);
+  /// Shows the message twice over: inline under the fields, and as a snack
+  /// bar. The inline line alone is easy to miss on a full screen, and a login
+  /// that appears to do nothing is the most confusing failure there is.
+  void _showLoginError(String message) {
     if (!mounted) return;
+    setState(() => _errorText = message);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showGoogleError(String message) {
+    if (!mounted) return;
+    setState(() => _errorText = message);
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Google sign-in failed'),
         content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
         ],
       ),
     );
@@ -116,7 +155,9 @@ class _LoginFormState extends State<LoginForm> {
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             validator: (value) {
-              if (value == null || value.trim().isEmpty) return 'Email is required';
+              if (value == null || value.trim().isEmpty) {
+                return 'Email is required';
+              }
               if (!value.contains('@')) return 'Enter a valid email address';
               return null;
             },
@@ -128,7 +169,9 @@ class _LoginFormState extends State<LoginForm> {
             obscureText: true,
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _submit(),
-            validator: (value) => (value == null || value.isEmpty) ? 'Password is required' : null,
+            validator: (value) => (value == null || value.isEmpty)
+                ? 'Password is required'
+                : null,
           ),
           const SizedBox(height: 12),
           Row(
@@ -141,7 +184,8 @@ class _LoginFormState extends State<LoginForm> {
                     Checkbox(
                       value: _rememberMe,
                       activeColor: AppColors.primary,
-                      onChanged: (value) => setState(() => _rememberMe = value ?? true),
+                      onChanged: (value) =>
+                          setState(() => _rememberMe = value ?? true),
                     ),
                     const Text('Remember me'),
                   ],
@@ -149,7 +193,9 @@ class _LoginFormState extends State<LoginForm> {
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ForgotPasswordScreen(),
+                  ),
                 ),
                 child: const Text('Forgot password?'),
               ),
@@ -157,17 +203,27 @@ class _LoginFormState extends State<LoginForm> {
           ),
           if (_errorText != null) ...[
             const SizedBox(height: 4),
-            Text(_errorText!, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+            Text(
+              _errorText!,
+              style: const TextStyle(color: AppColors.danger, fontSize: 13),
+            ),
           ],
           const SizedBox(height: 12),
-          PrimaryButton(label: 'Log In', isLoading: _isLoading, onPressed: _submit),
+          PrimaryButton(
+            label: 'Log In',
+            isLoading: _isLoading,
+            onPressed: _submit,
+          ),
           const SizedBox(height: 24),
           Row(
             children: const [
               Expanded(child: Divider()),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Text('Or with', style: TextStyle(color: AppColors.textMuted)),
+                child: Text(
+                  'Or with',
+                  style: TextStyle(color: AppColors.textMuted),
+                ),
               ),
               Expanded(child: Divider()),
             ],
@@ -186,7 +242,9 @@ class _LoginFormState extends State<LoginForm> {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(54),
               side: const BorderSide(color: AppColors.border),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ],

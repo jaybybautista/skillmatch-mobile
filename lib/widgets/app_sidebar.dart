@@ -6,6 +6,7 @@ import '../screens/student/bookmarks/bookmarks_screen.dart';
 import '../screens/student/home/home_screen.dart';
 import '../screens/student/matches/internship_search_screen.dart';
 import '../screens/student/notifications/notifications_screen.dart';
+import '../screens/student/placement/placement_screen.dart';
 import '../screens/student/profile/profile_screen.dart';
 import '../screens/student/requirements/requirements_screen.dart';
 import '../screens/student/resume/resume_list_screen.dart';
@@ -22,6 +23,7 @@ enum SidebarItem {
   profile,
   resumeBuilder,
   roadmap,
+  placement,
   requirements,
   settings,
   none,
@@ -60,10 +62,9 @@ class _AppSidebarState extends State<AppSidebar> {
     if (item == widget.current) return;
 
     if (item == SidebarItem.home) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (route) => false,
-      );
+      // Unwind to the gate, which is already showing Home underneath, rather
+      // than clearing the stack — clearing it takes the gate with it.
+      Navigator.of(context).popUntil((route) => route.isFirst);
       return;
     }
 
@@ -194,6 +195,13 @@ class _AppSidebarState extends State<AppSidebar> {
                     isActive: widget.current == SidebarItem.roadmap,
                     onTap: () =>
                         _go(SidebarItem.roadmap, SkillRoadmapScreen.new),
+                  ),
+                  _SidebarTile(
+                    icon: Icons.business_center_outlined,
+                    label: 'My placement',
+                    isActive: widget.current == SidebarItem.placement,
+                    onTap: () =>
+                        _go(SidebarItem.placement, PlacementScreen.new),
                   ),
                   _SidebarTile(
                     icon: Icons.apartment_outlined,

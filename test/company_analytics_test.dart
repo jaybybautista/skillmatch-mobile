@@ -49,16 +49,16 @@ class _FakeCompanyService extends CompanyService {
     if (error != null) throw error!;
     if (failAfterFirst != null && calls.length > 1) throw failAfterFirst!;
     if (filteredAnalytics) {
-      return CompanyAnalytics.fromJson(_analyticsJson(narrowed: internshipId != null));
+      return CompanyAnalytics.fromJson(
+        _analyticsJson(narrowed: internshipId != null),
+      );
     }
     return analytics ?? CompanyAnalytics.fromJson(const {});
   }
 
   @override
-  Future<({List<CompanyPlacement> placements, PlacementCounts counts})> fetchPlacements({
-    String status = '',
-    String query = '',
-  }) async {
+  Future<({List<CompanyPlacement> placements, PlacementCounts counts})>
+  fetchPlacements({String status = '', String query = ''}) async {
     calls.add('placements:$status:$query');
     if (error != null) throw error!;
     return (placements: placements, counts: counts);
@@ -76,85 +76,89 @@ Map<String, dynamic> _analyticsJson({
   int pipelineTotal = 5,
   int? filter,
   bool narrowed = false,
-}) =>
+}) => {
+  'postings': {
+    'total': 2,
+    'open': 2,
+    'closed': 0,
+    'open_slots': 14,
+    'slots_filled': 1,
+  },
+  'applicants': {
+    'total': 5,
+    'pending': 0,
+    'under_review': 1,
+    'interview': 3,
+    'accepted': 1,
+    'rejected': 0,
+  },
+  'matching': {'average_score': 63, 'high_match_count': 2},
+  'assessments': {'total': 1, 'quizzes_taken': 4, 'average_score': 71},
+  'placements': {'total': 1, 'active': 1},
+  'pipeline': {
+    'total': narrowed ? 3 : pipelineTotal,
+    'stages': [
+      {'status': 'pending', 'label': 'Pending', 'count': 0, 'percentage': 0},
+      {
+        'status': 'under_review',
+        'label': 'Under review',
+        'count': 1,
+        'percentage': narrowed ? 33 : 20,
+      },
+      {
+        'status': 'interview',
+        'label': 'Interview',
+        'count': narrowed ? 2 : 3,
+        'percentage': narrowed ? 67 : 60,
+      },
+      {
+        'status': 'accepted',
+        'label': 'Accepted',
+        'count': narrowed ? 0 : 1,
+        'percentage': 20,
+      },
+      {'status': 'rejected', 'label': 'Rejected', 'count': 0, 'percentage': 0},
+    ],
+  },
+  'pipeline_filter': filter,
+  'posting_options': [
+    {'id': 5, 'title': 'Laravel Developer'},
+    {'id': 2, 'title': 'Product Design Intern'},
+  ],
+  'assessment_rows': [
+    {'id': 1, 'title': 'Design Intern', 'questions_count': 3},
+  ],
+  'recent_activity': [
     {
-      'postings': {'total': 2, 'open': 2, 'closed': 0, 'open_slots': 14, 'slots_filled': 1},
-      'applicants': {
-        'total': 5,
-        'pending': 0,
-        'under_review': 1,
-        'interview': 3,
-        'accepted': 1,
-        'rejected': 0,
-      },
-      'matching': {'average_score': 63, 'high_match_count': 2},
-      'assessments': {'total': 1, 'quizzes_taken': 4, 'average_score': 71},
-      'placements': {'total': 1, 'active': 1},
-      'pipeline': {
-        'total': narrowed ? 3 : pipelineTotal,
-        'stages': [
-          {'status': 'pending', 'label': 'Pending', 'count': 0, 'percentage': 0},
-          {
-            'status': 'under_review',
-            'label': 'Under review',
-            'count': 1,
-            'percentage': narrowed ? 33 : 20,
-          },
-          {
-            'status': 'interview',
-            'label': 'Interview',
-            'count': narrowed ? 2 : 3,
-            'percentage': narrowed ? 67 : 60,
-          },
-          {
-            'status': 'accepted',
-            'label': 'Accepted',
-            'count': narrowed ? 0 : 1,
-            'percentage': 20,
-          },
-          {'status': 'rejected', 'label': 'Rejected', 'count': 0, 'percentage': 0},
-        ],
-      },
-      'pipeline_filter': filter,
-      'posting_options': [
-        {'id': 5, 'title': 'Laravel Developer'},
-        {'id': 2, 'title': 'Product Design Intern'},
-      ],
-      'assessment_rows': [
-        {'id': 1, 'title': 'Design Intern', 'questions_count': 3},
-      ],
-      'recent_activity': [
-        {
-          'id': 12,
-          'student_name': 'Jaymar Bautista',
-          'internship_title': 'Laravel Developer',
-          'status': 'under_review',
-          'assigned_assessment': null,
-          'updated_at_human': '28 minutes ago',
-        },
-      ],
-    };
+      'id': 12,
+      'student_name': 'Jaymar Bautista',
+      'internship_title': 'Laravel Developer',
+      'status': 'under_review',
+      'assigned_assessment': null,
+      'updated_at_human': '28 minutes ago',
+    },
+  ],
+};
 
 Map<String, dynamic> _placementJson({
   int id = 1,
   String status = 'ongoing',
   String name = 'Jayby Bautista',
-}) =>
-    {
-      'id': id,
-      'status': status,
-      'status_label': status[0].toUpperCase() + status.substring(1),
-      'student_id': 2,
-      'student_name': name,
-      'student_email': 'jayby@example.test',
-      'student_avatar_url': null,
-      'student_number': '23-UR-0629',
-      'internship_title': 'Product Design Intern',
-      'start_date': '2026-08-08',
-      'end_date': null,
-      'created_at_human': '1 week ago',
-      'updated_at_human': '3 days ago',
-    };
+}) => {
+  'id': id,
+  'status': status,
+  'status_label': status[0].toUpperCase() + status.substring(1),
+  'student_id': 2,
+  'student_name': name,
+  'student_email': 'jayby@example.test',
+  'student_avatar_url': null,
+  'student_number': '23-UR-0629',
+  'internship_title': 'Product Design Intern',
+  'start_date': '2026-08-08',
+  'end_date': null,
+  'created_at_human': '1 week ago',
+  'updated_at_human': '3 days ago',
+};
 
 /// Scrolls the screen's list until [finder] is built.
 ///
@@ -162,7 +166,11 @@ Map<String, dynamic> _placementJson({
 /// pages — everything below the first couple of cards starts off-screen and
 /// simply is not in the tree until it is scrolled to.
 Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
-  await tester.scrollUntilVisible(finder, 220, scrollable: find.byType(Scrollable).last);
+  await tester.scrollUntilVisible(
+    finder,
+    220,
+    scrollable: find.byType(Scrollable).last,
+  );
   await tester.pumpAndSettle();
 }
 
@@ -240,7 +248,9 @@ void main() {
   });
 
   group('CompanyAnalyticsScreen', () {
-    testWidgets('renders the headline metrics and the pipeline', (tester) async {
+    testWidgets('renders the headline metrics and the pipeline', (
+      tester,
+    ) async {
       final service = _FakeCompanyService(
         analytics: CompanyAnalytics.fromJson(_analyticsJson()),
       );
@@ -261,8 +271,9 @@ void main() {
       expect(find.text('60%'), findsOneWidget);
     });
 
-    testWidgets('choosing a posting re-renders the pipeline with its numbers',
-        (tester) async {
+    testWidgets('choosing a posting re-renders the pipeline with its numbers', (
+      tester,
+    ) async {
       final service = _FakeCompanyService(filteredAnalytics: true);
 
       await tester.pumpWidget(
@@ -271,18 +282,27 @@ void main() {
       await tester.pumpAndSettle();
 
       await _scrollTo(tester, find.byType(DropdownButtonFormField<int?>));
-      expect(find.text('60%'), findsOneWidget, reason: 'unfiltered interview share');
+      expect(
+        find.text('60%'),
+        findsOneWidget,
+        reason: 'unfiltered interview share',
+      );
 
       await _pick(tester, 'Laravel Developer');
 
       expect(service.calls, ['analytics:all', 'analytics:5']);
       await _scrollTo(tester, find.text('Interview'));
-      expect(find.text('67%'), findsOneWidget, reason: 'narrowed share is on screen');
+      expect(
+        find.text('67%'),
+        findsOneWidget,
+        reason: 'narrowed share is on screen',
+      );
       expect(find.text('60%'), findsNothing, reason: 'the old share is gone');
     });
 
-    testWidgets('switching back to All postings restores the full numbers',
-        (tester) async {
+    testWidgets('switching back to All postings restores the full numbers', (
+      tester,
+    ) async {
       final service = _FakeCompanyService(filteredAnalytics: true);
 
       await tester.pumpWidget(
@@ -298,8 +318,9 @@ void main() {
       expect(find.text('60%'), findsOneWidget);
     });
 
-    testWidgets('the chosen posting survives scrolling the panel out of view',
-        (tester) async {
+    testWidgets('the chosen posting survives scrolling the panel out of view', (
+      tester,
+    ) async {
       final service = _FakeCompanyService(filteredAnalytics: true);
 
       await tester.pumpWidget(
@@ -316,8 +337,9 @@ void main() {
       expect(find.text('Laravel Developer'), findsOneWidget);
     });
 
-    testWidgets('a failed filter says so instead of silently doing nothing',
-        (tester) async {
+    testWidgets('a failed filter says so instead of silently doing nothing', (
+      tester,
+    ) async {
       // A bare error rather than an ApiException — which is what a timeout or
       // a decode failure surfaces as. These used to escape uncaught, leaving
       // the screen unchanged and the user with no idea anything had happened.
@@ -333,7 +355,10 @@ void main() {
 
       await _pick(tester, 'Laravel Developer');
 
-      expect(find.textContaining('Could not filter the pipeline'), findsOneWidget);
+      expect(
+        find.textContaining('Could not filter the pipeline'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a slow filter shows the panel is working', (tester) async {
@@ -374,7 +399,9 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
     });
 
-    testWidgets('empty analytics still render, with empty-state copy', (tester) async {
+    testWidgets('empty analytics still render, with empty-state copy', (
+      tester,
+    ) async {
       final service = _FakeCompanyService(
         analytics: CompanyAnalytics.fromJson(_analyticsJson(pipelineTotal: 0)),
       );
@@ -390,7 +417,9 @@ void main() {
   });
 
   group('CompanyPlacementsScreen', () {
-    testWidgets('lists placements with their status and counts', (tester) async {
+    testWidgets('lists placements with their status and counts', (
+      tester,
+    ) async {
       final service = _FakeCompanyService(
         placements: [
           CompanyPlacement.fromJson(_placementJson()),
@@ -421,7 +450,12 @@ void main() {
     testWidgets('a status chip re-queries with that status', (tester) async {
       final service = _FakeCompanyService(
         placements: [CompanyPlacement.fromJson(_placementJson())],
-        counts: const PlacementCounts(total: 1, ongoing: 1, completed: 0, terminated: 0),
+        counts: const PlacementCounts(
+          total: 1,
+          ongoing: 1,
+          completed: 0,
+          terminated: 0,
+        ),
       );
 
       await tester.pumpWidget(
@@ -440,26 +474,35 @@ void main() {
       expect(service.calls, ['placements::', 'placements:completed:']);
     });
 
-    testWidgets('the empty state explains that coordinators create placements',
-        (tester) async {
-      final service = _FakeCompanyService();
+    testWidgets(
+      'the empty state explains that coordinators create placements',
+      (tester) async {
+        final service = _FakeCompanyService();
 
-      await tester.pumpWidget(
-        MaterialApp(home: CompanyPlacementsScreen(service: service)),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          MaterialApp(home: CompanyPlacementsScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('No placements found'), findsOneWidget);
-      expect(
-        find.textContaining('once a coordinator creates their placement record'),
-        findsOneWidget,
-      );
-    });
+        expect(find.text('No placements found'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'once a coordinator creates their placement record',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('tapping a placement opens its detail screen', (tester) async {
       final service = _FakeCompanyService(
         placements: [CompanyPlacement.fromJson(_placementJson())],
-        counts: const PlacementCounts(total: 1, ongoing: 1, completed: 0, terminated: 0),
+        counts: const PlacementCounts(
+          total: 1,
+          ongoing: 1,
+          completed: 0,
+          terminated: 0,
+        ),
         detail: CompanyPlacementDetail.fromJson({
           ..._placementJson(),
           'course': 'BSIT',

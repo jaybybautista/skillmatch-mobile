@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/api_client.dart';
 import '../../../core/app_navigation.dart';
 import '../../../core/app_theme.dart';
+import '../../../core/resume_updates.dart';
 import '../../../models/resume.dart';
 import '../../../services/resume_service.dart';
 import '../../../widgets/app_bottom_nav.dart';
@@ -20,7 +21,8 @@ class ResumeListScreen extends StatefulWidget {
   State<ResumeListScreen> createState() => _ResumeListScreenState();
 }
 
-class _ResumeListScreenState extends State<ResumeListScreen> with WidgetsBindingObserver {
+class _ResumeListScreenState extends State<ResumeListScreen>
+    with WidgetsBindingObserver, ResumeUpdateListener {
   final _service = ResumeService();
   late Future<List<ResumeSummary>> _future = _service.fetchResumes();
 
@@ -50,14 +52,18 @@ class _ResumeListScreenState extends State<ResumeListScreen> with WidgetsBinding
     await future;
   }
 
+  // Edits made on this phone say so the moment they happen, so the "last
+  // updated" line under each resume is never behind what the student just
+  // did in the editor two screens up.
+  @override
+  void onResumeChanged() => _refresh();
+
   Future<void> _openResume(int id) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ResumeSectionsScreen(resumeId: id)));
-    _refresh();
   }
 
   Future<void> _openImport() async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ImportResumeScreen()));
-    _refresh();
   }
 
   Future<void> _showAddResumeSheet() async {

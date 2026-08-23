@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
 import '../../core/error_message.dart';
 import '../../models/company_assessment.dart';
+import '../../services/company_assessment_service.dart';
 import '../../services/company_service.dart';
 import '../../widgets/company_screen_header.dart';
 import '../../widgets/matcha_launcher.dart';
@@ -26,6 +27,7 @@ class PostingDetailScreen extends StatefulWidget {
     required this.postingId,
     this.initialPosting,
     this.service,
+    this.assessmentService,
   });
 
   final int postingId;
@@ -36,12 +38,18 @@ class PostingDetailScreen extends StatefulWidget {
 
   final CompanyService? service;
 
+  /// Only the assessment link/unlink actions use this one; injected so the
+  /// screen can be driven in tests without a server.
+  final CompanyAssessmentService? assessmentService;
+
   @override
   State<PostingDetailScreen> createState() => _PostingDetailScreenState();
 }
 
 class _PostingDetailScreenState extends State<PostingDetailScreen> {
   late final CompanyService _service = widget.service ?? CompanyService();
+  late final CompanyAssessmentService _assessmentService =
+      widget.assessmentService ?? CompanyAssessmentService();
 
   bool _isLoading = true;
   bool _isBusy = false;
@@ -642,8 +650,8 @@ class _PostingDetailScreenState extends State<PostingDetailScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 10),
               child: _EmptyLine(
-                'No assessments linked. Go to Assessments to create and link '
-                'one.',
+                'No assessments screen for this posting yet. Use one you '
+                'have already written, or create a new one.',
               ),
             )
           else
@@ -658,10 +666,179 @@ class _PostingDetailScreenState extends State<PostingDetailScreen> {
                     ),
                   ),
                 ),
+                onUnlink: () => _unlinkAssessment(assessment),
               ),
+          const SizedBox(height: 6),
+          // The point of the pivot: attach a paper you already wrote instead
+          // of writing it twice. Editing it afterwards reaches every posting
+          // that uses it, which two copies could never do.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _isBusy ? null : _linkExistingAssessment,
+              icon: const Icon(Icons.link, size: 18),
+              label: const Text('Use an existing assessment'),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  /// Offers every assessment this company has written that is not already
+  /// screening for this posting, and links whichever is picked.
+  Future<void> _linkExistingAssessment() async {
+    setState(() => _isBusy = true);
+
+    final List<CompanyAssessment> candidates;
+    try {
+      final library = await _assessmentService.fetchLibrary();
+      final linked = _assessments.map((a) => a.id).toSet();
+      // The library groups by posting, so a paper on three postings comes
+      // back three times. De-duplicate before offering the list.
+      final seen = <int>{};
+      candidates = library.assessments
+          .where((a) => !linked.contains(a.id) && seen.add(a.id))
+          .toList();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isBusy = false);
+      _notify(
+        messageForError(e, 'Could not load your assessments. Try again.'),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isBusy = false);
+
+    if (candidates.isEmpty) {
+      _notify(
+        'Every assessment you have written already screens for this posting.',
+      );
+      return;
+    }
+
+    final chosen = await showModalBottomSheet<CompanyAssessment>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 4),
+              child: Text(
+                'Use an existing assessment',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
+              child: Text(
+                'It stays one assessment - editing it reaches every posting '
+                'that uses it.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12.5),
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final assessment in candidates)
+                    ListTile(
+                      leading: const Icon(
+                        Icons.description_outlined,
+                        color: AppColors.primary,
+                      ),
+                      title: Text(assessment.title),
+                      subtitle: Text(_candidateSubtitle(assessment)),
+                      onTap: () => Navigator.of(sheetContext).pop(assessment),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (chosen == null || !mounted) return;
+
+    setState(() => _isBusy = true);
+    try {
+      await _assessmentService.linkToPosting(chosen, widget.postingId);
+      if (!mounted) return;
+      _changed = true;
+      _notify('"${chosen.title}" now screens for this posting.');
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      _notify(messageForError(e, 'Could not link that assessment.'));
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
+  String _candidateSubtitle(CompanyAssessment assessment) {
+    final count = assessment.questionCount;
+    final questions = '$count question${count == 1 ? '' : 's'}';
+    final where = assessment.postingsLabel;
+
+    return where == null ? questions : '$questions - already on $where';
+  }
+
+  /// Takes this posting off an assessment without deleting the paper, since
+  /// other postings may still be using it.
+  Future<void> _unlinkAssessment(CompanyAssessment assessment) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Stop using this assessment?'),
+        content: Text(
+          '"${assessment.title}" will no longer screen applicants for this '
+          'posting. The assessment itself is kept, along with any answers '
+          'already submitted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isBusy = true);
+    try {
+      await _assessmentService.unlinkFromPosting(assessment, widget.postingId);
+      if (!mounted) return;
+      _changed = true;
+      _notify(
+        '"${assessment.title}" no longer screens for this posting.',
+      );
+      await _load();
+    } on StateError catch (e) {
+      // The one thing the backend cannot accept is an assessment linked to
+      // nothing. Say why, rather than letting it come back as a 422.
+      if (mounted) _notify(e.message);
+    } catch (e) {
+      if (!mounted) return;
+      _notify(messageForError(e, 'Could not remove that assessment.'));
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
   }
 
   Widget _listCard({
@@ -878,15 +1055,23 @@ class _CountChip extends StatelessWidget {
 }
 
 class _AssessmentRow extends StatelessWidget {
-  const _AssessmentRow({required this.assessment, required this.onTap});
+  const _AssessmentRow({
+    required this.assessment,
+    required this.onTap,
+    required this.onUnlink,
+  });
 
   final CompanyAssessment assessment;
   final VoidCallback onTap;
+  final VoidCallback onUnlink;
 
   @override
   Widget build(BuildContext context) {
     final questions = assessment.questionCount;
     final limit = assessment.timeLimitMinutes;
+    // Worth saying on the row itself: editing a shared paper changes it for
+    // the other postings too.
+    final others = assessment.internships.length - 1;
 
     return InkWell(
       onTap: onTap,
@@ -917,7 +1102,8 @@ class _AssessmentRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '$questions question${questions == 1 ? '' : 's'}'
-                    '${limit != null ? ' • $limit min' : ''}',
+                    '${limit != null ? ' • $limit min' : ''}'
+                    '${others > 0 ? ' • shared with $others other posting${others == 1 ? '' : 's'}' : ''}',
                     style: const TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12,
@@ -925,6 +1111,12 @@ class _AssessmentRow extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            IconButton(
+              onPressed: onUnlink,
+              icon: const Icon(Icons.link_off, size: 18),
+              color: AppColors.textMuted,
+              tooltip: 'Stop using this assessment here',
             ),
             const Icon(
               Icons.chevron_right,

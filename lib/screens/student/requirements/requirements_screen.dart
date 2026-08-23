@@ -38,7 +38,8 @@ class RequirementsScreen extends StatefulWidget {
 }
 
 class _RequirementsScreenState extends State<RequirementsScreen> {
-  late final RequirementService _service = widget.service ?? RequirementService();
+  late final RequirementService _service =
+      widget.service ?? RequirementService();
 
   bool _isLoading = true;
   Object? _error;
@@ -74,31 +75,37 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
 
   void _notify(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _viewTemplate(RequirementItem item) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => RequirementViewerScreen(
-        title: item.title,
-        subtitle: 'Original copy from your coordinator',
-        loadPreview: () => _service.previewTemplate(item.id),
-        loadDownload: () => _service.downloadTemplate(item.id),
-        downloadFilename: item.originalFilename ?? item.title,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RequirementViewerScreen(
+          title: item.title,
+          subtitle: 'Original copy from your coordinator',
+          loadPreview: () => _service.previewTemplate(item.id),
+          loadDownload: () => _service.downloadTemplate(item.id),
+          downloadFilename: item.originalFilename ?? item.title,
+        ),
       ),
-    ));
+    );
   }
 
   void _viewUpload(RequirementItem item) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => RequirementViewerScreen(
-        title: item.title,
-        subtitle: 'Your uploaded copy',
-        loadPreview: () => _service.previewUpload(item.id),
-        loadDownload: () => _service.downloadUpload(item.id),
-        downloadFilename: item.submission.originalFilename ?? item.title,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RequirementViewerScreen(
+          title: item.title,
+          subtitle: 'Your uploaded copy',
+          loadPreview: () => _service.previewUpload(item.id),
+          loadDownload: () => _service.downloadUpload(item.id),
+          downloadFilename: item.submission.originalFilename ?? item.title,
+        ),
       ),
-    ));
+    );
   }
 
   Future<void> _downloadTemplate(RequirementItem item) async {
@@ -113,7 +120,10 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
   Future<void> _downloadUpload(RequirementItem item) async {
     try {
       final bytes = await _service.downloadUpload(item.id);
-      await shareFileBytes(bytes, item.submission.originalFilename ?? item.title);
+      await shareFileBytes(
+        bytes,
+        item.submission.originalFilename ?? item.title,
+      );
     } on ApiException catch (e) {
       _notify(e.message);
     }
@@ -122,7 +132,16 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
   Future<void> _upload(RequirementItem item) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['doc', 'docx', 'pdf', 'odt', 'rtf', 'jpg', 'jpeg', 'png'],
+      allowedExtensions: const [
+        'doc',
+        'docx',
+        'pdf',
+        'odt',
+        'rtf',
+        'jpg',
+        'jpeg',
+        'png',
+      ],
     );
     if (result == null || result.files.isEmpty) return;
     final path = result.files.first.path;
@@ -162,12 +181,20 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Remove upload?'),
-        content: Text('This deletes your uploaded copy of "${item.title}". You can upload again later.'),
+        content: Text(
+          'This deletes your uploaded copy of "${item.title}". You can upload again later.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Remove', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -188,7 +215,9 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) => SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -200,7 +229,11 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textDark),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppColors.textDark,
+                    ),
                   ),
                 ),
               ),
@@ -302,14 +335,21 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                       onPressed: Scaffold.of(context).openDrawer,
                       tooltip: 'Menu',
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
                       'OJT Requirements',
-                      style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -325,15 +365,26 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
               ),
               child: Column(
                 children: [
-                  _ViewTabs(selected: _view, onSelected: (view) => setState(() => _view = view)),
-                  Expanded(child: RefreshIndicator(onRefresh: _load, child: _buildBody())),
+                  _ViewTabs(
+                    selected: _view,
+                    onSelected: (view) => setState(() => _view = view),
+                  ),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _load,
+                      child: _buildBody(),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ],
       ),
-      bottomNavigationBar: AppBottomNav(currentIndex: 3, onSelect: (i) => handleAppNavTap(context, i)),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 3,
+        onSelect: (i) => handleAppNavTap(context, i),
+      ),
     );
   }
 
@@ -347,12 +398,16 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
         padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
         children: [
           Text(
-            _error is ApiException ? (_error as ApiException).message : 'Could not load your requirements.',
+            _error is ApiException
+                ? (_error as ApiException).message
+                : 'Could not load your requirements.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
@@ -363,14 +418,17 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
           EmptyResults(
             icon: Icons.fact_check_outlined,
             title: 'No requirements published yet',
-            hint: 'Your coordinator hasn\'t posted any OJT forms for your campus yet.',
+            hint:
+                'Your coordinator hasn\'t posted any OJT forms for your campus yet.',
           ),
         ],
       );
     }
 
     if (_view == _RequirementsView.uploads) {
-      final uploaded = _items.where((item) => item.submission.hasUpload).toList();
+      final uploaded = _items
+          .where((item) => item.submission.hasUpload)
+          .toList();
 
       if (uploaded.isEmpty) {
         return ListView(
@@ -378,7 +436,8 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
             EmptyResults(
               icon: Icons.upload_file_outlined,
               title: 'Nothing uploaded yet',
-              hint: 'Switch to Coordinator Forms and upload your filled-in copy of one.',
+              hint:
+                  'Switch to Coordinator Forms and upload your filled-in copy of one.',
             ),
           ],
         );
@@ -437,20 +496,27 @@ class _ViewTabs extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: view == selected ? AppColors.primary : Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: view == selected ? AppColors.primary : AppColors.border),
+                    border: Border.all(
+                      color: view == selected
+                          ? AppColors.primary
+                          : AppColors.border,
+                    ),
                   ),
                   child: Text(
                     view.label,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: view == selected ? Colors.white : AppColors.textDark,
+                      color: view == selected
+                          ? Colors.white
+                          : AppColors.textDark,
                     ),
                   ),
                 ),
               ),
             ),
-            if (view != _RequirementsView.values.last) const SizedBox(width: 10),
+            if (view != _RequirementsView.values.last)
+              const SizedBox(width: 10),
           ],
         ],
       ),
@@ -459,7 +525,11 @@ class _ViewTabs extends StatelessWidget {
 }
 
 class _RequirementCard extends StatelessWidget {
-  const _RequirementCard({required this.item, required this.onTap, required this.onMore});
+  const _RequirementCard({
+    required this.item,
+    required this.onTap,
+    required this.onMore,
+  });
 
   final RequirementItem item;
   final VoidCallback onTap;
@@ -489,7 +559,10 @@ class _RequirementCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: iconStyle.background, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: iconStyle.background,
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Icon(iconStyle.icon, color: iconStyle.color, size: 22),
               ),
               const SizedBox(width: 12),
@@ -501,22 +574,39 @@ class _RequirementCard extends StatelessWidget {
                       item.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       item.updatedAtHuman == null
                           ? item.readableSize
                           : 'Modified ${item.updatedAtHuman} • ${item.readableSize}',
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(color: status.background, borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: status.background,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Text(
                         status.label,
-                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: status.color),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: status.color,
+                        ),
                       ),
                     ),
                   ],
@@ -539,7 +629,11 @@ class _RequirementCard extends StatelessWidget {
 /// (filename, size, kind) rather than the template's, and always opens the
 /// student's own copy on tap, never the coordinator's.
 class _UploadCard extends StatelessWidget {
-  const _UploadCard({required this.item, required this.onTap, required this.onMore});
+  const _UploadCard({
+    required this.item,
+    required this.onTap,
+    required this.onMore,
+  });
 
   final RequirementItem item;
   final VoidCallback onTap;
@@ -570,7 +664,10 @@ class _UploadCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: iconStyle.background, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: iconStyle.background,
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Icon(iconStyle.icon, color: iconStyle.color, size: 22),
               ),
               const SizedBox(width: 12),
@@ -582,30 +679,53 @@ class _UploadCard extends StatelessWidget {
                       item.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       submission.originalFilename ?? 'Your uploaded copy',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textMuted,
+                      ),
                     ),
-                    if (submission.updatedAtHuman != null || submission.readableSize != null)
+                    if (submission.updatedAtHuman != null ||
+                        submission.readableSize != null)
                       Text(
                         [
-                          if (submission.updatedAtHuman != null) 'Modified ${submission.updatedAtHuman}',
-                          if (submission.readableSize != null) submission.readableSize!,
+                          if (submission.updatedAtHuman != null)
+                            'Modified ${submission.updatedAtHuman}',
+                          if (submission.readableSize != null)
+                            submission.readableSize!,
                         ].join(' • '),
-                        style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(color: status.background, borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: status.background,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Text(
                         status.label,
-                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: status.color),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: status.color,
+                        ),
                       ),
                     ),
                   ],
@@ -625,7 +745,12 @@ class _UploadCard extends StatelessWidget {
 }
 
 class _ActionTile extends StatelessWidget {
-  const _ActionTile({required this.icon, required this.label, required this.onTap, this.color});
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
 
   final IconData icon;
   final String label;
@@ -637,7 +762,10 @@ class _ActionTile extends StatelessWidget {
     final resolved = color ?? AppColors.textDark;
     return ListTile(
       leading: Icon(icon, color: resolved),
-      title: Text(label, style: TextStyle(color: resolved, fontWeight: FontWeight.w500)),
+      title: Text(
+        label,
+        style: TextStyle(color: resolved, fontWeight: FontWeight.w500),
+      ),
       onTap: onTap,
     );
   }
@@ -653,15 +781,35 @@ class _IconStyle {
 _IconStyle _iconFor(String kind) {
   switch (kind) {
     case 'pdf':
-      return const _IconStyle(Icons.picture_as_pdf, Color(0xFFDC3B3B), Color(0xFFFDECEC));
+      return const _IconStyle(
+        Icons.picture_as_pdf,
+        Color(0xFFDC3B3B),
+        Color(0xFFFDECEC),
+      );
     case 'sheet':
-      return const _IconStyle(Icons.table_chart, Color(0xFF1A7F4B), Color(0xFFE9F8EF));
+      return const _IconStyle(
+        Icons.table_chart,
+        Color(0xFF1A7F4B),
+        Color(0xFFE9F8EF),
+      );
     case 'image':
-      return const _IconStyle(Icons.image_outlined, Color(0xFF7C3AED), Color(0xFFF3EEFE));
+      return const _IconStyle(
+        Icons.image_outlined,
+        Color(0xFF7C3AED),
+        Color(0xFFF3EEFE),
+      );
     case 'doc':
-      return const _IconStyle(Icons.description, Color(0xFF3D6EF5), Color(0xFFE8EEFF));
+      return const _IconStyle(
+        Icons.description,
+        Color(0xFF3D6EF5),
+        Color(0xFFE8EEFF),
+      );
     default:
-      return const _IconStyle(Icons.insert_drive_file_outlined, AppColors.textMuted, AppColors.chipBackground);
+      return const _IconStyle(
+        Icons.insert_drive_file_outlined,
+        AppColors.textMuted,
+        AppColors.chipBackground,
+      );
   }
 }
 
@@ -674,10 +822,22 @@ class _StatusStyle {
 
 _StatusStyle _statusFor(RequirementSubmissionInfo submission) {
   if (submission.isSubmitted) {
-    return const _StatusStyle('Submitted', Color(0xFF1A7F4B), Color(0xFFEAFAF1));
+    return const _StatusStyle(
+      'Submitted',
+      Color(0xFF1A7F4B),
+      Color(0xFFEAFAF1),
+    );
   }
   if (submission.hasUpload) {
-    return const _StatusStyle('Draft uploaded', Color(0xFFB87700), Color(0xFFFFF4E5));
+    return const _StatusStyle(
+      'Draft uploaded',
+      Color(0xFFB87700),
+      Color(0xFFFFF4E5),
+    );
   }
-  return const _StatusStyle('Not started', AppColors.textMuted, AppColors.chipBackground);
+  return const _StatusStyle(
+    'Not started',
+    AppColors.textMuted,
+    AppColors.chipBackground,
+  );
 }

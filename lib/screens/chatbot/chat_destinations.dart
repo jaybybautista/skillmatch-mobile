@@ -6,7 +6,6 @@ import '../company/assessment_library_screen.dart';
 import '../company/browse_candidates_screen.dart';
 import '../company/company_analytics_screen.dart';
 import '../company/company_applications_screen.dart';
-import '../company/company_home_screen.dart';
 import '../company/company_placements_screen.dart';
 import '../company/company_postings_screen.dart';
 import '../company/company_profile_screen.dart';
@@ -15,7 +14,6 @@ import '../company/company_settings_screen.dart';
 import '../company/create_post_screen.dart';
 import '../student/applications/applications_screen.dart';
 import '../student/bookmarks/bookmarks_screen.dart';
-import '../student/home/home_screen.dart';
 import '../student/internship/internship_detail_screen.dart';
 import '../student/matches/internship_search_screen.dart';
 import '../student/matches/matches_list_screen.dart';
@@ -75,11 +73,11 @@ bool _isCompany(BuildContext context) {
   }
 }
 
-void _replaceAll(BuildContext context, Widget screen) {
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => screen),
-    (route) => false,
-  );
+/// "Take me home" unwinds to the launch gate, which is already showing the
+/// right home for this account. Pushing a home screen over a cleared stack
+/// would drop the gate, and with it the app's ability to route the next login.
+void _goHome(BuildContext context) {
+  Navigator.of(context).popUntil((route) => route.isFirst);
 }
 
 int? _intParam(Map<String, dynamic> params, String key) {
@@ -93,10 +91,7 @@ typedef _DestinationBuilder =
     void Function(BuildContext context, Map<String, dynamic> params);
 
 final Map<String, _DestinationBuilder> _destinations = {
-  'home': (context, _) => _replaceAll(
-    context,
-    _isCompany(context) ? const CompanyHomeScreen() : const HomeScreen(),
-  ),
+  'home': (context, _) => _goHome(context),
   'internship_search': (context, _) =>
       _push(context, const InternshipSearchScreen()),
   'top_matches': (context, _) => _push(context, const MatchesListScreen()),

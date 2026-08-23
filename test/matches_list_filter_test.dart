@@ -27,11 +27,15 @@ class _FakeInternshipService extends InternshipService {
 
 void main() {
   Future<void> pump(WidgetTester tester, _FakeInternshipService service) async {
-    await tester.pumpWidget(MaterialApp(home: MatchesListScreen(service: service)));
+    await tester.pumpWidget(
+      MaterialApp(home: MatchesListScreen(service: service)),
+    );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('the ordering lives on the top-bar button, not in a chip row', (tester) async {
+  testWidgets('the ordering lives on the top-bar button, not in a chip row', (
+    tester,
+  ) async {
     final service = _FakeInternshipService();
     await pump(tester, service);
 
@@ -63,7 +67,9 @@ void main() {
     expect(find.text('12.4 km away'), findsOneWidget);
   });
 
-  testWidgets('re-picking the active ordering does not refetch', (tester) async {
+  testWidgets('re-picking the active ordering does not refetch', (
+    tester,
+  ) async {
     final service = _FakeInternshipService();
     await pump(tester, service);
 

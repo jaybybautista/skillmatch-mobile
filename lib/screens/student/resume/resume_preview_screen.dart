@@ -3,6 +3,7 @@ import 'package:printing/printing.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
+import '../../../core/resume_updates.dart';
 import '../../../models/resume.dart';
 import '../../../models/student_profile.dart';
 import '../../../services/profile_service.dart';
@@ -23,9 +24,16 @@ class ResumePreviewScreen extends StatefulWidget {
   State<ResumePreviewScreen> createState() => _ResumePreviewScreenState();
 }
 
-class _ResumePreviewScreenState extends State<ResumePreviewScreen> {
-  late final Future<(Resume, StudentProfile?)> _future = _load();
+class _ResumePreviewScreenState extends State<ResumePreviewScreen>
+    with ResumeUpdateListener {
+  late Future<(Resume, StudentProfile?)> _future = _load();
   bool _isDownloading = false;
+
+  /// The preview is the one screen where staleness is invisible — it looks
+  /// like a finished document either way — so it re-renders as soon as
+  /// anything behind it changes.
+  @override
+  void onResumeChanged() => setState(() => _future = _load());
 
   Future<(Resume, StudentProfile?)> _load() async {
     final resume = await ResumeService().fetchResume(widget.resumeId);

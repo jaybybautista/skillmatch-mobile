@@ -65,7 +65,11 @@ class _ReviewNoticeBanner extends StatelessWidget {
             child: Text(
               "Company accounts are reviewed before going live. You'll be able to "
               'post internships once a coordinator approves your account.',
-              style: TextStyle(color: AppColors.warning, fontSize: 13, height: 1.4),
+              style: TextStyle(
+                color: AppColors.warning,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
           ),
         ],

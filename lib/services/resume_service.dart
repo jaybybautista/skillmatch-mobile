@@ -1,4 +1,5 @@
 import '../core/api_client.dart';
+import '../core/resume_updates.dart';
 import '../models/resume.dart';
 
 /// Talks to Api\ResumeBuilderController — the same resumes/sections/items
@@ -6,6 +7,67 @@ import '../models/resume.dart';
 /// both directions.
 class ResumeService {
   final ApiClient _client = ApiClient.instance;
+
+  /// Every write goes through one of these rather than straight to the
+  /// client, so nothing can add a section or delete an entry without the
+  /// rest of the app hearing about it. Reads are left alone.
+  Future<Map<String, dynamic>> _post(
+    String path,
+    Map<String, dynamic> body, {
+    bool authenticated = false,
+  }) async {
+    final response = await _client.post(
+      path,
+      body,
+      authenticated: authenticated,
+    );
+    ResumeUpdates.instance.changed();
+    return response;
+  }
+
+  Future<Map<String, dynamic>> _put(
+    String path,
+    Map<String, dynamic> body, {
+    bool authenticated = false,
+  }) async {
+    final response = await _client.put(
+      path,
+      body,
+      authenticated: authenticated,
+    );
+    ResumeUpdates.instance.changed();
+    return response;
+  }
+
+  Future<Map<String, dynamic>> _delete(
+    String path, {
+    bool authenticated = false,
+  }) async {
+    final response = await _client.delete(path, authenticated: authenticated);
+    ResumeUpdates.instance.changed();
+    return response;
+  }
+
+  Future<Map<String, dynamic>> _postMultipart(
+    String path, {
+    Map<String, String> fields = const {},
+    String? filePath,
+    String? fileFieldName,
+    bool authenticated = false,
+  }) async {
+    final response = await _client.postMultipart(
+      path,
+      fields: fields,
+      filePath: filePath,
+      fileFieldName: fileFieldName,
+      authenticated: authenticated,
+    );
+    // An import rewrites the whole resume *and* auto-fills the student's
+    // profile with what the parser read, so this one reaches further than
+    // the resume screens.
+    ResumeUpdates.instance.changed();
+    return response;
+  }
 
   /// Update endpoints use Laravel's `$request->only([...])`, which only
   /// touches keys actually present in the JSON body — so dropping null
@@ -26,20 +88,20 @@ class ResumeService {
   }
 
   Future<Resume> createResume(String title) async {
-    final response = await _client.post('/resumes', {
+    final response = await _post('/resumes', {
       'title': title,
     }, authenticated: true);
     return Resume.fromJson(response);
   }
 
   Future<void> renameResume(int resumeId, String title) async {
-    await _client.put('/resumes/$resumeId/rename', {
+    await _put('/resumes/$resumeId/rename', {
       'title': title,
     }, authenticated: true);
   }
 
   Future<void> deleteResume(int resumeId) async {
-    await _client.delete('/resumes/$resumeId', authenticated: true);
+    await _delete('/resumes/$resumeId', authenticated: true);
   }
 
   Future<Resume> fetchResume(int resumeId) async {
@@ -56,7 +118,7 @@ class ResumeService {
     String? description,
     required String inputType,
   }) async {
-    await _client.post('/resumes/$resumeId/sections', {
+    await _post('/resumes/$resumeId/sections', {
       'title': title,
       'description': description,
       'input_type': inputType,
@@ -64,7 +126,7 @@ class ResumeService {
   }
 
   Future<void> deleteSection(int sectionId) async {
-    await _client.delete('/resume-sections/$sectionId', authenticated: true);
+    await _delete('/resume-sections/$sectionId', authenticated: true);
   }
 
   Future<void> updateBasicInfo(
@@ -75,7 +137,7 @@ class ResumeService {
     String? phoneNumber,
     String? email,
   }) async {
-    await _client.put(
+    await _put(
       '/resume-sections/$sectionId/basic-info',
       _presentOnly({
         'full_name': fullName,
@@ -89,7 +151,7 @@ class ResumeService {
   }
 
   Future<void> updateTextSection(int sectionId, String? content) async {
-    await _client.put('/resume-sections/$sectionId/text', {
+    await _put('/resume-sections/$sectionId/text', {
       'content': content,
     }, authenticated: true);
   }
@@ -124,7 +186,7 @@ class ResumeService {
     String? periodStart,
     String? periodEnd,
   }) async {
-    await _client.put(
+    await _put(
       '/resume-experiences/$experienceId',
       _presentOnly({
         'job_title': jobTitle,
@@ -139,7 +201,7 @@ class ResumeService {
   }
 
   Future<void> deleteExperience(int experienceId) async {
-    await _client.delete(
+    await _delete(
       '/resume-experiences/$experienceId',
       authenticated: true,
     );
@@ -152,7 +214,7 @@ class ResumeService {
     String? location,
     String? dateText,
   }) async {
-    final response = await _client.post(
+    final response = await _post(
       '/resume-sections/$sectionId/achievements',
       {
         'title': title,
@@ -172,7 +234,7 @@ class ResumeService {
     String? location,
     String? dateText,
   }) async {
-    await _client.put(
+    await _put(
       '/resume-achievements/$achievementId',
       _presentOnly({
         'title': title,
@@ -185,7 +247,7 @@ class ResumeService {
   }
 
   Future<void> deleteAchievement(int achievementId) async {
-    await _client.delete(
+    await _delete(
       '/resume-achievements/$achievementId',
       authenticated: true,
     );
@@ -196,7 +258,7 @@ class ResumeService {
     String? title,
     String? description,
   }) async {
-    final response = await _client.post(
+    final response = await _post(
       '/resume-sections/$sectionId/projects',
       {'title': title, 'description': description},
       authenticated: true,
@@ -209,7 +271,7 @@ class ResumeService {
     String? title,
     String? description,
   }) async {
-    await _client.put(
+    await _put(
       '/resume-projects/$projectId',
       _presentOnly({'title': title, 'description': description}),
       authenticated: true,
@@ -217,7 +279,7 @@ class ResumeService {
   }
 
   Future<void> deleteProject(int projectId) async {
-    await _client.delete('/resume-projects/$projectId', authenticated: true);
+    await _delete('/resume-projects/$projectId', authenticated: true);
   }
 
   Future<ResumeEducationEntry> addEducation(
@@ -244,7 +306,7 @@ class ResumeService {
     String? startDate,
     String? endDate,
   }) async {
-    await _client.put(
+    await _put(
       '/resume-education/$educationId',
       _presentOnly({
         'degree': degree,
@@ -257,7 +319,7 @@ class ResumeService {
   }
 
   Future<void> deleteEducation(int educationId) async {
-    await _client.delete('/resume-education/$educationId', authenticated: true);
+    await _delete('/resume-education/$educationId', authenticated: true);
   }
 
   /// Returns the section's full, updated skill lists (technical + soft) —
@@ -267,7 +329,7 @@ class ResumeService {
     required String category,
     required String skillName,
   }) async {
-    final response = await _client.post('/resume-sections/$sectionId/skills', {
+    final response = await _post('/resume-sections/$sectionId/skills', {
       'category': category,
       'skill_name': skillName,
     }, authenticated: true);
@@ -275,7 +337,7 @@ class ResumeService {
   }
 
   Future<void> deleteSkill(int skillId) async {
-    await _client.delete('/resume-skills/$skillId', authenticated: true);
+    await _delete('/resume-skills/$skillId', authenticated: true);
   }
 
   /// Sends the current text to the same Groq-backed rewrite endpoint the web
@@ -301,7 +363,7 @@ class ResumeService {
     String? filePath,
     bool useProfileResume = false,
   }) async {
-    final response = await _client.postMultipart(
+    final response = await _postMultipart(
       '/resumes/import',
       fields: {'use_profile_resume': useProfileResume.toString()},
       filePath: useProfileResume ? null : filePath,

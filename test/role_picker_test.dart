@@ -9,12 +9,14 @@ import 'package:skillmatch/screens/auth/role_picker_screen.dart';
 import 'package:skillmatch/services/auth_service.dart';
 
 Widget _wrap(Widget child) => ChangeNotifierProvider(
-      create: (_) => AuthService(),
-      child: MaterialApp(home: child),
-    );
+  create: (_) => AuthService(),
+  child: MaterialApp(home: child),
+);
 
 void main() {
-  testWidgets('Sign Up on the login screen opens the role picker', (tester) async {
+  testWidgets('Sign Up on the login screen opens the role picker', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(const AuthScreen()));
     await tester.pump();
 
@@ -29,20 +31,30 @@ void main() {
     expect(find.text('Company'), findsOneWidget);
   });
 
-  testWidgets('the picker is shown again on every trip to registration', (tester) async {
+  testWidgets('the picker is shown again on every trip to registration', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(const AuthScreen()));
     await tester.pump();
 
     for (var visit = 0; visit < 2; visit++) {
       await tester.tap(find.text('Sign Up'));
       await tester.pumpAndSettle();
-      expect(find.text('Describe Your Role'), findsOneWidget, reason: 'visit $visit');
+      expect(
+        find.text('Describe Your Role'),
+        findsOneWidget,
+        reason: 'visit $visit',
+      );
 
       // The picker has no app bar (it matches the full-bleed mockup), so back
       // out through the navigator the way the Android back gesture would.
       tester.state<NavigatorState>(find.byType(Navigator)).pop();
       await tester.pumpAndSettle();
-      expect(find.byType(RolePickerScreen), findsNothing, reason: 'visit $visit');
+      expect(
+        find.byType(RolePickerScreen),
+        findsNothing,
+        reason: 'visit $visit',
+      );
     }
   });
 
@@ -73,7 +85,9 @@ void main() {
     expect(find.text('Signing up as a Company'), findsOneWidget);
   });
 
-  testWidgets('Student is preselected and selection follows the tap', (tester) async {
+  testWidgets('Student is preselected and selection follows the tap', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(const RolePickerScreen()));
     await tester.pump();
 
@@ -81,11 +95,20 @@ void main() {
     // (Material, InkWell); only the card sets `selected`, so pick that one.
     bool isSelected(String label) {
       final matches = tester
-          .widgetList<Semantics>(find.ancestor(of: find.text(label), matching: find.byType(Semantics)))
+          .widgetList<Semantics>(
+            find.ancestor(
+              of: find.text(label),
+              matching: find.byType(Semantics),
+            ),
+          )
           .where((s) => s.properties.selected != null)
           .toList();
 
-      expect(matches, hasLength(1), reason: 'exactly one card should own the selected state for $label');
+      expect(
+        matches,
+        hasLength(1),
+        reason: 'exactly one card should own the selected state for $label',
+      );
       return matches.single.properties.selected!;
     }
 

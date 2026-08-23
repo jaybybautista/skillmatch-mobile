@@ -11,7 +11,12 @@ import '../../../services/assessment_service.dart';
 /// [result] is passed straight through after submitting; when opened any other
 /// way (e.g. reopening a completed test) the latest attempt is fetched.
 class AssessmentResultScreen extends StatefulWidget {
-  const AssessmentResultScreen({super.key, required this.assessmentId, this.result, this.service});
+  const AssessmentResultScreen({
+    super.key,
+    required this.assessmentId,
+    this.result,
+    this.service,
+  });
 
   final int assessmentId;
   final AssessmentAttemptResult? result;
@@ -78,8 +83,8 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
-                      ? _buildError()
-                      : _buildResult(_result!),
+                  ? _buildError()
+                  : _buildResult(_result!),
             ),
           ],
         ),
@@ -93,13 +98,13 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
     final accent = result.timedOut
         ? const Color(0xFFB87700)
         : result.passed
-            ? const Color(0xFF1E4FD8)
-            : const Color(0xFFE03E3E);
+        ? const Color(0xFF1E4FD8)
+        : const Color(0xFFE03E3E);
     final accentBackground = result.timedOut
         ? const Color(0xFFFFF4E5)
         : result.passed
-            ? const Color(0xFFE8EEFF)
-            : const Color(0xFFFFF1F1);
+        ? const Color(0xFFE8EEFF)
+        : const Color(0xFFFFF1F1);
 
     return Column(
       children: [
@@ -112,13 +117,16 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
                   width: 92,
                   height: 92,
                   alignment: Alignment.center,
-                  decoration: BoxDecoration(color: accentBackground, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: accentBackground,
+                    shape: BoxShape.circle,
+                  ),
                   child: Icon(
                     result.timedOut
                         ? Icons.timer_off_outlined
                         : result.passed
-                            ? Icons.school_outlined
-                            : Icons.close,
+                        ? Icons.school_outlined
+                        : Icons.close,
                     size: 42,
                     color: accent,
                   ),
@@ -127,25 +135,39 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
                 Text(
                   result.headline,
                   textAlign: TextAlign.center,
-                  style: AppFonts.title(fontSize: 21, color: AppColors.textDark, height: 1.3),
+                  style: AppFonts.title(
+                    fontSize: 21,
+                    color: AppColors.textDark,
+                    height: 1.3,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'You scored ${result.score} out of ${result.totalPoints} points (${result.percentage}%)',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textMuted,
+                  ),
                 ),
                 if (result.timedOut) ...[
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
                       color: accentBackground,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
                       'Did not pass — time expired',
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: accent),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: accent,
+                      ),
                     ),
                   ),
                 ],
@@ -153,7 +175,11 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
                 Text(
                   result.message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13.5, color: AppColors.textMuted, height: 1.55),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: AppColors.textMuted,
+                    height: 1.55,
+                  ),
                 ),
               ],
             ),
@@ -163,7 +189,10 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
           child: SafeArea(
             top: false,
-            child: ElevatedButton(onPressed: _close, child: const Text('Back to Applications')),
+            child: ElevatedButton(
+              onPressed: _close,
+              child: const Text('Back to Applications'),
+            ),
           ),
         ),
       ],
@@ -182,10 +211,17 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
         children: [
           const Icon(Icons.error_outline, size: 40, color: AppColors.textMuted),
           const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textMuted),
+          ),
           const SizedBox(height: 16),
           TextButton(onPressed: _load, child: const Text('Retry')),
-          TextButton(onPressed: _close, child: const Text('Back to Applications')),
+          TextButton(
+            onPressed: _close,
+            child: const Text('Back to Applications'),
+          ),
         ],
       ),
     );

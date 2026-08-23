@@ -64,18 +64,18 @@ class _FakeRecordsService extends CompanyRecordsService {
 }
 
 Map<String, dynamic> _overviewJson() => {
-      'stats': {
-        'total_applications': 5,
-        'total_placements': 1,
-        'total_assessments': 1,
-        'total_completed': 4,
-      },
-      'posting_options': [
-        {'id': 5, 'title': 'Laravel Developer'},
-        {'id': 2, 'title': 'Product Design Intern'},
-      ],
-      'placement_statuses': ['ongoing', 'completed', 'terminated'],
-    };
+  'stats': {
+    'total_applications': 5,
+    'total_placements': 1,
+    'total_assessments': 1,
+    'total_completed': 4,
+  },
+  'posting_options': [
+    {'id': 5, 'title': 'Laravel Developer'},
+    {'id': 2, 'title': 'Product Design Intern'},
+  ],
+  'placement_statuses': ['ongoing', 'completed', 'terminated'],
+};
 
 ApplicationRecord _applicationRecord({String name = 'Jaymar Bautista'}) =>
     ApplicationRecord.fromJson({
@@ -91,36 +91,37 @@ ApplicationRecord _applicationRecord({String name = 'Jaymar Bautista'}) =>
       'updated_at_human': '2 days ago',
     });
 
-AssessmentRecord _assessmentRecord({bool timedOut = false, bool passed = true}) =>
-    AssessmentRecord.fromJson({
-      'id': 18,
-      'student_id': 3,
-      'student_name': 'jabyy',
-      'avatar_url': null,
-      'course': 'BSIT',
-      'assessment_title': 'Design Intern',
-      'internship_title': 'Product Design Intern',
-      'score': 1,
-      'total_points': 1,
-      'percentage': 100,
-      'passed': passed,
-      'timed_out': timedOut,
-      'submitted_at': 'Aug 13, 2026',
-    });
+AssessmentRecord _assessmentRecord({
+  bool timedOut = false,
+  bool passed = true,
+}) => AssessmentRecord.fromJson({
+  'id': 18,
+  'student_id': 3,
+  'student_name': 'jabyy',
+  'avatar_url': null,
+  'course': 'BSIT',
+  'assessment_title': 'Design Intern',
+  'internship_title': 'Product Design Intern',
+  'score': 1,
+  'total_points': 1,
+  'percentage': 100,
+  'passed': passed,
+  'timed_out': timedOut,
+  'submitted_at': 'Aug 13, 2026',
+});
 
 PlacementRecord _placementRecord() => PlacementRecord.fromJson({
-      'id': 1,
-      'student_id': 2,
-      'student_name': 'Jayby Bautista',
-      'avatar_url': null,
-      'campus': 'Urdaneta City Campus',
-      'internship_title': 'Product Design Intern',
-      'coordinator_name': 'Dr. Maria Santos',
-      'status': 'ongoing',
-      'start_date': 'Aug 08, 2026',
-      'end_date': null,
-    });
-
+  'id': 1,
+  'student_id': 2,
+  'student_name': 'Jayby Bautista',
+  'avatar_url': null,
+  'campus': 'Urdaneta City Campus',
+  'internship_title': 'Product Design Intern',
+  'coordinator_name': 'Dr. Maria Santos',
+  'status': 'ongoing',
+  'start_date': 'Aug 08, 2026',
+  'end_date': null,
+});
 
 /// Scrolls the report list until [finder] is built.
 ///
@@ -146,7 +147,11 @@ void main() {
       expect(overview.totalAssessments, 1);
       expect(overview.totalCompleted, 4);
       expect(overview.postingOptions.first.title, 'Laravel Developer');
-      expect(overview.placementStatuses, ['ongoing', 'completed', 'terminated']);
+      expect(overview.placementStatuses, [
+        'ongoing',
+        'completed',
+        'terminated',
+      ]);
     });
 
     test('an empty payload parses to zeroes rather than throwing', () {
@@ -167,11 +172,14 @@ void main() {
   });
 
   group('CompanyRecordsScreen', () {
-    testWidgets('shows the four counters and the applications report',
-        (tester) async {
+    testWidgets('shows the four counters and the applications report', (
+      tester,
+    ) async {
       final service = _FakeRecordsService(applications: [_applicationRecord()]);
 
-      await tester.pumpWidget(MaterialApp(home: CompanyRecordsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyRecordsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Applications'), findsWidgets);
@@ -189,7 +197,9 @@ void main() {
         assessments: [_assessmentRecord()],
       );
 
-      await tester.pumpWidget(MaterialApp(home: CompanyRecordsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyRecordsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Assessments').last);
@@ -202,13 +212,16 @@ void main() {
       expect(find.text('Passed'), findsOneWidget);
     });
 
-    testWidgets('a timed-out attempt reads as timed out, not passed',
-        (tester) async {
+    testWidgets('a timed-out attempt reads as timed out, not passed', (
+      tester,
+    ) async {
       final service = _FakeRecordsService(
         assessments: [_assessmentRecord(timedOut: true, passed: false)],
       );
 
-      await tester.pumpWidget(MaterialApp(home: CompanyRecordsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyRecordsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Assessments').last);
       await tester.pumpAndSettle();
@@ -221,7 +234,9 @@ void main() {
     testWidgets('switching to Placements queries that report', (tester) async {
       final service = _FakeRecordsService(placements: [_placementRecord()]);
 
-      await tester.pumpWidget(MaterialApp(home: CompanyRecordsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyRecordsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Placements').last);
@@ -238,10 +253,14 @@ void main() {
       expect(find.text('Ongoing'), findsNWidgets(2));
     });
 
-    testWidgets('a status chip narrows the applications report', (tester) async {
+    testWidgets('a status chip narrows the applications report', (
+      tester,
+    ) async {
       final service = _FakeRecordsService(applications: [_applicationRecord()]);
 
-      await tester.pumpWidget(MaterialApp(home: CompanyRecordsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyRecordsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       final chip = find.widgetWithText(ChoiceChip, 'Interview');
@@ -256,7 +275,9 @@ void main() {
     testWidgets('searching re-queries with the term', (tester) async {
       final service = _FakeRecordsService(applications: [_applicationRecord()]);
 
-      await tester.pumpWidget(MaterialApp(home: CompanyRecordsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyRecordsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'Ana');
@@ -266,14 +287,17 @@ void main() {
       expect(service.calls, contains('applications::-:Ana'));
     });
 
-    testWidgets('switching tabs clears a status that the new report has not',
-        (tester) async {
+    testWidgets('switching tabs clears a status that the new report has not', (
+      tester,
+    ) async {
       final service = _FakeRecordsService(
         applications: [_applicationRecord()],
         placements: [_placementRecord()],
       );
 
-      await tester.pumpWidget(MaterialApp(home: CompanyRecordsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyRecordsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       final chip = find.widgetWithText(ChoiceChip, 'Interview');
@@ -292,7 +316,9 @@ void main() {
     testWidgets('an empty report says so', (tester) async {
       final service = _FakeRecordsService();
 
-      await tester.pumpWidget(MaterialApp(home: CompanyRecordsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyRecordsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
       await _scrollTo(tester, find.text('No applications on record yet'));
@@ -302,17 +328,23 @@ void main() {
     testWidgets('a load failure is retryable', (tester) async {
       final service = _FakeRecordsService(error: Exception('offline'));
 
-      await tester.pumpWidget(MaterialApp(home: CompanyRecordsScreen(service: service)));
+      await tester.pumpWidget(
+        MaterialApp(home: CompanyRecordsScreen(service: service)),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Could not load your records'), findsOneWidget);
+      expect(
+        find.textContaining('Could not load your records'),
+        findsOneWidget,
+      );
       expect(find.text('Retry'), findsOneWidget);
     });
   });
 
   group('company bottom navigation', () {
-    testWidgets('the Bookmark tab opens the bookmarked candidates',
-        (tester) async {
+    testWidgets('the Bookmark tab opens the bookmarked candidates', (
+      tester,
+    ) async {
       // Used to fall through to a "coming soon" message.
       await tester.pumpWidget(
         MaterialApp(

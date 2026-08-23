@@ -32,7 +32,12 @@ void main() {
         'pipeline': {
           'total': '3',
           'stages': [
-            {'status': 'interview', 'label': 'Interview', 'count': '2', 'percentage': '67'},
+            {
+              'status': 'interview',
+              'label': 'Interview',
+              'count': '2',
+              'percentage': '67',
+            },
           ],
         },
         'pipeline_filter': '5',

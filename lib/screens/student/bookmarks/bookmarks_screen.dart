@@ -73,8 +73,15 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
-                      child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -104,22 +111,43 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                     }
 
                     if (_error != null) {
-                      final message = _error is ApiException ? (_error as ApiException).message : 'Could not load your bookmarks.';
+                      final message = _error is ApiException
+                          ? (_error as ApiException).message
+                          : 'Could not load your bookmarks.';
                       return ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 60,
+                          horizontal: 32,
+                        ),
                         children: [
-                          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                          Text(
+                            message,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppColors.textMuted),
+                          ),
                           const SizedBox(height: 12),
-                          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+                          Center(
+                            child: TextButton(
+                              onPressed: _load,
+                              child: const Text('Retry'),
+                            ),
+                          ),
                         ],
                       );
                     }
 
                     if (_items.isEmpty) {
                       return ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 60,
+                          horizontal: 32,
+                        ),
                         children: const [
-                          Icon(Icons.bookmark_border, size: 40, color: AppColors.textMuted),
+                          Icon(
+                            Icons.bookmark_border,
+                            size: 40,
+                            color: AppColors.textMuted,
+                          ),
                           SizedBox(height: 12),
                           Text(
                             "You haven't bookmarked any internships yet.",
@@ -137,7 +165,11 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                           MatchCard(
                             key: ValueKey(internship.id),
                             internship: internship,
-                            onBookmarkChanged: (bookmarked) => _handleBookmarkChanged(internship.id, bookmarked),
+                            onBookmarkChanged: (bookmarked) =>
+                                _handleBookmarkChanged(
+                                  internship.id,
+                                  bookmarked,
+                                ),
                             onReturned: _load,
                           ),
                           const SizedBox(height: 16),

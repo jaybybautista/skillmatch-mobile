@@ -25,7 +25,8 @@ class ApplicationsScreen extends StatefulWidget {
 /// the web layout polls on.
 const _pollInterval = Duration(seconds: 15);
 
-class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBindingObserver {
+class _ApplicationsScreenState extends State<ApplicationsScreen>
+    with WidgetsBindingObserver {
   final _service = ApplicationService();
   final _searchController = TextEditingController();
   Timer? _debounce;
@@ -89,9 +90,13 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
         if (before.status != entry.status) {
           messages.add(_statusChangeMessage(entry));
         } else if (!before.isReassignment && entry.isReassignment) {
-          messages.add('"${entry.internshipTitle}" assessment was reassigned. You can answer it again.');
+          messages.add(
+            '"${entry.internshipTitle}" assessment was reassigned. You can answer it again.',
+          );
         } else if (!before.hasPendingAssessment && entry.hasPendingAssessment) {
-          messages.add('A competency assessment was assigned for "${entry.internshipTitle}".');
+          messages.add(
+            'A competency assessment was assigned for "${entry.internshipTitle}".',
+          );
         }
       }
 
@@ -101,7 +106,12 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(messages.first), duration: const Duration(seconds: 5)));
+        ..showSnackBar(
+          SnackBar(
+            content: Text(messages.first),
+            duration: const Duration(seconds: 5),
+          ),
+        );
     } catch (_) {
       // Offline or a blip — the next tick tries again.
     }
@@ -129,7 +139,9 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
       _error = null;
     });
     try {
-      final result = await _service.fetchApplications(query: _searchController.text);
+      final result = await _service.fetchApplications(
+        query: _searchController.text,
+      );
       if (!mounted) return;
       setState(() {
         _result = result;
@@ -151,7 +163,9 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
     if (assessmentId == null) return;
 
     final submitted = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => AssessmentIntroScreen(assessmentId: assessmentId)),
+      MaterialPageRoute(
+        builder: (_) => AssessmentIntroScreen(assessmentId: assessmentId),
+      ),
     );
 
     if (submitted == true && mounted) await _load();
@@ -182,7 +196,10 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
                       onPressed: Scaffold.of(context).openDrawer,
                       tooltip: 'Menu',
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -208,7 +225,10 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
           ),
         ],
       ),
-      bottomNavigationBar: AppBottomNav(currentIndex: 1, onSelect: (i) => handleAppNavTap(context, i)),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 1,
+        onSelect: (i) => handleAppNavTap(context, i),
+      ),
     );
   }
 
@@ -218,13 +238,21 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
       children: [
-        _SearchField(controller: _searchController, onChanged: _onSearchChanged),
+        _SearchField(
+          controller: _searchController,
+          onChanged: _onSearchChanged,
+        ),
         const SizedBox(height: 20),
         if (_isLoading)
-          const Padding(padding: EdgeInsets.symmetric(vertical: 60), child: Center(child: CircularProgressIndicator()))
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 60),
+            child: Center(child: CircularProgressIndicator()),
+          )
         else if (_error != null)
           _Message(
-            text: _error is ApiException ? (_error as ApiException).message : 'Could not load your applications.',
+            text: _error is ApiException
+                ? (_error as ApiException).message
+                : 'Could not load your applications.',
             onRetry: _load,
           )
         else if (result == null || result.applications.isEmpty)
@@ -249,7 +277,10 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with WidgetsBin
             const SizedBox(height: 16),
           ],
           for (final application in result.applications) ...[
-            _ApplicationCard(application: application, onTakeAssessment: () => _takeAssessment(application)),
+            _ApplicationCard(
+              application: application,
+              onTakeAssessment: () => _takeAssessment(application),
+            ),
             const SizedBox(height: 14),
           ],
         ],
@@ -273,11 +304,17 @@ class _SearchField extends StatelessWidget {
         hintText: 'Search internships...',
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         suffixIcon: Padding(
           padding: const EdgeInsets.all(6),
           child: Container(
-            decoration: BoxDecoration(color: AppColors.chipBackground, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: AppColors.chipBackground,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: const Icon(Icons.search, color: AppColors.primary, size: 20),
           ),
         ),
@@ -314,7 +351,11 @@ class _NewAssessmentBanner extends StatelessWidget {
           Expanded(
             child: Text(
               'New competency test assigned',
-              style: TextStyle(color: Color(0xFF3D6EF5), fontSize: 13.5, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Color(0xFF3D6EF5),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -343,7 +384,11 @@ class _ReassignmentBanner extends StatelessWidget {
           Expanded(
             child: Text(
               'Competency assessment reassigned. You can answer it again.',
-              style: TextStyle(color: _retakeText, fontSize: 13.5, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: _retakeText,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -379,7 +424,11 @@ class _ReassignmentBadge extends StatelessWidget {
           SizedBox(width: 6),
           Text(
             'Assessment Reassigned',
-            style: TextStyle(color: _retakeText, fontSize: 12, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: _retakeText,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -388,7 +437,10 @@ class _ReassignmentBadge extends StatelessWidget {
 }
 
 class _ApplicationCard extends StatelessWidget {
-  const _ApplicationCard({required this.application, required this.onTakeAssessment});
+  const _ApplicationCard({
+    required this.application,
+    required this.onTakeAssessment,
+  });
 
   final ApplicationSummary application;
   final VoidCallback onTakeAssessment;
@@ -407,7 +459,10 @@ class _ApplicationCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _CompanyLogo(logoUrl: application.companyLogoUrl, initial: application.companyInitial),
+              _CompanyLogo(
+                logoUrl: application.companyLogoUrl,
+                initial: application.companyInitial,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -417,14 +472,21 @@ class _ApplicationCard extends StatelessWidget {
                       application.internshipTitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       application.companyName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -438,12 +500,17 @@ class _ApplicationCard extends StatelessWidget {
               onPressed: onTakeAssessment,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
-                backgroundColor: application.isReassignment ? _retakeButton : null,
+                backgroundColor: application.isReassignment
+                    ? _retakeButton
+                    : null,
               ),
-              child: Text(application.isReassignment ? 'Retake Assessment' : 'Take Assessment'),
+              child: Text(
+                application.isReassignment
+                    ? 'Retake Assessment'
+                    : 'Take Assessment',
+              ),
             ),
-          ]
-          else ...[
+          ] else ...[
             const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: 14),
             Container(
@@ -501,9 +568,13 @@ class _CompanyLogo extends StatelessWidget {
   }
 
   Widget _fallback() => Text(
-        initial,
-        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 18),
-      );
+    initial,
+    style: const TextStyle(
+      fontWeight: FontWeight.bold,
+      color: AppColors.primary,
+      fontSize: 18,
+    ),
+  );
 }
 
 class _Message extends StatelessWidget {
@@ -518,9 +589,17 @@ class _Message extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          const Icon(Icons.description_outlined, size: 40, color: AppColors.textMuted),
+          const Icon(
+            Icons.description_outlined,
+            size: 40,
+            color: AppColors.textMuted,
+          ),
           const SizedBox(height: 12),
-          Text(text, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textMuted),
+          ),
           if (onRetry != null) ...[
             const SizedBox(height: 12),
             TextButton(onPressed: onRetry, child: const Text('Retry')),

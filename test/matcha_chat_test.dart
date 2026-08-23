@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:skillmatch/core/api_client.dart';
 import 'package:skillmatch/models/app_user.dart';
 import 'package:skillmatch/models/chat_message.dart';
 import 'package:skillmatch/screens/chatbot/chat_destinations.dart';
@@ -11,8 +12,10 @@ import 'package:skillmatch/services/chatbot_service.dart';
 class _FakeChatbotService extends ChatbotService {
   _FakeChatbotService({this.reply, this.error});
 
-  final ChatReply? reply;
-  final Object? error;
+  ChatReply? reply;
+
+  /// Mutable so a test can make the first send fail and the retry succeed.
+  Object? error;
 
   String? lastMessage;
   List<ChatMessage>? lastHistory;
@@ -224,6 +227,69 @@ void main() {
     test('notifications now has a real screen to land on', () {
       expect(chatDestinationFor('notifications'), isNotNull);
       expect(unavailableReasonFor('notifications'), isNull);
+    });
+  });
+
+  group('when a send fails', () {
+    testWidgets('the bubble names the cause instead of blaming the network', (
+      tester,
+    ) async {
+      // A FormatException means the server replied with something unreadable,
+      // which is a different problem from being offline - and used to be
+      // reported as "check your connection" either way.
+      await _pump(
+        tester,
+        _FakeChatbotService(error: const FormatException('bad json')),
+      );
+
+      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.testTextInput.receiveAction(TextInputAction.send);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('the server sent something the app could not read'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('an API error is shown as the server worded it', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _FakeChatbotService(error: ApiException('Unauthenticated.')),
+      );
+
+      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.testTextInput.receiveAction(TextInputAction.send);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Unauthenticated.'), findsOneWidget);
+    });
+
+    testWidgets('"Try again" resends without the question being retyped', (
+      tester,
+    ) async {
+      final service = _FakeChatbotService(error: Exception('offline'));
+      await _pump(tester, service);
+
+      await tester.enterText(find.byType(TextField), 'how do I apply?');
+      await tester.testTextInput.receiveAction(TextInputAction.send);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Try again'), findsOneWidget);
+
+      service.error = null;
+      service.reply = ChatReply(answer: 'Here you go', cards: const []);
+
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+
+      expect(service.lastMessage, 'how do I apply?');
+      expect(find.text('Here you go'), findsOneWidget);
+      // The failed exchange was replaced, not stacked on top of.
+      expect(find.text('how do I apply?'), findsOneWidget);
+      expect(find.text('Try again'), findsNothing);
     });
   });
 

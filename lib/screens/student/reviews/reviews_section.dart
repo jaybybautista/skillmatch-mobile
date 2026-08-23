@@ -9,7 +9,11 @@ import '../../chatbot/chat_destinations.dart';
 import 'review_replies_screen.dart';
 
 /// Replaces [review] wherever it sits in a thread, keeping the rest intact.
-List<Review> replaceInTree(List<Review> reviews, int id, Review Function(Review) update) {
+List<Review> replaceInTree(
+  List<Review> reviews,
+  int id,
+  Review Function(Review) update,
+) {
   return reviews.map((review) {
     if (review.id == id) return update(review);
     if (review.replies.isEmpty) return review;
@@ -85,7 +89,9 @@ class _ReviewsSectionState extends State<ReviewsSection> {
 
   void _notify(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _toggleLike(Review review) async {
@@ -95,11 +101,14 @@ class _ReviewsSectionState extends State<ReviewsSection> {
       final result = await _service.toggleLike(review.id);
       if (!mounted) return;
       setState(() {
-        _thread = _threadWith(replaceInTree(
-          _thread!.reviews,
-          review.id,
-          (r) => r.copyWith(hasLiked: result.liked, likeCount: result.likeCount),
-        ));
+        _thread = _threadWith(
+          replaceInTree(
+            _thread!.reviews,
+            review.id,
+            (r) =>
+                r.copyWith(hasLiked: result.liked, likeCount: result.likeCount),
+          ),
+        );
       });
     } on ApiException catch (e) {
       _notify(e.message);
@@ -121,7 +130,8 @@ class _ReviewsSectionState extends State<ReviewsSection> {
   Future<void> _openThread(Review root) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => ReviewRepliesScreen(rootReviewId: root.id, service: _service),
+        builder: (_) =>
+            ReviewRepliesScreen(rootReviewId: root.id, service: _service),
       ),
     );
     // Replies, likes or deletions may all have happened in there.
@@ -145,14 +155,20 @@ class _ReviewsSectionState extends State<ReviewsSection> {
         content: Text(
           review.replyCount > 0
               ? 'This will also remove the ${review.replyCount} '
-                  '${review.replyCount == 1 ? 'reply' : 'replies'} underneath it.'
+                    '${review.replyCount == 1 ? 'reply' : 'replies'} underneath it.'
               : 'This cannot be undone.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -194,9 +210,15 @@ class _ReviewsSectionState extends State<ReviewsSection> {
       return ListView(
         padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
         children: [
-          Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+          Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textMuted),
+          ),
           const SizedBox(height: 12),
-          Center(child: TextButton(onPressed: _load, child: const Text('Retry'))),
+          Center(
+            child: TextButton(onPressed: _load, child: const Text('Retry')),
+          ),
         ],
       );
     }
@@ -239,7 +261,11 @@ class _ReviewsSectionState extends State<ReviewsSection> {
               child: const Text(
                 'You have already reviewed this. Thank you for your feedback!',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF1A7F4B), fontWeight: FontWeight.w600, fontSize: 13),
+                style: TextStyle(
+                  color: Color(0xFF1A7F4B),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
             ),
           if (thread.reviews.isEmpty)
@@ -277,7 +303,9 @@ Future<String?> showEditReviewSheet(BuildContext context, Review review) {
     context: context,
     isScrollControlled: true,
     builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -342,7 +370,11 @@ class _SummaryCard extends StatelessWidget {
             children: [
               Text(
                 summary.average.toStringAsFixed(1),
-                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, height: 1),
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
               ),
               const SizedBox(height: 4),
               Row(
@@ -350,7 +382,9 @@ class _SummaryCard extends StatelessWidget {
                 children: [
                   for (var i = 1; i <= 5; i++)
                     Icon(
-                      i <= summary.average.round() ? Icons.star : Icons.star_border,
+                      i <= summary.average.round()
+                          ? Icons.star
+                          : Icons.star_border,
                       size: 13,
                       color: const Color(0xFFF5A623),
                     ),
@@ -359,7 +393,10 @@ class _SummaryCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 '${summary.total} ${summary.total == 1 ? 'review' : 'reviews'}',
-                style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),
@@ -372,7 +409,13 @@ class _SummaryCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 1.5),
                     child: Row(
                       children: [
-                        Text('$star', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                        Text(
+                          '$star',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: ClipRRect(
@@ -381,9 +424,12 @@ class _SummaryCard extends StatelessWidget {
                               minHeight: 6,
                               value: summary.total == 0
                                   ? 0
-                                  : (summary.ratingCounts[star] ?? 0) / summary.total,
+                                  : (summary.ratingCounts[star] ?? 0) /
+                                        summary.total,
                               backgroundColor: AppColors.border,
-                              valueColor: const AlwaysStoppedAnimation(Color(0xFFF5A623)),
+                              valueColor: const AlwaysStoppedAnimation(
+                                Color(0xFFF5A623),
+                              ),
                             ),
                           ),
                         ),
@@ -393,7 +439,10 @@ class _SummaryCard extends StatelessWidget {
                           child: Text(
                             '${summary.ratingCounts[star] ?? 0}',
                             textAlign: TextAlign.right,
-                            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ),
                       ],
@@ -411,7 +460,8 @@ class _SummaryCard extends StatelessWidget {
 class _NewReviewCard extends StatefulWidget {
   const _NewReviewCard({required this.onSubmit});
 
-  final Future<void> Function(int rating, String title, String content) onSubmit;
+  final Future<void> Function(int rating, String title, String content)
+  onSubmit;
 
   @override
   State<_NewReviewCard> createState() => _NewReviewCardState();
@@ -462,7 +512,10 @@ class _NewReviewCardState extends State<_NewReviewCard> {
                 IconButton(
                   onPressed: () => setState(() => _rating = i),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                  constraints: const BoxConstraints(
+                    minWidth: 34,
+                    minHeight: 34,
+                  ),
                   icon: Icon(
                     i <= _rating ? Icons.star : Icons.star_border,
                     color: const Color(0xFFF5A623),
@@ -499,10 +552,16 @@ class _NewReviewCardState extends State<_NewReviewCard> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: _isSending
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Text('Submit Review'),
             ),
           ),

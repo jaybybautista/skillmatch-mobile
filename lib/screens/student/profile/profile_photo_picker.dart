@@ -20,7 +20,10 @@ Future<bool> pickAndUploadProfilePhoto(BuildContext context) async {
 
   final messenger = ScaffoldMessenger.of(context);
   messenger.showSnackBar(
-    const SnackBar(content: Text('Uploading photo…'), duration: Duration(seconds: 2)),
+    const SnackBar(
+      content: Text('Uploading photo…'),
+      duration: Duration(seconds: 2),
+    ),
   );
 
   try {
@@ -36,7 +39,11 @@ Future<bool> pickAndUploadProfilePhoto(BuildContext context) async {
   } catch (_) {
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Could not upload that photo. Please try again.')));
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Could not upload that photo. Please try again.'),
+        ),
+      );
   }
 
   return false;
