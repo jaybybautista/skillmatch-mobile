@@ -339,6 +339,11 @@ Future<String?> showEditReviewSheet(BuildContext context, Review review) {
                     if (text.isEmpty) return;
                     Navigator.of(sheetContext).pop(text);
                   },
+                  // Same reason as the others: full-width minimum plus a
+                  // Row's unbounded width is an infinite-width constraint.
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(96, 48),
+                  ),
                   child: const Text('Save'),
                 ),
               ],

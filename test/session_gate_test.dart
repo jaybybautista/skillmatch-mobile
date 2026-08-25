@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:flutter/material.dart';
+
+import 'package:skillmatch/core/app_navigation.dart';
 import 'package:skillmatch/main.dart';
 import 'package:skillmatch/models/app_user.dart';
 import 'package:skillmatch/models/profile_setup.dart';
@@ -92,6 +95,41 @@ void main() {
     await _pump(tester, _FakeAuthService(), _FakeSetupService());
 
     expect(find.byType(AuthScreen), findsOneWidget);
+  });
+
+  testWidgets('a bottom-nav tab keeps the gate, so logging out still routes', (
+    tester,
+  ) async {
+    final auth = _FakeAuthService();
+    final setup = _FakeSetupService(needsSetup: false);
+
+    await _pump(tester, auth, setup);
+    auth.completeSignIn(_user());
+    await _settleGate(tester);
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+
+    // Switching tabs used to pushReplacement, which — from the gate's own
+    // route — replaced the gate. Logging out then cleared the account while
+    // the last tab stayed on screen, and Home re-rendered with no user at
+    // all: "Good Evening, Student" over "Unauthenticated.".
+    final context = tester.element(find.byType(HomeScreen));
+    handleAppNavTap(context, 2);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // Logging out from Settings: clear the session, then unwind to the gate.
+    auth.completeSignOut();
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    navigator.popUntil((route) => route.isFirst);
+    await _settleGate(tester);
+
+    expect(
+      find.byType(AuthScreen),
+      findsOneWidget,
+      reason: 'the gate has to survive a tab change to route the logout',
+    );
+    expect(find.byType(HomeScreen), findsNothing);
   });
 
   testWidgets('signing in as a student with setup done lands on Home', (

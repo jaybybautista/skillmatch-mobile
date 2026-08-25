@@ -1,13 +1,24 @@
 import 'student_profile.dart' show ResumeInfo;
 
 class CampusOption {
-  CampusOption({required this.id, required this.name});
+  CampusOption({required this.id, required this.name, this.programs = const []});
 
   final int id;
   final String name;
 
+  /// The programs this campus offers, which is what the Course picker
+  /// lists. Comes from the same CAMPUS_PROGRAMS table the website's
+  /// registration and profile forms read.
+  final List<String> programs;
+
   factory CampusOption.fromJson(Map<String, dynamic> json) {
-    return CampusOption(id: json['id'] as int, name: json['name'] as String);
+    return CampusOption(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      programs: (json['programs'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+    );
   }
 }
 

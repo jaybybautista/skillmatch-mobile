@@ -300,7 +300,6 @@ class _CompanyAnalyticsScreenState extends State<CompanyAnalyticsScreen> {
                     for (var i = 0; i < data.assessmentRows.length; i++)
                       _AssessmentRowTile(
                         row: data.assessmentRows[i],
-                        submissions: data.quizzesTaken,
                         isLast: i == data.assessmentRows.length - 1,
                       ),
                   ],
@@ -635,14 +634,9 @@ class _StatRow extends StatelessWidget {
 }
 
 class _AssessmentRowTile extends StatelessWidget {
-  const _AssessmentRowTile({
-    required this.row,
-    required this.submissions,
-    required this.isLast,
-  });
+  const _AssessmentRowTile({required this.row, required this.isLast});
 
   final AssessmentRow row;
-  final int submissions;
   final bool isLast;
 
   @override
@@ -686,7 +680,8 @@ class _AssessmentRowTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              '$submissions submission${submissions == 1 ? '' : 's'}',
+              '${row.submissionsCount} '
+              'submission${row.submissionsCount == 1 ? '' : 's'}',
               style: const TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.bold,
@@ -755,10 +750,47 @@ class _ActivityTile extends StatelessWidget {
             style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
           ),
           const SizedBox(height: 2),
-          Text(
-            'Assessment: ${row.assignedAssessment ?? 'None'} · ${row.updatedAtHuman}',
-            style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
-          ),
+          if (row.assessments.isEmpty)
+            Text(
+              'Assessment: None · ${row.updatedAtHuman}',
+              style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+            )
+          else ...[
+            // Each paper says both things: whether it was handed to this
+            // student, and whether they actually sat it. Those are not the
+            // same, and the title alone told you neither.
+            for (final assessment in row.assessments)
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textMuted,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: assessment.title,
+                        style: TextStyle(
+                          fontWeight: assessment.assigned
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: assessment.taken
+                              ? AppColors.textDark
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                      TextSpan(text: ' · ${assessment.statusLabel}'),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 2),
+            Text(
+              row.updatedAtHuman,
+              style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+            ),
+          ],
         ],
       ),
     );

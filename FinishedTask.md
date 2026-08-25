@@ -578,3 +578,62 @@
   - Verified live against the real placement: every field matches the screenshot, `progress_percent` comes back null, and `internship_id` is present for the link.
   - Guarded by a test that fails if any of the removed labels reappears.
   - 324 tests pass; `flutter analyze` clean.
+
+## 2026-08-24 — Course dropdown by campus, and two assessment-count bugs in analytics
+- Task: (1) the edit-profile Course field should be a campus-driven dropdown like the web; (2) the company Dashboard/Analytics "Assessment quiz participation" submissions are wrong, "like they are sharing the numbers"; (3) the recruitment activity summary should show every assessment, not just one.
+- Files:
+  - `app/Services/CampusProgramService.php` (new) — campus → programs, from the same `AuthController::CAMPUS_PROGRAMS` table the web reads.
+  - `app/Http/Controllers/Api/StudentProfileController.php` (modified) — the edit payload's campuses now carry their programs.
+  - `lib/models/editable_profile.dart`, `lib/screens/student/settings/edit_profile_screen.dart` (modified) — Course is a dropdown filtered by campus.
+  - `app/Services/CompanyAnalyticsService.php` (modified) — per-assessment submission counts, ownership via `company_id`, and `activityAssessments()`.
+  - `app/Http/Controllers/Company/CompanyDashboardController.php`, `resources/views/company/analytics/index.blade.php`, `app/Http/Controllers/Api/CompanyDashboardController.php` (modified) — both platforms read the corrected numbers.
+  - `lib/models/company_analytics.dart`, `lib/screens/company/company_analytics_screen.dart` (modified).
+  - Tests: `test/course_dropdown_test.dart` (new, 2); `test/company_analytics_test.dart` (+2).
+- Notes:
+  - **The submissions bug was one line, and the user's description was exact.** The web table printed `{{ $totalQuizzesDone }}` — the company-wide total — in *every* row, so each assessment claimed the same figure. The app copied it faithfully (`submissions: data.quizzesTaken`), bug included. Each row now carries its own count. Proven on live data: "Design Intern" has 4 submissions and "SAMPLE" has 0, where both used to read 4.
+  - **A second, quieter fault in the same method:** `assessmentStats()` and `assessments()` found a company's assessments through `assessment.internship` — the legacy `internship_id` column the pivot migration explicitly demoted and made nullable. Ownership now goes through `assessments.company_id`, which is what the rest of the system uses. Both queries happen to return the same two rows today, so this is a correctness fix rather than a visible one — worth saying plainly.
+  - `quizzes_taken` now counts only completed attempts (`submitted_at` not null), matching what "submissions" means everywhere else. No in-progress attempts exist right now, so the number is unchanged at 4.
+  - **Recruitment activity now lists every assessment in play** for each applicant: the one assigned to them, marked, plus the others their posting screens with. Verified live — applicants on "Laravel Developer" now show both "Design Intern" and "SAMPLE" instead of "None".
+  - **Course was free text on the phone and a campus-driven dropdown on the web** — so a student could type anything, including a program their campus does not offer. It is a dropdown now, disabled with "Select a campus first" until a campus is chosen, and changing campus clears a course the new campus does not offer rather than saving something untrue.
+  - **One deliberate difference from the web:** if the course already on record is not in the campus's list, it is kept as an option instead of vanishing. The web would silently drop it on the next save. Verified against the real account — its stored IT program is in the Urdaneta list, so the fallback does not fire there.
+  - The programs list itself was already exposed by the registration endpoint; the edit-profile endpoint simply never sent it. Both now go through one service rather than repeating the name-matching loop.
+  - 328 tests pass; `flutter analyze` clean; all PHP files lint clean.
+
+## 2026-08-24 — The match-score filter crashed its own sheet; activity rows now say who actually sat each assessment
+- Task: "Tapping 50%+ greys the screen and nothing happens." / "In the recruitment summary, how will I know if the student took this assessment or it is only on the posting?"
+- Files:
+  - `lib/screens/company/browse_candidates_screen.dart`, `lib/screens/student/resume/section_editors/skills_edit_screen.dart`, `lib/screens/student/reviews/reviews_section.dart` (modified) — three ElevatedButtons given bounded widths.
+  - `app/Services/CompanyAnalyticsService.php` (modified) — `activityAssessments()` now reports `taken` and the score, through the shared `AssessmentService`.
+  - `resources/views/company/analytics/index.blade.php`, `app/Http/Controllers/Api/CompanyDashboardController.php`, `lib/models/company_analytics.dart`, `lib/screens/company/company_analytics_screen.dart` (modified).
+  - Tests: `test/company_candidates_test.dart` (+2), `test/company_analytics_test.dart` (+2).
+- Notes:
+  - **The grey screen was a layout crash, and the tests could not have caught it.** `AppTheme.light` sets `elevatedButtonTheme.minimumSize: Size.fromHeight(54)` — which is `Size(infinity, 54)`. A `Row` lays a non-flex child out with unbounded width, so an ElevatedButton left loose in one demands *infinite* width and `performLayout` throws. The sheet then renders nothing: barrier grey, no content, no error visible in release.
+  - **Reproduced before fixing, by adding `theme: AppTheme.light` to a widget test** — the same test passed without the theme and failed with it: `BoxConstraints forces an infinite width … ElevatedButton … browse_candidates_screen.dart:759`. Worth recording that the whole suite pumps bare `MaterialApp`s, so every theme-dependent layout fault is invisible to it; the two new tests use the real theme.
+  - A scan for the same shape found four sites. `setup_wizard_screen.dart` was already safe (it sets its own `minimumSize`); the other three were not. Apply is now `Expanded`; the two "Add"/"Save" buttons got explicit minimum sizes, matching what the setup wizard already did.
+  - **On the second question:** the activity rows named assessments but said nothing about them, so "on this posting" and "this student sat it" looked identical. Each line now ends with one of four states: *assigned, scored 1/1 (100%)* / *assigned, not taken yet* / *on this posting, already sat it (1/1)* / *on this posting, not taken*.
+  - Whether it counts as taken goes through `AssessmentService::latestResultForCurrentWindow()` for the assigned paper, so a pre-reassignment attempt does not read as done — the same rule the student's own screen uses. For a paper that is merely on the posting, any completed attempt counts, with no window.
+  - Live check surfaced the case that makes the distinction worth drawing: Jayby Bautista on "Laravel Developer" has *Design Intern* as **not assigned but already sat** — they took it for the other posting. The wording says exactly that rather than implying it was assigned here.
+  - 332 tests pass; `flutter analyze` clean; PHP lints clean.
+
+## 2026-08-24 — Em dash out of the recruitment activity summary
+- Task: "Replace the em dash in the recruitment activity summary."
+- Files: `lib/screens/company/company_analytics_screen.dart`, `resources/views/company/analytics/index.blade.php` (modified).
+- Notes:
+  - Replaced with the middle dot the rest of the app already uses as a separator (`·` / `&middot;`), so the line now reads "Design Intern · assigned, scored 1/1 (100%)". Four occurrences on the web, one on the phone.
+  - Both platforms changed together — the wording of that column is meant to match.
+  - 332 tests still pass; `flutter analyze` clean; the blade lints clean and the view cache was cleared.
+
+## 2026-08-24 — Logging out as a student left the app signed out but still inside
+- Task: "There is an error logging out as a student — it goes to the resume builder and then shows Unauthenticated."
+- Files:
+  - `lib/core/app_navigation.dart`, `lib/core/company_navigation.dart` (rewritten) — bottom-nav tabs unwind to the gate and push, instead of replacing the current route.
+  - `lib/screens/student/home/home_screen.dart`, `matches_list_screen.dart`, `profile_screen.dart`, `resume_list_screen.dart`, `resume_preview_screen.dart`, `resume_sections_screen.dart`, `settings/edit_profile_screen.dart` (modified) — seven `setState` callbacks no longer return a Future.
+  - Tests: `test/session_gate_test.dart` (+1).
+- Notes:
+  - **The bottom nav was destroying the session gate, the same fault as the `(route) => false` bug on 2026-08-23 wearing different clothes.** Every tab did `pushReplacement`, and when the tap came from the gate's own route that replaced *the gate*. From then on the first route was whichever tab had been opened.
+  - That accounts for the whole report, step by step: Home → tap a tab (gate replaced by, say, Resume Builder) → sidebar → Settings → Log out → `popUntil(isFirst)` lands on **Resume Builder**, not the login screen. Tapping Home then built a fresh HomeScreen with no session, which is why the greeting read **"Student"** — `user?.name ?? 'Student'` — over **"Unauthenticated."** from the recommendations call.
+  - Tabs now `popUntil(isFirst)` and then push, which keeps exactly one screen above the gate — the flat feel `pushReplacement` was going for, without taking the gate with it. Home is simply the unwind, since the gate is already showing it. Fixed on the company side too, which had the identical handler.
+  - **A second, real bug surfaced while writing the test**, and it would never have shown up in release: `setState(() => _future = something)` returns that Future from the closure, and Flutter asserts a setState callback returns nothing. In debug it throws every time the screen refreshes — including plain pull-to-refresh, which predates any of this. Seven sites across the student screens now use block bodies.
+  - The regression test walks the real sequence — sign in, switch tab, sign out, unwind — and asserts the login screen appears. It fails on the old handler.
+  - **Formatting note:** `dart format` on the four files I touched reflowed a lot of previously unformatted code, so their diffs are much larger than the change. The reflow also broke one-line `if`s into lint violations again; braced by hand this time, one at a time, rather than by script. Nothing was reverted because those files also carry this session's real work.
+  - 333 tests pass; `flutter analyze` clean.

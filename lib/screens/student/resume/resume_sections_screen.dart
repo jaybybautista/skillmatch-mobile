@@ -34,7 +34,9 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
 
   Future<void> _refresh() async {
     final future = _service.fetchResume(widget.resumeId);
-    setState(() => _future = future);
+    setState(() {
+      _future = future;
+    });
     await future;
   }
 
@@ -67,12 +69,18 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
     // No refresh on the way back: adding goes through the service, which
     // announces the change as it happens, so this list has already reloaded.
     await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => AddSectionScreen(resumeId: widget.resumeId)),
+      MaterialPageRoute(
+        builder: (_) => AddSectionScreen(resumeId: widget.resumeId),
+      ),
     );
   }
 
   void _openPreview() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ResumePreviewScreen(resumeId: widget.resumeId)));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ResumePreviewScreen(resumeId: widget.resumeId),
+      ),
+    );
   }
 
   Future<void> _renameResume(String currentTitle) async {
@@ -81,15 +89,25 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) {
         return Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 20),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Rename Resume', style: AppFonts.title(fontSize: 18, color: AppColors.primary)),
+              Text(
+                'Rename Resume',
+                style: AppFonts.title(fontSize: 18, color: AppColors.primary),
+              ),
               const SizedBox(height: 12),
               TextField(controller: controller, autofocus: true),
               const SizedBox(height: 16),
@@ -103,7 +121,12 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
                     await _service.renameResume(widget.resumeId, title);
                     _refresh();
                   } on ApiException catch (e) {
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+                    if (mounted)
+                      {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(e.message)));
+                      }
                   }
                 },
               ),
@@ -119,12 +142,20 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Remove section?'),
-        content: Text('"${section.title}" and everything in it will be removed.'),
+        content: Text(
+          '"${section.title}" and everything in it will be removed.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Remove', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -136,7 +167,12 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
       await _service.deleteSection(section.id);
       _refresh();
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted)
+        {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.message)));
+        }
     }
   }
 
@@ -155,13 +191,19 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
           ),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.remove_red_eye_outlined), tooltip: 'Preview', onPressed: _openPreview),
+          IconButton(
+            icon: const Icon(Icons.remove_red_eye_outlined),
+            tooltip: 'Preview',
+            onPressed: _openPreview,
+          ),
           FutureBuilder<Resume>(
             future: _future,
             builder: (context, snapshot) => IconButton(
               icon: const Icon(Icons.edit_note),
               tooltip: 'Rename',
-              onPressed: snapshot.data == null ? null : () => _renameResume(snapshot.data!.title),
+              onPressed: snapshot.data == null
+                  ? null
+                  : () => _renameResume(snapshot.data!.title),
             ),
           ),
         ],
@@ -176,20 +218,34 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
             }
 
             if (snapshot.hasError || !snapshot.hasData) {
-              final message =
-                  snapshot.error is ApiException ? (snapshot.error as ApiException).message : 'Could not load this resume.';
+              final message = snapshot.error is ApiException
+                  ? (snapshot.error as ApiException).message
+                  : 'Could not load this resume.';
               return ListView(
-                padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 60,
+                  horizontal: 32,
+                ),
                 children: [
-                  Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.textMuted),
+                  ),
                   const SizedBox(height: 12),
-                  Center(child: TextButton(onPressed: _refresh, child: const Text('Retry'))),
+                  Center(
+                    child: TextButton(
+                      onPressed: _refresh,
+                      child: const Text('Retry'),
+                    ),
+                  ),
                 ],
               );
             }
 
             final resume = snapshot.data!;
-            final sections = resume.sections.toList()..sort((a, b) => a.order.compareTo(b.order));
+            final sections = resume.sections.toList()
+              ..sort((a, b) => a.order.compareTo(b.order));
 
             return ListView(
               padding: const EdgeInsets.all(20),
@@ -204,7 +260,9 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
                       foregroundColor: Colors.white,
                       backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -227,7 +285,11 @@ class _ResumeSectionsScreenState extends State<ResumeSectionsScreen>
 }
 
 class _SectionRow extends StatelessWidget {
-  const _SectionRow({required this.section, required this.onTap, required this.onDelete});
+  const _SectionRow({
+    required this.section,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   final ResumeSection section;
   final VoidCallback onTap;
@@ -243,19 +305,32 @@ class _SectionRow extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(section.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                    if (section.description != null && section.description!.isNotEmpty) ...[
+                    Text(
+                      section.title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (section.description != null &&
+                        section.description!.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         section.description!,
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -269,7 +344,10 @@ class _SectionRow extends StatelessWidget {
                   if (value == 'delete') onDelete();
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'delete', child: Text('Remove section')),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Remove section'),
+                  ),
                 ],
               ),
             ],

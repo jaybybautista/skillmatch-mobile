@@ -160,6 +160,12 @@ class _SkillGroup extends StatelessWidget {
               const SizedBox(width: 10),
               ElevatedButton(
                 onPressed: isAdding ? null : onAdd,
+                // The theme's full-width minimum would ask for infinite
+                // width in a Row and break the layout, so this one is sized
+                // to hug its label instead.
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(76, 50),
+                ),
                 child: isAdding
                     ? const SizedBox(
                         width: 16,

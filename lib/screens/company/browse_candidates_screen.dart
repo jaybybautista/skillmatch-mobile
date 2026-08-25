@@ -755,13 +755,20 @@ class _MinScoreButton extends StatelessWidget {
                       },
                       child: const Text('Use my default'),
                     ),
-                    const Spacer(),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(sheetContext).pop();
-                        onChanged(draft);
-                      },
-                      child: const Text('Apply'),
+                    const SizedBox(width: 12),
+                    // Expanded, not loose: the app theme asks every
+                    // ElevatedButton to be full width, and a Row gives a
+                    // non-flex child unbounded width — so an unbounded one
+                    // here asks for infinite width and the whole sheet
+                    // fails to lay out, leaving just the grey scrim.
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(sheetContext).pop();
+                          onChanged(draft);
+                        },
+                        child: const Text('Apply'),
+                      ),
                     ),
                   ],
                 ),

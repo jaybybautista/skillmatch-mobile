@@ -236,17 +236,75 @@ class AssessmentRow {
     required this.id,
     required this.title,
     required this.questionsCount,
+    required this.submissionsCount,
   });
 
   final int id;
   final String title;
   final int questionsCount;
 
+  /// How many students have completed *this* assessment. The table used to
+  /// print the company-wide total on every row, so every assessment claimed
+  /// the same number however many attempts it had really had.
+  final int submissionsCount;
+
   factory AssessmentRow.fromJson(Map<String, dynamic> json) => AssessmentRow(
     id: asInt(json['id']),
     title: json['title'] as String? ?? 'Untitled assessment',
     questionsCount: asInt(json['questions_count']),
+    submissionsCount: asInt(json['submissions_count']),
   );
+}
+
+/// One assessment named on an activity row.
+class ActivityAssessment {
+  const ActivityAssessment({
+    required this.id,
+    required this.title,
+    required this.assigned,
+    required this.taken,
+    this.score,
+    this.totalPoints,
+    this.percentage,
+  });
+
+  final int id;
+  final String title;
+
+  /// True for the paper actually handed to this student; false for the
+  /// others their posting also screens with.
+  final bool assigned;
+
+  /// True when this student has actually completed it. Independent of
+  /// [assigned]: a paper can be on the posting without being handed to
+  /// anyone, and a student can have sat one for a different posting.
+  final bool taken;
+
+  final int? score;
+  final int? totalPoints;
+  final int? percentage;
+
+  /// What the row should say about this paper. The distinction that matters
+  /// is between "this posting also uses it" and "this student sat it".
+  String get statusLabel {
+    if (assigned && taken) {
+      return 'assigned, scored $score/$totalPoints ($percentage%)';
+    }
+    if (assigned) return 'assigned, not taken yet';
+    if (taken) return 'on this posting, already sat it ($score/$totalPoints)';
+    return 'on this posting, not taken';
+  }
+
+  factory ActivityAssessment.fromJson(Map<String, dynamic> json) =>
+      ActivityAssessment(
+        id: asInt(json['id']),
+        title: json['title'] as String? ?? 'Untitled assessment',
+        assigned: json['assigned'] as bool? ?? false,
+        taken: json['taken'] as bool? ?? false,
+        score: asIntOrNull(json['score']),
+        totalPoints: asIntOrNull(json['total_points']),
+        percentage: asIntOrNull(json['percentage']),
+      );
 }
 
 /// A row of the recruitment activity feed.
@@ -257,6 +315,7 @@ class ActivityRow {
     required this.internshipTitle,
     required this.status,
     required this.assignedAssessment,
+    this.assessments = const [],
     required this.updatedAtHuman,
   });
 
@@ -265,6 +324,12 @@ class ActivityRow {
   final String? internshipTitle;
   final String status;
   final String? assignedAssessment;
+
+  /// Every assessment in play for this applicant: the one assigned to them,
+  /// plus the others their posting screens with. One posting can carry
+  /// several now, so a single name was never the whole picture.
+  final List<ActivityAssessment> assessments;
+
   final String updatedAtHuman;
 
   factory ActivityRow.fromJson(Map<String, dynamic> json) => ActivityRow(
@@ -273,6 +338,9 @@ class ActivityRow {
     internshipTitle: json['internship_title'] as String?,
     status: json['status'] as String? ?? '',
     assignedAssessment: json['assigned_assessment'] as String?,
+    assessments: (json['assessments'] as List? ?? const [])
+        .map((e) => ActivityAssessment.fromJson(e as Map<String, dynamic>))
+        .toList(),
     updatedAtHuman: json['updated_at_human'] as String? ?? '',
   );
 }

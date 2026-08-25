@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:skillmatch/core/app_theme.dart';
 import 'package:skillmatch/models/company_application.dart';
 import 'package:skillmatch/screens/company/browse_candidates_screen.dart';
 import 'package:skillmatch/screens/company/candidate_detail_screen.dart';
@@ -339,6 +340,65 @@ void main() {
   });
 
   group('BrowseCandidatesScreen', () {
+    testWidgets('the match-score filter opens under the real app theme', (
+      tester,
+    ) async {
+      final service = _FakeCompanyService(candidates: [_candidate()]);
+
+      // The theme is the point of this test, not decoration. Its
+      // elevatedButtonTheme sets minimumSize: Size.fromHeight(54), which is
+      // Size(infinity, 54) — and a Row lays a non-flex child out with
+      // unbounded width. An ElevatedButton left loose in that Row therefore
+      // demanded infinite width and the whole sheet failed to lay out: on
+      // the phone that looked like the screen greying with nothing on it.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: BrowseCandidatesScreen(service: service),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.tune));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Minimum match score'), findsOneWidget);
+      expect(find.byType(Slider), findsOneWidget);
+      expect(find.text('Apply'), findsOneWidget);
+      expect(find.text('Use my default'), findsOneWidget);
+    });
+
+    testWidgets('applying a floor re-queries with it', (tester) async {
+      final service = _FakeCompanyService(candidates: [_candidate()]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: BrowseCandidatesScreen(service: service),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.tune));
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(Slider), const Offset(200, 0));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Apply'));
+      await tester.pumpAndSettle();
+
+      // Whatever the slider landed on, the list was refetched with a floor
+      // rather than the dash that stands for "server default".
+      expect(
+        service.calls.any(
+          (c) => c.startsWith('fetchCandidates:') && !c.contains(':-:'),
+        ),
+        isTrue,
+        reason: 'the chosen floor should reach the query',
+      );
+    });
+
     testWidgets('lists candidates with their match score', (tester) async {
       final service = _FakeCompanyService(
         candidates: [

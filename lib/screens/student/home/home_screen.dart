@@ -33,7 +33,9 @@ class _HomeScreenState extends State<HomeScreen> with RefreshOnReveal {
 
   Future<void> _refresh() async {
     final future = _internshipService.fetchRecommendations(limit: 5);
-    setState(() => _recommendationsFuture = future);
+    setState(() {
+      _recommendationsFuture = future;
+    });
     await future;
   }
 

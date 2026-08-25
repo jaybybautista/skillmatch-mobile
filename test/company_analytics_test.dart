@@ -126,7 +126,20 @@ Map<String, dynamic> _analyticsJson({
     {'id': 2, 'title': 'Product Design Intern'},
   ],
   'assessment_rows': [
-    {'id': 1, 'title': 'Design Intern', 'questions_count': 3},
+    // Two papers with different histories: the table used to print the
+    // company-wide total on both rows, so they read the same.
+    {
+      'id': 1,
+      'title': 'Design Intern',
+      'questions_count': 3,
+      'submissions_count': 4,
+    },
+    {
+      'id': 9,
+      'title': 'SAMPLE',
+      'questions_count': 1,
+      'submissions_count': 0,
+    },
   ],
   'recent_activity': [
     {
@@ -135,6 +148,18 @@ Map<String, dynamic> _analyticsJson({
       'internship_title': 'Laravel Developer',
       'status': 'under_review',
       'assigned_assessment': null,
+      'assessments': [
+        {
+          'id': 1,
+          'title': 'Design Intern',
+          'assigned': true,
+          'taken': true,
+          'score': 1,
+          'total_points': 1,
+          'percentage': 100,
+        },
+        {'id': 9, 'title': 'SAMPLE', 'assigned': false, 'taken': false},
+      ],
       'updated_at_human': '28 minutes ago',
     },
   ],
@@ -185,6 +210,65 @@ Future<void> _pick(WidgetTester tester, String label) async {
 }
 
 void main() {
+  group('assessment quiz participation', () {
+    test('each row carries its own submission count', () {
+      final data = CompanyAnalytics.fromJson(_analyticsJson());
+
+      final counts = {
+        for (final row in data.assessmentRows) row.title: row.submissionsCount,
+      };
+
+      // Not the same number on both rows, which is what the company-wide
+      // total gave before — and not the company total either.
+      expect(counts, {'Design Intern': 4, 'SAMPLE': 0});
+      expect(data.quizzesTaken, 4);
+    });
+
+    test('an activity row lists every assessment, marking the assigned one', () {
+      final data = CompanyAnalytics.fromJson(_analyticsJson());
+      final activity = data.recentActivity.single;
+
+      expect(activity.assessments.map((a) => a.title), [
+        'Design Intern',
+        'SAMPLE',
+      ]);
+      expect(
+        activity.assessments.where((a) => a.assigned).map((a) => a.title),
+        ['Design Intern'],
+      );
+    });
+
+    test('each assessment says whether the student actually sat it', () {
+      final data = CompanyAnalytics.fromJson(_analyticsJson());
+      final labels = {
+        for (final a in data.recentActivity.single.assessments)
+          a.title: a.statusLabel,
+      };
+
+      // "On the posting" and "this student took it" are different facts, and
+      // the row used to show neither.
+      expect(labels, {
+        'Design Intern': 'assigned, scored 1/1 (100%)',
+        'SAMPLE': 'on this posting, not taken',
+      });
+    });
+
+    test('a paper sat for another posting is not read as assigned here', () {
+      final row = ActivityAssessment.fromJson(const {
+        'id': 1,
+        'title': 'Design Intern',
+        'assigned': false,
+        'taken': true,
+        'score': 1,
+        'total_points': 1,
+        'percentage': 100,
+      });
+
+      expect(row.statusLabel, 'on this posting, already sat it (1/1)');
+    });
+  });
+
+
   group('CompanyAnalytics parsing', () {
     test('reads every section of the analytics payload', () {
       final data = CompanyAnalytics.fromJson(_analyticsJson());
@@ -204,7 +288,7 @@ void main() {
       expect(data.pipelineStages[2].label, 'Interview');
       expect(data.pipelineStages[2].percentage, 60);
       expect(data.postingOptions.first.title, 'Laravel Developer');
-      expect(data.assessmentRows.single.questionsCount, 3);
+      expect(data.assessmentRows.first.questionsCount, 3);
       expect(data.recentActivity.single.studentName, 'Jaymar Bautista');
     });
 

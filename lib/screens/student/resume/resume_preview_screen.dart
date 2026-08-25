@@ -33,7 +33,11 @@ class _ResumePreviewScreenState extends State<ResumePreviewScreen>
   /// like a finished document either way — so it re-renders as soon as
   /// anything behind it changes.
   @override
-  void onResumeChanged() => setState(() => _future = _load());
+  void onResumeChanged() {
+    setState(() {
+      _future = _load();
+    });
+  }
 
   Future<(Resume, StudentProfile?)> _load() async {
     final resume = await ResumeService().fetchResume(widget.resumeId);
@@ -51,8 +55,12 @@ class _ResumePreviewScreenState extends State<ResumePreviewScreen>
     try {
       final (resume, profile) = await _future;
       final bytes = await buildResumePdf(resume, profile);
-      final fileName = '${resume.title.replaceAll(RegExp(r'[^A-Za-z0-9 _-]'), '').trim()}.pdf';
-      await Printing.sharePdf(bytes: bytes, filename: fileName.isEmpty ? 'Resume.pdf' : fileName);
+      final fileName =
+          '${resume.title.replaceAll(RegExp(r'[^A-Za-z0-9 _-]'), '').trim()}.pdf';
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: fileName.isEmpty ? 'Resume.pdf' : fileName,
+      );
     } catch (e, stack) {
       debugPrint('Resume PDF download failed: $e\n$stack');
       if (mounted) {
@@ -79,7 +87,10 @@ class _ResumePreviewScreenState extends State<ResumePreviewScreen>
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.ios_share_outlined),
             tooltip: 'Download',
@@ -95,12 +106,17 @@ class _ResumePreviewScreenState extends State<ResumePreviewScreen>
           }
 
           if (snapshot.hasError || !snapshot.hasData) {
-            final message =
-                snapshot.error is ApiException ? (snapshot.error as ApiException).message : 'Could not load this resume.';
+            final message = snapshot.error is ApiException
+                ? (snapshot.error as ApiException).message
+                : 'Could not load this resume.';
             return ListView(
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
               children: [
-                Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
               ],
             );
           }
@@ -117,7 +133,13 @@ class _ResumePreviewScreenState extends State<ResumePreviewScreen>
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -125,27 +147,42 @@ class _ResumePreviewScreenState extends State<ResumePreviewScreen>
                   Text(
                     header.fullName.toUpperCase(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 0.4),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.4,
+                    ),
                   ),
                   if (header.course != null) ...[
                     const SizedBox(height: 3),
                     Text(
                       header.course!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 11, color: AppColors.textMuted, letterSpacing: 1, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                        letterSpacing: 1,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 8),
                   Text(
                     [
                       if (header.addressLine.isNotEmpty) header.addressLine,
-                      if (header.phone != null && header.phone!.isNotEmpty) header.phone!,
-                      if (header.email != null && header.email!.isNotEmpty) header.email!,
+                      if (header.phone != null && header.phone!.isNotEmpty)
+                        header.phone!,
+                      if (header.email != null && header.email!.isNotEmpty)
+                        header.email!,
                     ].join('  |  '),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
                   ),
-                  for (final section in sections) _PreviewSection(section: section),
+                  for (final section in sections)
+                    _PreviewSection(section: section),
                 ],
               ),
             ),
@@ -170,10 +207,19 @@ class _PreviewSection extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.only(bottom: 5),
-            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.primary, width: 1.5))),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+            ),
             child: Text(
               section.title.toUpperCase(),
-              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.primary, letterSpacing: 1),
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primary,
+                letterSpacing: 1,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -195,7 +241,10 @@ class _PreviewSection extends StatelessWidget {
           section.experiences.map(
             (e) => _Entry(
               title: e.jobTitle ?? '',
-              subtitle: [e.company, e.address].where((s) => s != null && s.isNotEmpty).join(' — '),
+              subtitle: [
+                e.company,
+                e.address,
+              ].where((s) => s != null && s.isNotEmpty).join(' — '),
               period: '${e.periodStart ?? ''} – ${e.periodEnd ?? ''}',
               description: e.responsibilities,
             ),
@@ -209,7 +258,10 @@ class _PreviewSection extends StatelessWidget {
           section.achievements.map(
             (a) => _Entry(
               title: a.title ?? '',
-              subtitle: [a.category, a.location].where((s) => s != null && s.isNotEmpty).join(' — '),
+              subtitle: [
+                a.category,
+                a.location,
+              ].where((s) => s != null && s.isNotEmpty).join(' — '),
               period: a.dateText ?? '',
             ),
           ),
@@ -219,7 +271,9 @@ class _PreviewSection extends StatelessWidget {
         return _entries(
           section.projects.isEmpty,
           'No projects added yet.',
-          section.projects.map((p) => _Entry(title: p.title ?? '', description: p.description)),
+          section.projects.map(
+            (p) => _Entry(title: p.title ?? '', description: p.description),
+          ),
         );
 
       case 'education':
@@ -242,28 +296,53 @@ class _PreviewSection extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _SkillColumn(label: 'Technical Skills', skills: section.technicalSkills)),
+            Expanded(
+              child: _SkillColumn(
+                label: 'Technical Skills',
+                skills: section.technicalSkills,
+              ),
+            ),
             const SizedBox(width: 16),
-            Expanded(child: _SkillColumn(label: 'Soft Skills', skills: section.softSkills)),
+            Expanded(
+              child: _SkillColumn(
+                label: 'Soft Skills',
+                skills: section.softSkills,
+              ),
+            ),
           ],
         );
 
       case 'custom':
-        if (section.content == null || section.content!.isEmpty) return _empty('Nothing added yet.');
+        if (section.content == null || section.content!.isEmpty)
+        {
+          return _empty('Nothing added yet.');
+        }
         if (section.inputType == 'bullet_points') {
-          final lines = section.content!.split('\n').where((l) => l.trim().isNotEmpty);
+          final lines = section.content!
+              .split('\n')
+              .where((l) => l.trim().isNotEmpty);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final line in lines)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: Text('•  ${line.trim()}', style: const TextStyle(fontSize: 12.5, height: 1.5)),
+                  child: Text(
+                    '•  ${line.trim()}',
+                    style: const TextStyle(fontSize: 12.5, height: 1.5),
+                  ),
                 ),
             ],
           );
         }
-        return Text(section.content!, style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF2A2A3E)));
+        return Text(
+          section.content!,
+          style: const TextStyle(
+            fontSize: 12.5,
+            height: 1.5,
+            color: Color(0xFF2A2A3E),
+          ),
+        );
 
       default:
         return const SizedBox.shrink();
@@ -272,10 +351,24 @@ class _PreviewSection extends StatelessWidget {
 
   Widget _textOrEmpty(String? text, String emptyLabel) {
     if (text == null || text.isEmpty) return _empty(emptyLabel);
-    return Text(text, style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF2A2A3E)));
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12.5,
+        height: 1.5,
+        color: Color(0xFF2A2A3E),
+      ),
+    );
   }
 
-  Widget _empty(String label) => Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontStyle: FontStyle.italic));
+  Widget _empty(String label) => Text(
+    label,
+    style: const TextStyle(
+      fontSize: 11,
+      color: AppColors.textMuted,
+      fontStyle: FontStyle.italic,
+    ),
+  );
 
   Widget _entries(bool isEmpty, String emptyLabel, Iterable<_Entry> entries) {
     if (isEmpty) return _empty(emptyLabel);
@@ -284,7 +377,12 @@ class _PreviewSection extends StatelessWidget {
 }
 
 class _Entry extends StatelessWidget {
-  const _Entry({required this.title, this.subtitle, this.period, this.description});
+  const _Entry({
+    required this.title,
+    this.subtitle,
+    this.period,
+    this.description,
+  });
 
   final String title;
   final String? subtitle;
@@ -298,18 +396,43 @@ class _Entry extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
           if (subtitle != null && subtitle!.isNotEmpty) ...[
             const SizedBox(height: 1),
-            Text(subtitle!, style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+            Text(
+              subtitle!,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: AppColors.textMuted,
+              ),
+            ),
           ],
-          if (period != null && period!.trim().isNotEmpty && period != ' – ') ...[
+          if (period != null &&
+              period!.trim().isNotEmpty &&
+              period != ' – ') ...[
             const SizedBox(height: 1),
-            Text(period!, style: const TextStyle(fontSize: 11, color: Color(0xFF888888), fontStyle: FontStyle.italic)),
+            Text(
+              period!,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF888888),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ],
           if (description != null && description!.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(description!, style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF2A2A3E))),
+            Text(
+              description!,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.5,
+                color: Color(0xFF2A2A3E),
+              ),
+            ),
           ],
         ],
       ),
@@ -330,7 +453,12 @@ class _SkillColumn extends StatelessWidget {
       children: [
         Text(
           label.toUpperCase(),
-          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.textMuted, letterSpacing: 0.4),
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textMuted,
+            letterSpacing: 0.4,
+          ),
         ),
         const SizedBox(height: 6),
         Wrap(
@@ -340,8 +468,17 @@ class _SkillColumn extends StatelessWidget {
             for (final skill in skills)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: AppColors.chipBackground, borderRadius: BorderRadius.circular(4)),
-                child: Text(skill.skillName, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
+                decoration: BoxDecoration(
+                  color: AppColors.chipBackground,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  skill.skillName,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
           ],
         ),

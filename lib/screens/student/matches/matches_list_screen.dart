@@ -71,7 +71,9 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
       query: _searchController.text.trim(),
       filter: _filter,
     );
-    setState(() => _internshipsFuture = future);
+    setState(() {
+      _internshipsFuture = future;
+    });
     await future;
   }
 

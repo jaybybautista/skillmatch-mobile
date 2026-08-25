@@ -27,7 +27,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   final _service = ProfileService();
   late Future<StudentProfile> _future = _service.fetchStudentProfile();
 
-  void _refresh() => setState(() => _future = _service.fetchStudentProfile());
+  void _refresh() {
+    setState(() {
+      _future = _service.fetchStudentProfile();
+    });
+  }
 
   /// Importing a resume auto-fills this page's skills, education and
   /// experience from what the parser read, so a resume change is a profile

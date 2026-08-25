@@ -28,7 +28,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _lastName = TextEditingController();
   final _studentNumber = TextEditingController();
   final _contactNumber = TextEditingController();
-  final _course = TextEditingController();
+
+  /// The chosen program. A dropdown rather than free text, because the
+  /// course has to be one of the ones the campus actually offers — the same
+  /// rule the website's profile form enforces.
+  String? _course;
   final _address = TextEditingController();
   final _region = TextEditingController();
   final _province = TextEditingController();
@@ -52,7 +56,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _lastName,
       _studentNumber,
       _contactNumber,
-      _course,
       _address,
       _region,
       _province,
@@ -72,7 +75,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _lastName.text = profile.lastName;
     _studentNumber.text = profile.studentNumber ?? '';
     _contactNumber.text = profile.contactNumber ?? '';
-    _course.text = profile.course ?? '';
+    _course = profile.course?.trim().isEmpty ?? true ? null : profile.course;
     _address.text = profile.address ?? '';
     _region.text = profile.region ?? '';
     _province.text = profile.province ?? '';
@@ -84,7 +87,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _resume = profile.resume;
   }
 
-  String? _blankToNull(String value) => value.trim().isEmpty ? null : value.trim();
+  String? _blankToNull(String value) =>
+      value.trim().isEmpty ? null : value.trim();
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -97,7 +101,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         studentNumber: _blankToNull(_studentNumber.text),
         contactNumber: _blankToNull(_contactNumber.text),
         campusId: _campusId,
-        course: _blankToNull(_course.text),
+        course: _course,
         yearLevel: _yearLevel,
         address: _blankToNull(_address.text),
         region: _blankToNull(_region.text),
@@ -111,7 +115,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted)
+        {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.message)));
+        }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -122,14 +131,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     // filters to match rather than letting the upload fail validation.
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: autofill ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', 'doc', 'docx'],
+      allowedExtensions: autofill
+          ? ['pdf', 'jpg', 'jpeg', 'png']
+          : ['pdf', 'doc', 'docx'],
     );
     final path = result?.files.singleOrNull?.path;
     if (path == null) return;
 
     setState(() {
       _isUploading = true;
-      _uploadingLabel = autofill ? 'Reading your resume with OCR + AI…' : 'Uploading your resume…';
+      _uploadingLabel = autofill
+          ? 'Reading your resume with OCR + AI…'
+          : 'Uploading your resume…';
     });
 
     try {
@@ -139,14 +152,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
       setState(() => _resume = outcome.resume ?? _resume);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(outcome.message), duration: const Duration(seconds: 5)),
+        SnackBar(
+          content: Text(outcome.message),
+          duration: const Duration(seconds: 5),
+        ),
       );
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted)
+        {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.message)));
+        }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not upload that file. Please try again.')),
+          const SnackBar(
+            content: Text('Could not upload that file. Please try again.'),
+          ),
         );
       }
     } finally {
@@ -166,10 +189,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         title: const Text('Remove resume?'),
         content: const Text('Your uploaded resume file will be deleted.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Remove', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -181,10 +210,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       await _service.removeResume();
       if (!mounted) return;
       setState(() => _resume = null);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Resume removed.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Resume removed.')));
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted)
+        {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.message)));
+        }
     }
+  }
+
+  /// The programs the chosen campus offers, plus the course already on
+  /// record if the campus no longer lists it.
+  ///
+  /// That last part is deliberate: a student whose course was set before the
+  /// list changed, or set on a different campus, would otherwise find it
+  /// missing from the picker and lose it on the next save.
+  List<String> get _programsForCampus {
+    final campus = _campuses.where((c) => c.id == _campusId).firstOrNull;
+    final programs = [...?campus?.programs];
+
+    final current = _course;
+    if (current != null && current.isNotEmpty && !programs.contains(current)) {
+      programs.insert(0, current);
+    }
+
+    return programs;
+  }
+
+  /// Changing campus can invalidate the course, since the two lists differ.
+  void _changeCampus(int? campusId) {
+    setState(() {
+      _campusId = campusId;
+
+      final campus = _campuses.where((c) => c.id == campusId).firstOrNull;
+      if (campus == null || !campus.programs.contains(_course)) {
+        // Cleared rather than carried over: keeping a program the new campus
+        // does not offer would save something that is not true.
+        _course = null;
+      }
+    });
   }
 
   @override
@@ -204,16 +272,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           }
 
           if (snapshot.hasError || !snapshot.hasData) {
-            final message =
-                snapshot.error is ApiException ? (snapshot.error as ApiException).message : 'Could not load your profile.';
+            final message = snapshot.error is ApiException
+                ? (snapshot.error as ApiException).message
+                : 'Could not load your profile.';
             return ListView(
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
               children: [
-                Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
                 const SizedBox(height: 12),
                 Center(
                   child: TextButton(
-                    onPressed: () => setState(() => _future = _service.fetchEditableProfile()),
+                    onPressed: () => setState(() {
+                      _future = _service.fetchEditableProfile();
+                    }),
                     child: const Text('Retry'),
                   ),
                 ),
@@ -230,17 +305,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               children: [
                 const _SectionHeading('Personal Information'),
                 const SizedBox(height: 12),
-                _Field(label: 'First Name', controller: _firstName, isRequired: true),
-                _Field(label: 'Last Name', controller: _lastName, isRequired: true),
+                _Field(
+                  label: 'First Name',
+                  controller: _firstName,
+                  isRequired: true,
+                ),
+                _Field(
+                  label: 'Last Name',
+                  controller: _lastName,
+                  isRequired: true,
+                ),
                 _Field(label: 'Student Number', controller: _studentNumber),
-                _Field(label: 'Contact Number', controller: _contactNumber, keyboardType: TextInputType.phone),
+                _Field(
+                  label: 'Contact Number',
+                  controller: _contactNumber,
+                  keyboardType: TextInputType.phone,
+                ),
                 _CampusDropdown(
                   campuses: _campuses,
                   value: _campusId,
-                  onChanged: (v) => setState(() => _campusId = v),
+                  onChanged: _changeCampus,
                 ),
-                _Field(label: 'Course', controller: _course),
-                _YearLevelDropdown(value: _yearLevel, onChanged: (v) => setState(() => _yearLevel = v)),
+                _CourseDropdown(
+                  programs: _programsForCampus,
+                  value: _course,
+                  onChanged: (v) => setState(() => _course = v),
+                ),
+                _YearLevelDropdown(
+                  value: _yearLevel,
+                  onChanged: (v) => setState(() => _yearLevel = v),
+                ),
                 const SizedBox(height: 12),
                 const _SectionHeading('Address'),
                 const SizedBox(height: 12),
@@ -250,7 +344,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 _Field(label: 'Province', controller: _province),
                 _Field(label: 'Region', controller: _region),
                 const SizedBox(height: 8),
-                PrimaryButton(label: 'Save Changes', isLoading: _isSaving, onPressed: _save),
+                PrimaryButton(
+                  label: 'Save Changes',
+                  isLoading: _isSaving,
+                  onPressed: _save,
+                ),
                 const SizedBox(height: 28),
                 const _SectionHeading('Resume / CV'),
                 const SizedBox(height: 12),
@@ -310,7 +408,11 @@ class _ResumeSection extends StatelessWidget {
                     color: const Color(0xFFFDECEC),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.danger, size: 20),
+                  child: const Icon(
+                    Icons.picture_as_pdf_outlined,
+                    color: AppColors.danger,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -321,14 +423,26 @@ class _ResumeSection extends StatelessWidget {
                         resume!.filename,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      const Text('Uploaded resume', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                      const Text(
+                        'Uploaded resume',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.danger,
+                  ),
                   tooltip: 'Remove',
                   onPressed: isUploading ? null : onRemove,
                 ),
@@ -347,12 +461,19 @@ class _ResumeSection extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     uploadingLabel ?? 'Uploading…',
-                    style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
               ],
@@ -362,7 +483,8 @@ class _ResumeSection extends StatelessWidget {
           _UploadOption(
             icon: Icons.auto_fix_high,
             title: 'Upload & Auto-Fill',
-            subtitle: 'Reads your resume and fills your Skills, Education & Experience automatically.',
+            subtitle:
+                'Reads your resume and fills your Skills, Education & Experience automatically.',
             fileTypes: 'PDF, JPG, PNG — max 8MB',
             isPrimary: true,
             onTap: onAutofill,
@@ -371,7 +493,8 @@ class _ResumeSection extends StatelessWidget {
           _UploadOption(
             icon: Icons.upload_file_outlined,
             title: 'Upload Only',
-            subtitle: 'Just attaches the file to your profile without changing any of your details.',
+            subtitle:
+                'Just attaches the file to your profile without changing any of your details.',
             fileTypes: 'PDF, DOC, DOCX — max 5MB',
             isPrimary: false,
             onTap: onUploadOnly,
@@ -411,14 +534,20 @@ class _UploadOption extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: isPrimary ? AppColors.primary : AppColors.border),
+            border: Border.all(
+              color: isPrimary ? AppColors.primary : AppColors.border,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(icon, size: 20, color: isPrimary ? AppColors.primary : AppColors.textMuted),
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: isPrimary ? AppColors.primary : AppColors.textMuted,
+                  ),
                   const SizedBox(width: 10),
                   Text(
                     title,
@@ -430,9 +559,22 @@ class _UploadOption extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.4)),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
+              ),
               const SizedBox(height: 6),
-              Text(fileTypes, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+              Text(
+                fileTypes,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
             ],
           ),
         ),
@@ -448,10 +590,7 @@ class _SectionHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: AppFonts.title(fontSize: 16),
-    );
+    return Text(title, style: AppFonts.title(fontSize: 16));
   }
 }
 
@@ -489,14 +628,21 @@ class _Field extends StatelessWidget {
             controller: controller,
             keyboardType: keyboardType,
             validator: isRequired
-                ? (value) => (value == null || value.trim().isEmpty) ? '$label is required.' : null
+                ? (value) => (value == null || value.trim().isEmpty)
+                      ? '$label is required.'
+                      : null
                 : null,
             decoration: InputDecoration(
               isDense: true,
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ],
@@ -506,7 +652,11 @@ class _Field extends StatelessWidget {
 }
 
 class _CampusDropdown extends StatelessWidget {
-  const _CampusDropdown({required this.campuses, required this.value, required this.onChanged});
+  const _CampusDropdown({
+    required this.campuses,
+    required this.value,
+    required this.onChanged,
+  });
 
   final List<CampusOption> campuses;
   final int? value;
@@ -538,15 +688,90 @@ class _CampusDropdown extends StatelessWidget {
             isExpanded: true,
             items: [
               for (final campus in campuses)
-                DropdownMenuItem(value: campus.id, child: Text(campus.name, overflow: TextOverflow.ellipsis)),
+                DropdownMenuItem(
+                  value: campus.id,
+                  child: Text(campus.name, overflow: TextOverflow.ellipsis),
+                ),
             ],
             onChanged: onChanged,
             decoration: InputDecoration(
               isDense: true,
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The Course picker: the chosen campus's programs, and nothing until a
+/// campus is chosen — which is exactly how the web form behaves.
+class _CourseDropdown extends StatelessWidget {
+  const _CourseDropdown({
+    required this.programs,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final List<String> programs;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final safeValue = programs.contains(value) ? value : null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'COURSE',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textMuted,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            initialValue: safeValue,
+            isExpanded: true,
+            items: [
+              for (final program in programs)
+                DropdownMenuItem(
+                  value: program,
+                  child: Text(program, overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: programs.isEmpty ? null : onChanged,
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: programs.isEmpty
+                  ? const Color(0xFFF1F3F6)
+                  : Colors.white,
+              hintText: programs.isEmpty
+                  ? 'Select a campus first'
+                  : 'Select program',
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ],
@@ -579,18 +804,26 @@ class _YearLevelDropdown extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           DropdownButtonFormField<int>(
-            initialValue: (value != null && value! >= 1 && value! <= 5) ? value : null,
+            initialValue: (value != null && value! >= 1 && value! <= 5)
+                ? value
+                : null,
             isExpanded: true,
             items: [
-              for (var year = 1; year <= 5; year++) DropdownMenuItem(value: year, child: Text('Year $year')),
+              for (var year = 1; year <= 5; year++)
+                DropdownMenuItem(value: year, child: Text('Year $year')),
             ],
             onChanged: onChanged,
             decoration: InputDecoration(
               isDense: true,
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ],

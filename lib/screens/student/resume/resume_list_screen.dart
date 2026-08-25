@@ -48,7 +48,9 @@ class _ResumeListScreenState extends State<ResumeListScreen>
 
   Future<void> _refresh() async {
     final future = _service.fetchResumes();
-    setState(() => _future = future);
+    setState(() {
+      _future = future;
+    });
     await future;
   }
 
@@ -59,28 +61,41 @@ class _ResumeListScreenState extends State<ResumeListScreen>
   void onResumeChanged() => _refresh();
 
   Future<void> _openResume(int id) async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ResumeSectionsScreen(resumeId: id)));
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ResumeSectionsScreen(resumeId: id)),
+    );
   }
 
   Future<void> _openImport() async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ImportResumeScreen()));
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ImportResumeScreen()));
   }
 
   Future<void> _showAddResumeSheet() async {
     final existing = await _future;
     if (!mounted) return;
-    final controller = TextEditingController(text: 'Resume ${existing.length + 1}');
+    final controller = TextEditingController(
+      text: 'Resume ${existing.length + 1}',
+    );
     bool isSaving = false;
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (sheetContext, setSheetState) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 20),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                12,
+                20,
+                MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -90,14 +105,23 @@ class _ResumeListScreenState extends State<ResumeListScreen>
                       width: 40,
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  Text('Add Resume', style: AppFonts.title(color: AppColors.primary)),
+                  Text(
+                    'Add Resume',
+                    style: AppFonts.title(color: AppColors.primary),
+                  ),
                   const SizedBox(height: 8),
                   const Divider(),
                   const SizedBox(height: 12),
-                  const Text('Title', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                  const Text(
+                    'Title',
+                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                  ),
                   const SizedBox(height: 6),
                   TextField(controller: controller, autofocus: true),
                   const SizedBox(height: 20),
@@ -128,7 +152,9 @@ class _ResumeListScreenState extends State<ResumeListScreen>
                             } on ApiException catch (e) {
                               setSheetState(() => isSaving = false);
                               if (sheetContext.mounted) {
-                                ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(content: Text(e.message)));
+                                ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                  SnackBar(content: Text(e.message)),
+                                );
                               }
                             }
                           },
@@ -148,7 +174,9 @@ class _ResumeListScreenState extends State<ResumeListScreen>
   Future<void> _showResumeOptionsSheet(ResumeSummary resume) async {
     await showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
@@ -162,14 +190,23 @@ class _ResumeListScreenState extends State<ResumeListScreen>
                     width: 40,
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-                Text(resume.title, style: AppFonts.title(fontSize: 18, color: AppColors.primary)),
+                Text(
+                  resume.title,
+                  style: AppFonts.title(fontSize: 18, color: AppColors.primary),
+                ),
                 const SizedBox(height: 8),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.edit_outlined, color: AppColors.primary),
+                  leading: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.primary,
+                  ),
                   title: const Text('Rename'),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
@@ -177,7 +214,10 @@ class _ResumeListScreenState extends State<ResumeListScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: AppColors.danger),
+                  leading: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.danger,
+                  ),
                   title: const Text('Delete'),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
@@ -198,15 +238,25 @@ class _ResumeListScreenState extends State<ResumeListScreen>
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) {
         return Padding(
-          padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 20),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Rename Resume', style: AppFonts.title(fontSize: 18, color: AppColors.primary)),
+              Text(
+                'Rename Resume',
+                style: AppFonts.title(fontSize: 18, color: AppColors.primary),
+              ),
               const SizedBox(height: 12),
               TextField(controller: controller, autofocus: true),
               const SizedBox(height: 16),
@@ -220,7 +270,12 @@ class _ResumeListScreenState extends State<ResumeListScreen>
                     await _service.renameResume(resume.id, title);
                     _refresh();
                   } on ApiException catch (e) {
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+                    if (mounted)
+                      {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(e.message)));
+                      }
                   }
                 },
               ),
@@ -238,10 +293,16 @@ class _ResumeListScreenState extends State<ResumeListScreen>
         title: const Text('Delete resume?'),
         content: Text('"${resume.title}" will be permanently deleted.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -253,7 +314,12 @@ class _ResumeListScreenState extends State<ResumeListScreen>
       await _service.deleteResume(resume.id);
       _refresh();
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted)
+        {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.message)));
+        }
     }
   }
 
@@ -265,10 +331,20 @@ class _ResumeListScreenState extends State<ResumeListScreen>
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: Text('Resume Builder', style: AppFonts.title(color: Colors.white)),
+        title: Text(
+          'Resume Builder',
+          style: AppFonts.title(color: Colors.white),
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.upload_file_outlined), tooltip: 'Import Resume', onPressed: _openImport),
-          IconButton(icon: const Icon(Icons.add), onPressed: _showAddResumeSheet),
+          IconButton(
+            icon: const Icon(Icons.upload_file_outlined),
+            tooltip: 'Import Resume',
+            onPressed: _openImport,
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _showAddResumeSheet,
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -281,14 +357,27 @@ class _ResumeListScreenState extends State<ResumeListScreen>
             }
 
             if (snapshot.hasError || !snapshot.hasData) {
-              final message =
-                  snapshot.error is ApiException ? (snapshot.error as ApiException).message : 'Could not load your resumes.';
+              final message = snapshot.error is ApiException
+                  ? (snapshot.error as ApiException).message
+                  : 'Could not load your resumes.';
               return ListView(
-                padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 60,
+                  horizontal: 32,
+                ),
                 children: [
-                  Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.textMuted),
+                  ),
                   const SizedBox(height: 12),
-                  Center(child: TextButton(onPressed: _refresh, child: const Text('Retry'))),
+                  Center(
+                    child: TextButton(
+                      onPressed: _refresh,
+                      child: const Text('Retry'),
+                    ),
+                  ),
                 ],
               );
             }
@@ -296,9 +385,16 @@ class _ResumeListScreenState extends State<ResumeListScreen>
             final resumes = snapshot.data!;
             if (resumes.isEmpty) {
               return ListView(
-                padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 60,
+                  horizontal: 32,
+                ),
                 children: [
-                  const Icon(Icons.description_outlined, size: 40, color: AppColors.textMuted),
+                  const Icon(
+                    Icons.description_outlined,
+                    size: 40,
+                    color: AppColors.textMuted,
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     'No resumes yet. Tap + to create your first one.',
@@ -325,13 +421,20 @@ class _ResumeListScreenState extends State<ResumeListScreen>
           },
         ),
       ),
-      bottomNavigationBar: AppBottomNav(currentIndex: 2, onSelect: (i) => handleAppNavTap(context, i)),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 2,
+        onSelect: (i) => handleAppNavTap(context, i),
+      ),
     );
   }
 }
 
 class _ResumeRow extends StatelessWidget {
-  const _ResumeRow({required this.resume, required this.onTap, required this.onMenuTap});
+  const _ResumeRow({
+    required this.resume,
+    required this.onTap,
+    required this.onMenuTap,
+  });
 
   final ResumeSummary resume;
   final VoidCallback onTap;
@@ -350,7 +453,13 @@ class _ResumeRow extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(resume.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                child: Text(
+                  resume.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               InkWell(
                 onTap: onMenuTap,
