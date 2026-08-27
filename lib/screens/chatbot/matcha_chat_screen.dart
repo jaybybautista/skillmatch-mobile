@@ -269,11 +269,27 @@ class _CloseButton extends StatelessWidget {
 }
 
 /// The empty state: logo, greeting, and what Matcha can help with.
+///
+/// What it can help with depends on who is asking. A company was being told
+/// about resume creation and skills alignment, which are the student's
+/// concerns and not theirs — the web has said something different to each
+/// since the panel was written.
 class _Welcome extends StatelessWidget {
   const _Welcome();
 
+  static const _studentBlurb =
+      'Ask me about internships, skills alignment, or resume creation. '
+      'Or ask "how do I..." for a quick tour of any screen.';
+
+  static const _companyBlurb =
+      'Ask me about posting internships, reviewing applicants, or finding '
+      'candidates. Or ask "how do I..." for a quick tour of any screen.';
+
   @override
   Widget build(BuildContext context) {
+    final isCompany =
+        context.watch<AuthService>().currentUser?.role == 'company';
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -289,8 +305,7 @@ class _Welcome extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Ask me about internships, skills alignment, or resume creation. '
-              "I'm here to assist you!",
+              isCompany ? _companyBlurb : _studentBlurb,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.82),

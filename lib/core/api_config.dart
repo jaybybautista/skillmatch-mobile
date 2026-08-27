@@ -10,7 +10,10 @@ class ApiConfig {
   ApiConfig._();
 
   ///same dapat ung ip teh ng wifi niyu, check mo nalang ipconfig tas same wifi dapat
+  //wifi sa bahay
   static const String _lanHost = '192.168.100.51';
+  //wifi ng ssc
+  // static const String _lanHost = '192.168.101.184';
 
   ///gawin mo siyang true teh if want mo gumamit ng emulator
   static const bool _useAndroidEmulator = false;

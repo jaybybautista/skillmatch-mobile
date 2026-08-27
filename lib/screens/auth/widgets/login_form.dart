@@ -23,7 +23,9 @@ class _LoginFormState extends State<LoginForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool _rememberMe = true;
+  /// Unchecked to start, matching the web form, whose checkbox is only
+  /// ticked when a failed submit sends the old value back.
+  bool _rememberMe = false;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
   String? _errorText;
@@ -185,7 +187,7 @@ class _LoginFormState extends State<LoginForm> {
                       value: _rememberMe,
                       activeColor: AppColors.primary,
                       onChanged: (value) =>
-                          setState(() => _rememberMe = value ?? true),
+                          setState(() => _rememberMe = value ?? false),
                     ),
                     const Text('Remember me'),
                   ],

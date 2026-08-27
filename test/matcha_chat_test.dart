@@ -63,6 +63,28 @@ void main() {
     expect(find.text('Ask anything'), findsOneWidget);
   });
 
+  testWidgets('the welcome blurb speaks to the account that is signed in', (
+    tester,
+  ) async {
+    await _pump(tester, _FakeChatbotService());
+
+    // A student is told about the things a student does here.
+    expect(
+      find.textContaining('skills alignment, or resume creation'),
+      findsOneWidget,
+    );
+
+    await _pump(tester, _FakeChatbotService(), role: 'company');
+
+    // A company is not — those are not their concerns, and the web has
+    // always said something different to each.
+    expect(
+      find.textContaining('reviewing applicants, or finding candidates'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('resume creation'), findsNothing);
+  });
+
   testWidgets('a company gets company prompts, not student ones', (
     tester,
   ) async {

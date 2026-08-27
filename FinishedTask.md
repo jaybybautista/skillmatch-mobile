@@ -637,3 +637,16 @@
   - The regression test walks the real sequence — sign in, switch tab, sign out, unwind — and asserts the login screen appears. It fails on the old handler.
   - **Formatting note:** `dart format` on the four files I touched reflowed a lot of previously unformatted code, so their diffs are much larger than the change. The reflow also broke one-line `if`s into lint violations again; braced by hand this time, one at a time, rather than by script. Nothing was reverted because those files also carry this session's real work.
   - 333 tests pass; `flutter analyze` clean.
+
+## 2026-08-24 — Remember me starts unchecked; Matcha greets a company as a company
+- Task: "Uncheck Remember me by default." / "In the AI chatbot the description is for students; it should be the company one like the web."
+- Files:
+  - `lib/screens/auth/widgets/login_form.dart` (modified) — the checkbox starts unchecked, and an untick that yields null now falls back to false rather than true.
+  - `lib/screens/chatbot/matcha_chat_screen.dart` (modified) — the welcome blurb switches on the signed-in role.
+  - Tests: `test/matcha_chat_test.dart` (+1).
+- Notes:
+  - The web's box is `{{ old('remember') ? 'checked' : '' }}` — unchecked unless a failed submit sends the old value back — so this brings the app into line rather than inventing a default.
+  - **Worth knowing: the checkbox is decorative today.** `_rememberMe` is read nowhere except its own widget; it is not sent with the login request and nothing branches on it. The session is kept by the stored token regardless. Changing the default therefore changes what the form *says*, not what it does. Say the word if it should actually govern whether the token is persisted.
+  - The chatbot's suggestion chips already split by role, but the greeting under "Hello, I am Matcha!" did not — a company was being offered help with *skills alignment and resume creation*, which are the student's concerns. It now mirrors the web's two strings: posting internships / reviewing applicants / finding candidates for a company, internships / skills alignment / resume creation for a student.
+  - Both now end with the web's "Or ask 'how do I...' for a quick tour of any screen", which the app supports and was not advertising. The web joins that clause with a colon; the app uses a full stop, which is the only wording difference.
+  - 334 tests pass; `flutter analyze` clean.
