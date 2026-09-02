@@ -11,10 +11,6 @@ import '../../../services/resume_display.dart';
 import '../../../services/resume_pdf_builder.dart';
 import '../../../services/resume_service.dart';
 
-/// Read-only rendered resume — mirrors the web's
-/// student.resume-builder.preview page layout (name/role/contact header,
-/// then each section rendered the same way: summary text, entry lists with
-/// title/sub/period, and a two-column technical/soft skills pill layout).
 class ResumePreviewScreen extends StatefulWidget {
   const ResumePreviewScreen({super.key, required this.resumeId});
 
@@ -29,9 +25,6 @@ class _ResumePreviewScreenState extends State<ResumePreviewScreen>
   late Future<(Resume, StudentProfile?)> _future = _load();
   bool _isDownloading = false;
 
-  /// The preview is the one screen where staleness is invisible — it looks
-  /// like a finished document either way — so it re-renders as soon as
-  /// anything behind it changes.
   @override
   void onResumeChanged() {
     setState(() {

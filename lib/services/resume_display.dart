@@ -32,9 +32,6 @@ final _emptyBasicInfoSection = ResumeSection(
   softSkills: const [],
 );
 
-/// Mirrors the web's preview.blade.php fallback logic: prefer whatever the
-/// resume's own Basic Info section has, falling back to the student's
-/// profile (name/email) and course when a field is blank.
 ResumeHeaderInfo computeResumeHeader(Resume resume, StudentProfile? profile) {
   final basicInfo = resume.sections
       .firstWhere(

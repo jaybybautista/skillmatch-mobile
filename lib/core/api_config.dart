@@ -12,6 +12,8 @@ class ApiConfig {
   ///same dapat ung ip teh ng wifi niyu, check mo nalang ipconfig tas same wifi dapat
   //wifi sa bahay
   static const String _lanHost = '192.168.100.51';
+  // defense wifi
+  // static const String _lanHost = '132.168.7.163';
   //wifi ng ssc
   // static const String _lanHost = '192.168.101.184';
 

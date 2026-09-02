@@ -25,12 +25,7 @@ const _asciiReplacements = {
   ' ': ' ', // non-breaking space
 };
 
-/// Swaps "smart" punctuation (en/em dashes, curly quotes, bullets — the kind
-/// the Groq AI Help feature and OCR import both routinely produce) for plain
-/// ASCII equivalents. Roboto (below) covers these fine when the font
-/// downloads successfully, but this keeps the PDF free of missing-glyph
-/// boxes even when it can't (offline, or a network that blocks the Google
-/// Fonts CDN) — the base14 fallback font only supports WinAnsi.
+
 String _pdfSafe(String text) {
   var result = text;
   for (final entry in _asciiReplacements.entries) {
@@ -39,15 +34,6 @@ String _pdfSafe(String text) {
   return result;
 }
 
-/// Renders the exact same content ResumePreviewScreen shows on-screen (which
-/// itself mirrors the web's resume-builder preview page) into a downloadable
-/// PDF, for the Download action.
-///
-/// The base14 Helvetica font the `pdf` package falls back to otherwise can't
-/// draw plenty of characters that show up in real resume content — en/em
-/// dashes, curly quotes, bullets — including ones the Groq AI Help feature
-/// and OCR import both routinely produce. Roboto (fetched once and cached
-/// by the `printing` package) covers all of that.
 Future<Uint8List> buildResumePdf(Resume resume, StudentProfile? profile) async {
   final header = computeResumeHeader(resume, profile);
   final sections = nonBasicInfoSections(resume);

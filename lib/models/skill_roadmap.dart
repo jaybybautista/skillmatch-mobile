@@ -25,11 +25,6 @@ class RoadmapStep {
   }
 }
 
-/// The skills-vs-market comparison the web's Skill Roadmap page computes:
-/// the student's own skills against the top skills demanded across every
-/// open internship posting. Same underlying suggestions as the web — this
-/// model just also carries [skillDemand], additive data the backend already
-/// computed but the plain web page never surfaced.
 class SkillRoadmap {
   SkillRoadmap({
     required this.possessedSkills,
@@ -43,13 +38,9 @@ class SkillRoadmap {
   final List<String> suggestedSkills;
   final List<String> trendingSkills;
 
-  /// Skill label -> how many open postings ask for it.
   final Map<String, int> skillDemand;
   final List<RoadmapStep> steps;
 
-  /// How many of the market's top trending skills the student already has,
-  /// as a 0-1 fraction — purely a presentational summary of the same
-  /// possessed/trending sets, not a new comparison.
   double get masteryFraction => trendingSkills.isEmpty
       ? 0
       : possessedSkills.length / trendingSkills.length;

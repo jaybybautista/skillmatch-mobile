@@ -10,11 +10,6 @@ import '../../../models/requirement.dart';
 typedef PreviewLoader = Future<RequirementPreview> Function();
 typedef DownloadLoader = Future<List<int>> Function();
 
-/// Reads one document — either a coordinator's template or a student's own
-/// upload — the same way the web's `document-viewer.blade.php` does: a PDF
-/// (converted server-side when the source wasn't already one) renders inline,
-/// an image renders inline, and anything else falls back to a Download
-/// button, since neither platform can display it in place.
 class RequirementViewerScreen extends StatefulWidget {
   const RequirementViewerScreen({
     super.key,

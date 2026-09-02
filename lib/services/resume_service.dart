@@ -2,15 +2,10 @@ import '../core/api_client.dart';
 import '../core/resume_updates.dart';
 import '../models/resume.dart';
 
-/// Talks to Api\ResumeBuilderController — the same resumes/sections/items
-/// the web app's Resume Builder reads and writes, so edits stay in sync in
-/// both directions.
+/// Ina-access un nasa web
 class ResumeService {
   final ApiClient _client = ApiClient.instance;
 
-  /// Every write goes through one of these rather than straight to the
-  /// client, so nothing can add a section or delete an entry without the
-  /// rest of the app hearing about it. Reads are left alone.
   Future<Map<String, dynamic>> _post(
     String path,
     Map<String, dynamic> body, {
@@ -62,17 +57,11 @@ class ResumeService {
       fileFieldName: fileFieldName,
       authenticated: authenticated,
     );
-    // An import rewrites the whole resume *and* auto-fills the student's
-    // profile with what the parser read, so this one reaches further than
-    // the resume screens.
+
     ResumeUpdates.instance.changed();
     return response;
   }
 
-  /// Update endpoints use Laravel's `$request->only([...])`, which only
-  /// touches keys actually present in the JSON body — so dropping null
-  /// entries here lets a partial "just this one field changed" update go
-  /// out without wiping the other fields back to null server-side.
   Map<String, dynamic> _presentOnly(Map<String, dynamic> body) {
     return {
       for (final entry in body.entries)
@@ -322,8 +311,6 @@ class ResumeService {
     await _delete('/resume-education/$educationId', authenticated: true);
   }
 
-  /// Returns the section's full, updated skill lists (technical + soft) —
-  /// the backend returns the whole section here rather than a single skill.
   Future<ResumeSection> addSkill(
     int sectionId, {
     required String category,
@@ -340,9 +327,6 @@ class ResumeService {
     await _delete('/resume-skills/$skillId', authenticated: true);
   }
 
-  /// Sends the current text to the same Groq-backed rewrite endpoint the web
-  /// app's "AI Help" buttons use, returning the improved version. [context]
-  /// carries extra fields (e.g. job_title/company) the model uses for tone.
   Future<String> improveText(
     String fieldLabel,
     String text, {
@@ -356,9 +340,6 @@ class ResumeService {
     return response['text'] as String;
   }
 
-  /// Uploads a resume file (or reuses the student's already-uploaded profile
-  /// resume) to the same OCR + AI parsing pipeline the web app's Import
-  /// feature uses, and returns the newly created resume.
   Future<Resume> importResume({
     String? filePath,
     bool useProfileResume = false,
