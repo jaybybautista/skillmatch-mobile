@@ -7,14 +7,20 @@ import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
 import '../../../models/internship.dart';
 import '../../../models/person_search_result.dart';
+import '../../../models/search_history_entry.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/internship_service.dart';
 import '../../../services/people_search_service.dart';
+import '../../../services/search_history_service.dart';
 import '../../../widgets/empty_results.dart';
 import '../../../widgets/match_card.dart';
+import '../../../widgets/search_history_list.dart';
 import '../../chatbot/chat_destinations.dart';
 import '../../company/posting_detail_screen.dart';
 import '../internship/internship_detail_screen.dart';
+import '../profile/company_public_profile_screen.dart';
+import '../profile/coordinator_public_profile_screen.dart';
+import '../profile/student_public_profile_screen.dart';
 
 /// What this screen searches for — internships (the original, and default,
 /// behavior) or one kind of account. Matches the web global search's type
@@ -39,11 +45,17 @@ enum _SearchScope {
 /// found here is the same account the web search returns and taps through to
 /// the same profile.
 class InternshipSearchScreen extends StatefulWidget {
-  const InternshipSearchScreen({super.key, this.service, this.peopleService});
+  const InternshipSearchScreen({
+    super.key,
+    this.service,
+    this.peopleService,
+    this.historyService,
+  });
 
   /// Injectable for tests; defaults to the real services.
   final InternshipService? service;
   final PeopleSearchService? peopleService;
+  final SearchHistoryService? historyService;
 
   @override
   State<InternshipSearchScreen> createState() => _InternshipSearchScreenState();
@@ -127,8 +139,14 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
   late final InternshipService _service = widget.service ?? InternshipService();
   late final PeopleSearchService _peopleService =
       widget.peopleService ?? PeopleSearchService();
+  late final SearchHistoryService _historyService =
+      widget.historyService ?? SearchHistoryService();
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
+
+  /// Lets the list refresh itself right after a new search is recorded, so
+  /// clearing the box shows what was just searched for.
+  final _historyKey = GlobalKey<SearchHistoryListState>();
 
   Timer? _debounce;
   bool _isLoading = false;
@@ -254,6 +272,83 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
     }
   }
 
+  /// Which remembered list this screen writes to. Internships and people are
+  /// kept apart, exactly as they are on the web.
+  String get _historyContext => _scope == _SearchScope.internship
+      ? SearchContext.internships
+      : SearchContext.global;
+
+  /// Recorded when the person actually commits to a search, not while they
+  /// are still typing — same rule as the web, so half-typed words never end
+  /// up in the list.
+  Future<void> _rememberTerm(String term) async {
+    if (term.trim().length < 2) return;
+
+    try {
+      await _historyService.recordTerm(_historyContext, term.trim());
+      await _historyKey.currentState?.reload();
+    } catch (_) {
+      // Dagdag lang ang pagtatala. Pag pumalya ito, tuloy pa rin dapat yung
+      // mismong paghahanap.
+    }
+  }
+
+  Future<void> _rememberEntity({
+    required String entityType,
+    required int entityId,
+    required String label,
+    String? subtitle,
+    String? imageUrl,
+    String? initials,
+  }) async {
+    try {
+      await _historyService.recordEntity(
+        _historyContext,
+        entityType: entityType,
+        entityId: entityId,
+        label: label,
+        subtitle: subtitle,
+        imageUrl: imageUrl,
+        initials: initials,
+      );
+      await _historyKey.currentState?.reload();
+    } catch (_) {
+      // Ganoon din dito.
+    }
+  }
+
+  /// Reopens whatever the person opened from a search before. The row already
+  /// carries the name and picture, so this only needs the kind and the id.
+  void _openRemembered(SearchHistoryEntry entry) {
+    final id = entry.entityId;
+    if (id == null) {
+      _controller.text = entry.label;
+      _search(entry.label);
+      return;
+    }
+
+    final screen = switch (entry.entityType) {
+      'internship' => InternshipDetailScreen(
+        internshipId: id,
+        canApply: !_isCompany,
+      ),
+      'company' => CompanyPublicProfileScreen(companyId: id),
+      'student' => StudentPublicProfileScreen(studentId: id),
+      'coordinator' => CoordinatorPublicProfileScreen(coordinatorId: id),
+      _ => null,
+    };
+
+    if (screen == null) {
+      // Hindi kilalang klase. Hinahanap na lang yung pangalan imbes na walang
+      // mangyari sa pindot niya.
+      _controller.text = entry.label;
+      _search(entry.label);
+      return;
+    }
+
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  }
+
   PersonSearchType _personTypeFor(_SearchScope scope) => switch (scope) {
     _SearchScope.student => PersonSearchType.student,
     _SearchScope.company => PersonSearchType.company,
@@ -290,6 +385,17 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
   /// posting page when the posting is theirs - the same page the web's search
   /// sends them to - and a read-only view of anyone else's.
   void _openInternship(Internship internship) {
+    _rememberEntity(
+      entityType: 'internship',
+      entityId: internship.id,
+      label: internship.title,
+      subtitle: internship.companyName,
+      imageUrl: internship.companyLogoUrl,
+      initials: internship.companyName.isNotEmpty
+          ? internship.companyName.substring(0, 1).toUpperCase()
+          : null,
+    );
+
     if (!_isCompany) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -317,6 +423,16 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
 
   void _openPerson(PersonSearchResult result) {
     if (result.screen == null) return;
+
+    _rememberEntity(
+      entityType: result.type,
+      entityId: result.id,
+      label: result.title,
+      subtitle: result.subtitle,
+      imageUrl: result.avatarUrl,
+      initials: result.initials,
+    );
+
     final destination = chatDestinationFor(result.screen!, result.screenParams);
     destination?.call(context);
   }
@@ -352,7 +468,9 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
             textInputAction: TextInputAction.search,
             onSubmitted: (value) {
               _debounce?.cancel();
-              if (value.trim().isNotEmpty) _search(value.trim());
+              if (value.trim().isEmpty) return;
+              _search(value.trim());
+              _rememberTerm(value.trim());
             },
             decoration: InputDecoration(
               hintText: 'Search ${_scope.label.toLowerCase()}...',
@@ -403,6 +521,36 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
     );
   }
 
+  /// The screen with nothing searched yet. Past searches sit on top, and the
+  /// usual prompt sits under them - or on its own when the list is empty.
+  Widget _buildIdleBody({required String title, required String hint}) {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 32),
+      children: [
+        SearchHistoryList(
+          // Hawak ang key para makapag-refresh agad pagkatapos magtala. Yung
+          // scope naman, prop lang - kusa nang naghahanap ulit yung widget
+          // pag nagbago ito, kaya hiwalay pa rin ang listahan ng bawat isa.
+          key: _historyKey,
+          context: _historyContext,
+          service: widget.historyService,
+          onTermPicked: (term) {
+            _controller.text = term;
+            _focusNode.unfocus();
+            _search(term);
+          },
+          onEntityPicked: _openRemembered,
+        ),
+        EmptyResults(
+          icon: Icons.search,
+          title: title,
+          hint: hint,
+          padding: const EdgeInsets.fromLTRB(32, 48, 32, 24),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBody() {
     if (_scope != _SearchScope.internship) {
       return _buildPeopleBody();
@@ -439,13 +587,12 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
 
     final results = _results;
 
-    // Nothing typed yet — a blank canvas rather than a premature "no results".
+    // Nothing typed yet — this is where past searches belong, so the student
+    // can pick one back up instead of typing it out again.
     if (results == null) {
-      return const EmptyResults(
-        icon: Icons.search,
+      return _buildIdleBody(
         title: 'Search internships',
         hint: 'Find postings by title, company, or skill.',
-        padding: EdgeInsets.fromLTRB(32, 72, 32, 32),
       );
     }
 
@@ -554,15 +701,13 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
     final results = _peopleResults;
 
     if (results == null) {
-      return EmptyResults(
-        icon: Icons.search,
+      return _buildIdleBody(
         title: 'Search ${_scope.label.toLowerCase()}',
         hint: _scope == _SearchScope.student
             ? 'Find students by name, course, or email.'
             : _scope == _SearchScope.company
             ? 'Find companies by name, industry, or city.'
             : 'Find coordinators by name, department, or campus.',
-        padding: const EdgeInsets.fromLTRB(32, 72, 32, 32),
       );
     }
 

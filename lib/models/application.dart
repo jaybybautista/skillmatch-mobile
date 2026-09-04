@@ -12,6 +12,7 @@ class ApplicationSummary {
     required this.statusTextColor,
     required this.internshipTitle,
     required this.companyName,
+    this.companyHasMoa = false,
     this.companyLogoUrl,
     required this.companyInitial,
     this.appliedAt,
@@ -27,6 +28,11 @@ class ApplicationSummary {
   final Color statusTextColor;
   final String internshipTitle;
   final String companyName;
+
+  /// The company has a signed Memorandum of Agreement with the school, so the
+  /// card carries the same "With MOA" tag the student saw while browsing.
+  final bool companyHasMoa;
+
   final String? companyLogoUrl;
   final String companyInitial;
   final String? appliedAt;
@@ -56,6 +62,7 @@ class ApplicationSummary {
       ),
       internshipTitle: json['internship_title'] as String? ?? 'Internship',
       companyName: json['company_name'] as String? ?? 'Company',
+      companyHasMoa: json['company_has_moa'] as bool? ?? false,
       companyLogoUrl: json['company_logo_url'] as String?,
       companyInitial: json['company_initial'] as String? ?? 'C',
       appliedAt: json['applied_at'] as String?,

@@ -1,4 +1,5 @@
 import '../core/api_client.dart';
+import '../models/assessment_answer_sheet.dart';
 import '../models/assessment_submission.dart';
 import '../models/company_assessment.dart';
 
@@ -216,5 +217,53 @@ class CompanyAssessmentService {
     );
 
     return AssessmentSubmissions.fromJson(response);
+  }
+
+  /// One student's whole answer sheet — what they picked or typed per
+  /// question, and whether it was marked right. Reads the same
+  /// `assessment_answers` rows the website's answer sheet shows.
+  Future<AssessmentAnswerSheet> fetchAnswerSheet(
+    int assessmentId,
+    int resultId,
+  ) async {
+    final response = await _client.get(
+      '/company/assessments/$assessmentId/submissions/$resultId',
+      authenticated: true,
+    );
+
+    return AssessmentAnswerSheet.fromJson(response);
+  }
+
+  /// Puts a score on the written answers. Keys are `assessment_answers` ids,
+  /// values are the points given. The server clamps anything above the
+  /// question's maximum and recomputes the total, so the phone and the web
+  /// cannot end up disagreeing about the score.
+  Future<void> gradeSubmission(
+    int assessmentId,
+    int resultId,
+    Map<int, double> pointsByAnswerId,
+  ) async {
+    await _client.post(
+      '/company/assessments/$assessmentId/submissions/$resultId/grade',
+      {'points': pointsByAnswerId.map((k, v) => MapEntry('$k', v))},
+      authenticated: true,
+    );
+  }
+
+  /// Retakes [assessmentId] for [applicationId] — the same reassignment the
+  /// application's own Assign/Reassign action makes (Api\CompanyApplication
+  /// Controller@assignAssessment), so a retake from the submissions list
+  /// behaves exactly like reassigning from the application itself. Opens a
+  /// fresh attempt window and notifies the student; the score already on
+  /// record for the earlier attempt is left untouched.
+  Future<void> retake({
+    required int applicationId,
+    required int assessmentId,
+  }) async {
+    await _client.post(
+      '/company/applications/$applicationId/assign-assessment',
+      {'assessment_id': assessmentId},
+      authenticated: true,
+    );
   }
 }

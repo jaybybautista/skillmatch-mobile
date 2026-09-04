@@ -10,13 +10,17 @@ import '../placement/placement_screen.dart';
 import '../settings/settings_screen.dart';
 import 'image_viewer_screen.dart';
 import 'profile_photo_picker.dart';
+import 'profile_section_editor.dart';
 
 /// Profile screen — pulls real data from GET /api/student/profile (course,
 /// campus, contact info, resume, skills, education, certifications,
 /// experience), the same tables the web app's Profile page and Resume
 /// Builder populate.
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.service});
+
+  /// Injectable for tests; defaults to the real service.
+  final ProfileService? service;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -24,7 +28,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with ResumeUpdateListener {
-  final _service = ProfileService();
+  late final ProfileService _service = widget.service ?? ProfileService();
   late Future<StudentProfile> _future = _service.fetchStudentProfile();
 
   void _refresh() {
@@ -38,6 +42,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// change — the profile has to hear about it too.
   @override
   void onResumeChanged() => _refresh();
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           return _ProfileBody(
             profile: snapshot.data!,
+            service: _service,
             onBack: () => Navigator.of(context).pop(),
             onRefresh: _refresh,
           );
@@ -208,8 +215,10 @@ class _ProfileBody extends StatefulWidget {
     required this.profile,
     required this.onBack,
     required this.onRefresh,
+    required this.service,
   });
 
+  final ProfileService service;
   final StudentProfile profile;
   final VoidCallback onBack;
 
@@ -234,6 +243,340 @@ class _ProfileBodyState extends State<_ProfileBody> {
   double _scrollOffset = 0;
 
   StudentProfile get profile => widget.profile;
+
+  ProfileService get _service => widget.service;
+
+  /// Runs a save or delete, then reloads so the screen shows what the server
+  /// actually stored rather than what the phone hoped it stored.
+  Future<void> _afterChange(bool changed, String message) async {
+    if (!changed || !mounted) return;
+
+    widget.onRefresh();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _removeEntry({
+    required String what,
+    required Future<void> Function() remove,
+  }) async {
+    if (!await confirmSectionDelete(context, what)) return;
+
+    try {
+      await remove();
+      if (!mounted) return;
+      await _afterChange(true, 'Entry removed.');
+    } catch (e) {
+      if (!mounted) return;
+      final message = e is ApiException ? e.message : 'Could not remove that entry.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _editSummary(StudentProfile profile) async {
+    final saved = await showProfileSectionEditor(
+      context: context,
+      title: 'Professional summary',
+      saveLabel: 'Save summary',
+      fields: [
+        EditorField(
+          key: 'summary',
+          label: 'About you',
+          initial: profile.professionalSummary,
+          type: EditorFieldType.multiline,
+          hint: 'A few sentences about who you are and the work you want.',
+        ),
+      ],
+      onSave: (values) => _service.updateSummary(values['summary'] ?? ''),
+    );
+
+    await _afterChange(saved, 'Professional summary saved.');
+  }
+
+  Future<void> _editSkills(StudentProfile profile) async {
+    final saved = await showProfileSectionEditor(
+      context: context,
+      title: 'Skills',
+      saveLabel: 'Save skills',
+      fields: [
+        EditorField(
+          key: 'skills',
+          label: 'Skills',
+          initial: profile.skills.join(', '),
+          type: EditorFieldType.multiline,
+          hint: 'Separate each one with a comma.',
+        ),
+      ],
+      onSave: (values) => _service.updateSkills(
+        (values['skills'] ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList(),
+      ),
+    );
+
+    await _afterChange(saved, 'Skills saved.');
+  }
+
+  Future<void> _editEducation([EducationEntry? entry]) async {
+    final saved = await showProfileSectionEditor(
+      context: context,
+      title: entry == null ? 'Add education' : 'Edit education',
+      fields: [
+        EditorField(
+          key: 'institution',
+          label: 'Institution',
+          initial: entry?.institution,
+          required: true,
+        ),
+        EditorField(key: 'degree', label: 'Degree', initial: entry?.degree),
+        EditorField(
+          key: 'field_of_study',
+          label: 'Field of study',
+          initial: entry?.fieldOfStudy,
+        ),
+        EditorField(
+          key: 'start_year',
+          label: 'Start year',
+          initial: entry?.startYear?.toString(),
+          type: EditorFieldType.year,
+        ),
+        EditorField(
+          key: 'end_year',
+          label: 'End year (blank if ongoing)',
+          initial: entry?.endYear?.toString(),
+          type: EditorFieldType.year,
+        ),
+      ],
+      onSave: (values) => _service.saveEducation(
+        id: entry?.id,
+        institution: values['institution'] ?? '',
+        degree: values['degree'],
+        fieldOfStudy: values['field_of_study'],
+        startYear: int.tryParse(values['start_year'] ?? ''),
+        endYear: int.tryParse(values['end_year'] ?? ''),
+      ),
+    );
+
+    await _afterChange(saved, entry == null ? 'Education added.' : 'Education updated.');
+  }
+
+  Future<void> _editCertification([CertificationInfo? entry]) async {
+    final saved = await showProfileSectionEditor(
+      context: context,
+      title: entry == null ? 'Add certification' : 'Edit certification',
+      fields: [
+        EditorField(
+          key: 'title',
+          label: 'Title',
+          initial: entry?.title,
+          required: true,
+        ),
+        EditorField(
+          key: 'issuing_organization',
+          label: 'Issuing organization',
+          initial: entry?.issuingOrganization,
+        ),
+        EditorField(
+          key: 'issue_date',
+          label: 'Issue date',
+          initial: entry?.issueDateRaw,
+          type: EditorFieldType.date,
+        ),
+        EditorField(
+          key: 'expiry_date',
+          label: 'Expiry date (optional)',
+          initial: entry?.expiryDateRaw,
+          type: EditorFieldType.date,
+        ),
+        EditorField(
+          key: 'credential_url',
+          label: 'Credential link (optional)',
+          initial: entry?.credentialUrl,
+          type: EditorFieldType.url,
+        ),
+      ],
+      onSave: (values) => _service.saveCertification(
+        id: entry?.id,
+        title: values['title'] ?? '',
+        issuingOrganization: values['issuing_organization'],
+        issueDate: values['issue_date'],
+        expiryDate: values['expiry_date'],
+        credentialUrl: values['credential_url'],
+      ),
+    );
+
+    await _afterChange(
+      saved,
+      entry == null ? 'Certification added.' : 'Certification updated.',
+    );
+  }
+
+  Future<void> _editExperience([ExperienceInfo? entry]) async {
+    final saved = await showProfileSectionEditor(
+      context: context,
+      title: entry == null ? 'Add experience' : 'Edit experience',
+      fields: [
+        EditorField(
+          key: 'position',
+          label: 'Position',
+          initial: entry?.position,
+          required: true,
+        ),
+        EditorField(
+          key: 'organization',
+          label: 'Organization',
+          initial: entry?.organization,
+          required: true,
+        ),
+        EditorField(
+          key: 'type',
+          label: 'Type',
+          initial: entry?.type ?? 'work',
+          type: EditorFieldType.choice,
+          required: true,
+          choices: const [
+            (value: 'work', label: 'Work experience'),
+            (value: 'extracurricular', label: 'Extracurricular'),
+          ],
+        ),
+        EditorField(
+          key: 'start_date',
+          label: 'Start date',
+          initial: entry?.startDateRaw,
+          type: EditorFieldType.date,
+        ),
+        EditorField(
+          key: 'end_date',
+          label: 'End date (blank if ongoing)',
+          initial: entry?.endDateRaw,
+          type: EditorFieldType.date,
+        ),
+        EditorField(
+          key: 'description',
+          label: 'Description',
+          initial: entry?.description,
+          type: EditorFieldType.multiline,
+        ),
+      ],
+      onSave: (values) => _service.saveExperience(
+        id: entry?.id,
+        position: values['position'] ?? '',
+        organization: values['organization'] ?? '',
+        type: values['type'] ?? 'work',
+        startDate: values['start_date'],
+        endDate: values['end_date'],
+        description: values['description'],
+      ),
+    );
+
+    await _afterChange(
+      saved,
+      entry == null ? 'Experience added.' : 'Experience updated.',
+    );
+  }
+
+  Future<void> _editProject([ProjectInfo? entry]) async {
+    final saved = await showProfileSectionEditor(
+      context: context,
+      title: entry == null ? 'Add project' : 'Edit project',
+      fields: [
+        EditorField(
+          key: 'title',
+          label: 'Title',
+          initial: entry?.title,
+          required: true,
+        ),
+        EditorField(
+          key: 'role',
+          label: 'Your role (optional)',
+          initial: entry?.role,
+        ),
+        EditorField(
+          key: 'start_date',
+          label: 'Start date',
+          initial: entry?.startDateRaw,
+          type: EditorFieldType.date,
+        ),
+        EditorField(
+          key: 'end_date',
+          label: 'End date (blank if ongoing)',
+          initial: entry?.endDateRaw,
+          type: EditorFieldType.date,
+        ),
+        EditorField(
+          key: 'link',
+          label: 'Link (optional)',
+          initial: entry?.link,
+          type: EditorFieldType.url,
+        ),
+        EditorField(
+          key: 'description',
+          label: 'Description',
+          initial: entry?.description,
+          type: EditorFieldType.multiline,
+        ),
+      ],
+      onSave: (values) => _service.saveProject(
+        id: entry?.id,
+        title: values['title'] ?? '',
+        role: values['role'],
+        description: values['description'],
+        link: values['link'],
+        startDate: values['start_date'],
+        endDate: values['end_date'],
+      ),
+    );
+
+    await _afterChange(saved, entry == null ? 'Project added.' : 'Project updated.');
+  }
+
+  Future<void> _editAchievement([AchievementInfo? entry]) async {
+    final saved = await showProfileSectionEditor(
+      context: context,
+      title: entry == null ? 'Add achievement' : 'Edit achievement',
+      fields: [
+        EditorField(
+          key: 'title',
+          label: 'Title',
+          initial: entry?.title,
+          required: true,
+        ),
+        EditorField(
+          key: 'issuer',
+          label: 'Awarded by (optional)',
+          initial: entry?.issuer,
+        ),
+        EditorField(
+          key: 'date_awarded',
+          label: 'Date awarded',
+          initial: entry?.dateAwardedRaw,
+          type: EditorFieldType.date,
+        ),
+        EditorField(
+          key: 'description',
+          label: 'Description (optional)',
+          initial: entry?.description,
+          type: EditorFieldType.multiline,
+        ),
+      ],
+      onSave: (values) => _service.saveAchievement(
+        id: entry?.id,
+        title: values['title'] ?? '',
+        issuer: values['issuer'],
+        dateAwarded: values['date_awarded'],
+        description: values['description'],
+      ),
+    );
+
+    await _afterChange(
+      saved,
+      entry == null ? 'Achievement added.' : 'Achievement updated.',
+    );
+  }
+
 
   @override
   void initState() {
@@ -295,23 +638,65 @@ class _ProfileBodyState extends State<_ProfileBody> {
                       ],
                       _ContactCard(profile: profile),
                       const SizedBox(height: 24),
+                      // Sumusunod agad ito sa personal na detalye, gaya ng
+                      // pagkakasunod ng tab sa web. Ito ang unang binabasa ng
+                      // kompanyang tumitingin sa kanya, kaya malapit din ito
+                      // sa umpisa habang inaayos niya.
+                      _SectionTitle(
+                        'Professional Summary',
+                        actionIcon: Icons.edit_outlined,
+                        actionLabel: 'Edit',
+                        onAction: () => _editSummary(profile),
+                      ),
+                      const SizedBox(height: 10),
+                      _SummaryCard(profile: profile),
+                      const SizedBox(height: 24),
                       const _SectionTitle('Resume'),
                       const SizedBox(height: 10),
                       _ResumeCard(profile: profile),
                       const SizedBox(height: 24),
-                      const _SectionTitle('Professional Summary'),
-                      const SizedBox(height: 10),
-                      _SummaryCard(profile: profile),
-                      const SizedBox(height: 24),
-                      const _SectionTitle('Skills'),
+                      _SectionTitle(
+                        'Skills',
+                        actionIcon: Icons.edit_outlined,
+                        actionLabel: 'Edit',
+                        onAction: () => _editSkills(profile),
+                      ),
                       const SizedBox(height: 10),
                       _SkillsCard(profile: profile),
                       const SizedBox(height: 24),
-                      const _SectionTitle('Education'),
+                      const _SectionTitle('Campus'),
                       const SizedBox(height: 10),
                       _EducationCard(profile: profile),
                       const SizedBox(height: 24),
-                      const _SectionTitle('Certification'),
+                      _SectionTitle(
+                        'Education',
+                        onAction: () => _editEducation(),
+                      ),
+                      const SizedBox(height: 10),
+                      if (profile.educationHistory.isEmpty)
+                        const _EmptyStateCard(
+                          text: 'No education added yet.',
+                        )
+                      else
+                        for (final entry in profile.educationHistory) ...[
+                          _EducationEntryCard(
+                            entry: entry,
+                            onEdit: () => _editEducation(entry),
+                            onRemove: entry.id == null
+                                ? null
+                                : () => _removeEntry(
+                                    what: entry.institution ?? 'this entry',
+                                    remove: () =>
+                                        _service.deleteEducation(entry.id!),
+                                  ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      const SizedBox(height: 12),
+                      _SectionTitle(
+                        'Certification',
+                        onAction: () => _editCertification(),
+                      ),
                       const SizedBox(height: 10),
                       if (profile.certifications.isEmpty)
                         const _EmptyStateCard(
@@ -319,17 +704,86 @@ class _ProfileBodyState extends State<_ProfileBody> {
                         )
                       else
                         for (final cert in profile.certifications) ...[
-                          _CertificationCard(certification: cert),
+                          _CertificationCard(
+                            certification: cert,
+                            onEdit: () => _editCertification(cert),
+                            onRemove: cert.id == null
+                                ? null
+                                : () => _removeEntry(
+                                    what: cert.title ?? 'this entry',
+                                    remove: () =>
+                                        _service.deleteCertification(cert.id!),
+                                  ),
+                          ),
                           const SizedBox(height: 12),
                         ],
                       const SizedBox(height: 12),
-                      const _SectionTitle('Experience'),
+                      _SectionTitle(
+                        'Experience',
+                        onAction: () => _editExperience(),
+                      ),
                       const SizedBox(height: 10),
                       if (profile.experiences.isEmpty)
                         const _EmptyStateCard(text: 'No experience added yet.')
                       else
                         for (final exp in profile.experiences) ...[
-                          _ExperienceCard(experience: exp),
+                          _ExperienceCard(
+                            experience: exp,
+                            onEdit: () => _editExperience(exp),
+                            onRemove: exp.id == null
+                                ? null
+                                : () => _removeEntry(
+                                    what: exp.position ?? 'this entry',
+                                    remove: () =>
+                                        _service.deleteExperience(exp.id!),
+                                  ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      const SizedBox(height: 12),
+                      _SectionTitle(
+                        'Projects',
+                        onAction: () => _editProject(),
+                      ),
+                      const SizedBox(height: 10),
+                      if (profile.projects.isEmpty)
+                        const _EmptyStateCard(text: 'No projects added yet.')
+                      else
+                        for (final project in profile.projects) ...[
+                          _ProjectCard(
+                            project: project,
+                            onEdit: () => _editProject(project),
+                            onRemove: project.id == null
+                                ? null
+                                : () => _removeEntry(
+                                    what: project.title ?? 'this entry',
+                                    remove: () =>
+                                        _service.deleteProject(project.id!),
+                                  ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      const SizedBox(height: 12),
+                      _SectionTitle(
+                        'Achievements',
+                        onAction: () => _editAchievement(),
+                      ),
+                      const SizedBox(height: 10),
+                      if (profile.achievements.isEmpty)
+                        const _EmptyStateCard(text: 'No achievements added yet.')
+                      else
+                        for (final award in profile.achievements) ...[
+                          _AchievementCard(
+                            achievement: award,
+                            onEdit: () => _editAchievement(award),
+                            onRemove: award.id == null
+                                ? null
+                                : () => _removeEntry(
+                                    what: award.title ?? 'this entry',
+                                    remove: () =>
+                                        _service.deleteAchievement(award.id!),
+                                  ),
+                          ),
                           const SizedBox(height: 12),
                         ],
                     ],
@@ -562,14 +1016,146 @@ class _Avatar extends StatelessWidget {
   }
 }
 
+/// A section heading, with the button that adds to it or edits it.
+///
+/// The one-off sections (summary, skills) pass an edit icon; the list
+/// sections leave it as the default plus, because there the button adds a new
+/// row rather than editing the existing one.
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
+  const _SectionTitle(
+    this.title, {
+    this.onAction,
+    this.actionIcon = Icons.add,
+    this.actionLabel = 'Add',
+  });
 
   final String title;
+  final VoidCallback? onAction;
+  final IconData actionIcon;
+  final String actionLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Text(title, style: AppFonts.title(fontSize: 17));
+    if (onAction == null) {
+      return Text(title, style: AppFonts.title(fontSize: 17));
+    }
+
+    return Row(
+      children: [
+        Expanded(child: Text(title, style: AppFonts.title(fontSize: 17))),
+        TextButton.icon(
+          onPressed: onAction,
+          icon: Icon(actionIcon, size: 17),
+          label: Text(actionLabel),
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The edit and remove menu on a single row.
+///
+/// Only shown where the row can actually be changed, so a row with no id (a
+/// card built by a test, say) simply does not get one.
+class _RowMenu extends StatelessWidget {
+  const _RowMenu({this.onEdit, this.onRemove});
+
+  final VoidCallback? onEdit;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    if (onEdit == null && onRemove == null) return const SizedBox.shrink();
+
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textMuted),
+      padding: EdgeInsets.zero,
+      tooltip: 'Options',
+      onSelected: (value) {
+        if (value == 'edit') onEdit?.call();
+        if (value == 'remove') onRemove?.call();
+      },
+      itemBuilder: (context) => [
+        if (onEdit != null)
+          const PopupMenuItem(value: 'edit', child: Text('Edit')),
+        if (onRemove != null)
+          const PopupMenuItem(
+            value: 'remove',
+            child: Text('Remove', style: TextStyle(color: AppColors.danger)),
+          ),
+      ],
+    );
+  }
+}
+
+/// One school the student attended.
+class _EducationEntryCard extends StatelessWidget {
+  const _EducationEntryCard({required this.entry, this.onEdit, this.onRemove});
+
+  final EducationEntry entry;
+  final VoidCallback? onEdit;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.chipBackground,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.school_outlined, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.institution ?? '',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                if ((entry.degree ?? '').isNotEmpty)
+                  Text(
+                    entry.degree!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                if ((entry.fieldOfStudy ?? '').isNotEmpty)
+                  Text(
+                    entry.fieldOfStudy!,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                Text(
+                  entry.period,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _RowMenu(onEdit: onEdit, onRemove: onRemove),
+        ],
+      ),
+    );
   }
 }
 
@@ -850,21 +1436,34 @@ class _EducationCard extends StatelessWidget {
 }
 
 class _CertificationCard extends StatelessWidget {
-  const _CertificationCard({required this.certification});
+  const _CertificationCard({required this.certification, this.onEdit, this.onRemove});
 
   final CertificationInfo certification;
+  final VoidCallback? onEdit;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
     return _Card(
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _LabelValueRow(label: 'Certificate', value: certification.title),
-          _LabelValueRow(
-            label: 'Organization',
-            value: certification.issuingOrganization,
+          Expanded(
+            child: Column(
+              children: [
+                _LabelValueRow(
+                  label: 'Certificate',
+                  value: certification.title,
+                ),
+                _LabelValueRow(
+                  label: 'Organization',
+                  value: certification.issuingOrganization,
+                ),
+                _LabelValueRow(label: 'Issued', value: certification.issueDate),
+              ],
+            ),
           ),
-          _LabelValueRow(label: 'Issued', value: certification.issueDate),
+          _RowMenu(onEdit: onEdit, onRemove: onRemove),
         ],
       ),
     );
@@ -872,9 +1471,11 @@ class _CertificationCard extends StatelessWidget {
 }
 
 class _ExperienceCard extends StatelessWidget {
-  const _ExperienceCard({required this.experience});
+  const _ExperienceCard({required this.experience, this.onEdit, this.onRemove});
 
   final ExperienceInfo experience;
+  final VoidCallback? onEdit;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -921,6 +1522,156 @@ class _ExperienceCard extends StatelessWidget {
               ],
             ),
           ),
+          _RowMenu(onEdit: onEdit, onRemove: onRemove),
+        ],
+      ),
+    );
+  }
+}
+
+/// Isang proyekto sa profile. Kaparehong hugis ng _ExperienceCard para
+/// magkatugma yung buong listahan.
+class _ProjectCard extends StatelessWidget {
+  const _ProjectCard({required this.project, this.onEdit, this.onRemove});
+
+  final ProjectInfo project;
+  final VoidCallback? onEdit;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final period = project.startDate == null
+        ? null
+        : '${project.startDate} to ${project.endDate ?? 'Present'}';
+
+    return _Card(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.chipBackground,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.code, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  project.title ?? '',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                if ((project.role ?? '').isNotEmpty)
+                  Text(
+                    project.role!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                if (period != null)
+                  Text(
+                    period,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                if ((project.description ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    project.description!,
+                    style: const TextStyle(fontSize: 13, height: 1.45),
+                  ),
+                ],
+                if ((project.link ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    project.link!,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          _RowMenu(onEdit: onEdit, onRemove: onRemove),
+        ],
+      ),
+    );
+  }
+}
+
+/// Isang parangal sa profile.
+class _AchievementCard extends StatelessWidget {
+  const _AchievementCard({required this.achievement, this.onEdit, this.onRemove});
+
+  final AchievementInfo achievement;
+  final VoidCallback? onEdit;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.chipBackground,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.star_outline, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  achievement.title ?? '',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                if ((achievement.issuer ?? '').isNotEmpty)
+                  Text(
+                    achievement.issuer!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                if ((achievement.dateAwarded ?? '').isNotEmpty)
+                  Text(
+                    achievement.dateAwarded!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                if ((achievement.description ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    achievement.description!,
+                    style: const TextStyle(fontSize: 13, height: 1.45),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          _RowMenu(onEdit: onEdit, onRemove: onRemove),
         ],
       ),
     );

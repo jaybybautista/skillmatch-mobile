@@ -39,6 +39,10 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
   List<AssessmentGroup> _groups = const [];
   List<AssessmentPostingOption> _postings = const [];
 
+  /// Papers with no posting yet. They get their own heading, because the rest
+  /// of this screen is grouped by posting and they would otherwise be lost.
+  List<CompanyAssessment> _unlinked = const [];
+
   /// Every paper once, however many postings use it — for the counts in the
   /// delete warning, which are about the paper rather than one posting.
   List<CompanyAssessment> _assessments = const [];
@@ -61,6 +65,7 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
         _groups = library.groups;
         _assessments = library.assessments;
         _postings = library.postingOptions;
+        _unlinked = library.unlinked;
         _isLoading = false;
       });
     } catch (e) {
@@ -257,7 +262,7 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
     // list of assessments, not of postings.
     final groups = _groups.where((g) => g.assessments.isNotEmpty).toList();
 
-    if (groups.isEmpty) {
+    if (groups.isEmpty && _unlinked.isEmpty) {
       return ListView(
         children: const [
           SizedBox(height: 40),
@@ -273,6 +278,22 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       children: [
+        if (_unlinked.isNotEmpty) ...[
+          const _UnlinkedHeading(),
+          const SizedBox(height: 12),
+          for (final assessment in _unlinked) ...[
+            _AssessmentCard(
+              assessment: assessment,
+              onTap: () => _preview(assessment),
+              onEdit: () => _edit(assessment),
+              onDelete: () => _confirmDelete(assessment),
+              // Walang posting, kaya walang sagutan pang matitingnan.
+              onViewSubmissions: null,
+            ),
+            const SizedBox(height: 16),
+          ],
+          const SizedBox(height: 10),
+        ],
         for (final group in groups) ...[
           _PostingHeading(group: group),
           const SizedBox(height: 12),
@@ -289,6 +310,66 @@ class _AssessmentLibraryScreenState extends State<AssessmentLibraryScreen> {
           const SizedBox(height: 10),
         ],
       ],
+    );
+  }
+}
+
+/// The heading for papers that have no posting yet.
+class _UnlinkedHeading extends StatelessWidget {
+  const _UnlinkedHeading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFDF7),
+        border: Border.all(color: const Color(0xFFF4DFBA)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.warningBackground,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: const Icon(
+              Icons.link_off,
+              size: 16,
+              color: AppColors.warning,
+            ),
+          ),
+          const SizedBox(width: 11),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Not linked to a posting',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Waiting to be attached. Open a posting and use Link '
+                  'existing when you are ready.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -335,14 +416,16 @@ class _AssessmentCard extends StatelessWidget {
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
-    required this.onViewSubmissions,
+    this.onViewSubmissions,
   });
 
   final CompanyAssessment assessment;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  final VoidCallback onViewSubmissions;
+  /// Null for a paper with no posting: there is nothing to look at yet, so
+  /// the link is left off the card rather than shown doing nothing.
+  final VoidCallback? onViewSubmissions;
 
   @override
   Widget build(BuildContext context) {
@@ -478,19 +561,20 @@ class _AssessmentCard extends StatelessWidget {
                     ),
                   ],
                   const Spacer(),
-                  InkWell(
-                    onTap: onViewSubmissions,
-                    child: Text(
-                      assessment.submissionCount > 0
-                          ? 'View Submissions (${assessment.submissionCount})'
-                          : 'View Submissions',
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                  if (onViewSubmissions != null)
+                    InkWell(
+                      onTap: onViewSubmissions,
+                      child: Text(
+                        assessment.submissionCount > 0
+                            ? 'View Submissions (${assessment.submissionCount})'
+                            : 'View Submissions',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ],

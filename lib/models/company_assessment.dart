@@ -254,6 +254,7 @@ class AssessmentLibrary {
     required this.assessments,
     required this.postingOptions,
     this.groups = const [],
+    this.unlinked = const [],
   });
 
   /// Every assessment once, however many postings use it, counted across
@@ -267,6 +268,11 @@ class AssessmentLibrary {
   /// which is what the library screen shows.
   final List<AssessmentGroup> groups;
 
+  /// Papers with no posting attached yet. The library is grouped by posting,
+  /// so without their own place these would be invisible to the company that
+  /// wrote them.
+  final List<CompanyAssessment> unlinked;
+
   factory AssessmentLibrary.fromJson(Map<String, dynamic> json) =>
       AssessmentLibrary(
         // One card per assessment. The server groups them under the posting
@@ -278,6 +284,9 @@ class AssessmentLibrary {
               .map((e) => CompanyAssessment.fromJson(e as Map<String, dynamic>))
               .toList(),
         ),
+        unlinked: (json['unlinked'] as List? ?? const [])
+            .map((e) => CompanyAssessment.fromJson(e as Map<String, dynamic>))
+            .toList(),
         postingOptions: (json['posting_options'] as List? ?? const [])
             .map(
               (e) =>

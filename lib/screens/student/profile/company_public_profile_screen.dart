@@ -117,6 +117,14 @@ class _CompanyPublicProfileScreenState
                 label: 'Verified',
                 color: Color(0xFF16A34A),
               ),
+            // Hiwalay ito sa Verified. Yun, tunay lang yung account. Ito,
+            // may hawak talagang kasunduan yung paaralan sa kompanyang ito.
+            if (company.hasMoa)
+              const ProfileMetaChip(
+                icon: Icons.assignment_turned_in_outlined,
+                label: 'With MOA',
+                color: Color(0xFF1A7F4B),
+              ),
           ],
         ),
         Padding(

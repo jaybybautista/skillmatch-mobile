@@ -4,6 +4,7 @@ import '../core/app_theme.dart';
 import '../models/internship.dart';
 import '../screens/student/internship/internship_detail_screen.dart';
 import '../services/internship_service.dart';
+import 'moa_tag.dart';
 
 class MatchCard extends StatefulWidget {
   const MatchCard({
@@ -106,12 +107,26 @@ class _MatchCardState extends State<MatchCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        internship.companyName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              internship.companyName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          // Nakapirma na ang paaralan at ang kompanya sa
+                          // kasunduan, kaya opisyal na pwede kang ipadala dito.
+                          if (internship.companyHasMoa) ...[
+                            const SizedBox(width: 6),
+                            const MoaTag(),
+                          ],
+                        ],
                       ),
                       if (internship.location != null)
                         Text(

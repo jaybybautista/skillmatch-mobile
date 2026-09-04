@@ -746,7 +746,7 @@ void main() {
       expect(service.calls.where((c) => c == 'create'), hasLength(1));
     });
 
-    testWidgets('no posting ticked is caught before any request', (
+    testWidgets('no posting ticked is allowed: the paper waits unlinked', (
       tester,
     ) async {
       final service = _FakeAssessmentService();
@@ -775,11 +775,11 @@ void main() {
       await tester.tap(find.text('Next'));
       await tester.pump();
 
-      expect(
-        find.textContaining('at least one posting'),
-        findsOneWidget,
-      );
-      expect(service.calls, isEmpty);
+      // Walang posting, tuloy pa rin. May nagsisimulang magsulat ng papel
+      // bago pa may posting na maikakabit - sa library ito maghihintay.
+      expect(find.textContaining('at least one posting'), findsNothing);
+      expect(service.calls, contains('create'));
+      expect(service.lastDetails!['internship_ids'], isEmpty);
     });
 
     testWidgets(
@@ -1020,7 +1020,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Step 1 of 2 \u00b7 Details'), findsOneWidget);
-      expect(find.text('LINKED POSTINGS'), findsOneWidget);
+      expect(find.text('LINKED POSTINGS (OPTIONAL)'), findsOneWidget);
     });
 
     testWidgets('Save assessment saves the paper', (tester) async {

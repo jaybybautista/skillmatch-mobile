@@ -8,14 +8,16 @@ import '../../models/assessment_submission.dart';
 import '../../models/company_assessment.dart';
 import '../../services/company_assessment_service.dart';
 import '../../widgets/company_screen_header.dart';
+import '../../widgets/retake_open_tag.dart';
+import 'assessment_answer_sheet_screen.dart';
 
 /// Reached from "View Submissions" on an Assessment Library card — everyone
 /// who has completed that assessment, with the score they got.
 ///
-/// Read-only, like the website's Records → Assessments table: the score was
-/// computed by the shared AssessmentService when the student submitted, and
-/// what happens to a candidate next is decided on their application, not on
-/// the attempt.
+/// The score itself is fixed, computed by the shared AssessmentService when
+/// the student submitted. The one action a card offers is Retake, which
+/// reassigns the same paper to the application it came through, opening a
+/// fresh attempt window without touching the score already on record.
 class AssessmentSubmissionsScreen extends StatefulWidget {
   const AssessmentSubmissionsScreen({
     super.key,
@@ -52,6 +54,7 @@ class _AssessmentSubmissionsScreenState
   List<AssessmentSubmission> _submissions = const [];
   List<SubmissionPosting> _postings = const [];
   int _unattributed = 0;
+  SubmissionTiming _timing = const SubmissionTiming();
 
   late int? _internshipId = widget.internshipId;
 
@@ -90,6 +93,7 @@ class _AssessmentSubmissionsScreenState
         // options can say how many are behind each without asking again.
         _postings = result.postings;
         _unattributed = result.unattributedCount;
+        _timing = result.timing;
         _isLoading = false;
       });
     } catch (e) {
@@ -279,12 +283,143 @@ class _AssessmentSubmissionsScreenState
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-      itemCount: _submissions.length,
-      itemBuilder: (_, index) => Padding(
-        padding: EdgeInsets.only(
-          bottom: index == _submissions.length - 1 ? 0 : 16,
+      // Yung buod ng tagal, nauuna bago yung listahan.
+      itemCount: _submissions.length + (_timing.hasData ? 1 : 0),
+      itemBuilder: (_, index) {
+        if (_timing.hasData) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _TimingStrip(timing: _timing),
+            );
+          }
+          index -= 1;
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: index == _submissions.length - 1 ? 0 : 16,
+          ),
+          child: _SubmissionCard(
+            submission: _submissions[index],
+            onTap: () => _openAnswerSheet(_submissions[index]),
+            onRetake: _submissions[index].applicationId == null
+                ? null
+                : () => _retake(_submissions[index]),
+          ),
+        );
+      },
+    );
+  }
+
+  void _openAnswerSheet(AssessmentSubmission submission) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AssessmentAnswerSheetScreen(
+          assessmentId: widget.assessment.id,
+          resultId: submission.id,
+          studentName: submission.name,
         ),
-        child: _SubmissionCard(submission: _submissions[index]),
+      ),
+    ).then((changed) {
+      // Pag may binagong puntos, kailangang bagong-basa yung listahan.
+      if (changed == true) _load();
+    });
+  }
+
+  /// Re-runs the same reassignment the application's own Assign/Reassign
+  /// action makes, on whichever application this attempt came through — the
+  /// score already on record stays exactly as it is.
+  Future<void> _retake(AssessmentSubmission submission) async {
+    final applicationId = submission.applicationId;
+    if (applicationId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Retake this assessment?'),
+        content: Text(
+          'Let ${submission.name} retake "${widget.assessment.title}"? '
+          'Their current score is kept, and this opens a fresh attempt.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Retake'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _service.retake(
+        applicationId: applicationId,
+        assessmentId: widget.assessment.id,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${submission.name} can now retake this assessment.'),
+        ),
+      );
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is ApiException ? e.message : 'Could not open a retake.',
+          ),
+        ),
+      );
+    }
+  }
+}
+
+/// Average, fastest and slowest, above the list. Only the attempts that
+/// actually have a recorded duration are counted.
+class _TimingStrip extends StatelessWidget {
+  const _TimingStrip({required this.timing});
+
+  final SubmissionTiming timing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _Stat(
+              label: 'AVERAGE',
+              value: SubmissionTiming.format(timing.averageSeconds),
+            ),
+          ),
+          Expanded(
+            child: _Stat(
+              label: 'FASTEST',
+              value: SubmissionTiming.format(timing.fastestSeconds),
+            ),
+          ),
+          Expanded(
+            child: _Stat(
+              label: 'SLOWEST',
+              value: SubmissionTiming.format(timing.slowestSeconds),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -340,16 +475,31 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _SubmissionCard extends StatelessWidget {
-  const _SubmissionCard({required this.submission});
+  const _SubmissionCard({
+    required this.submission,
+    this.onTap,
+    this.onRetake,
+  });
 
   final AssessmentSubmission submission;
+
+  /// Tapping opens the answer sheet, the same page the website's
+  /// "View answers" link goes to.
+  final VoidCallback? onTap;
+
+  /// Null when the server could not tell which application this attempt
+  /// came through — with nowhere safe to send it, there is no button.
+  final VoidCallback? onRetake;
 
   @override
   Widget build(BuildContext context) {
     final avatarUrl = submission.avatarUrl;
     final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
 
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -403,7 +553,19 @@ class _SubmissionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _VerdictPill(submission: submission),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _VerdictPill(submission: submission),
+                  // Nananatili ito hangga't di pa siya sumasagot ulit, kaya
+                  // makikita mo pa rin na may binigay kang bagong pagkakataon
+                  // kahit matagal na mula nang pindutin mo.
+                  if (submission.retakeOpen) ...[
+                    const SizedBox(height: 6),
+                    const RetakeOpenTag(),
+                  ],
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -429,6 +591,12 @@ class _SubmissionCard extends StatelessWidget {
                   value: '${submission.percentage}%',
                 ),
               ),
+              Expanded(
+                child: _Stat(
+                  label: 'TIME SPENT',
+                  value: submission.durationLabel ?? 'Not recorded',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -443,7 +611,31 @@ class _SubmissionCard extends StatelessWidget {
               ),
             ),
           ),
+          if (onRetake != null) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton(
+                onPressed: onRetake,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textDark,
+                  side: const BorderSide(color: AppColors.border),
+                  minimumSize: const Size(0, 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                child: const Text('Retake'),
+              ),
+            ),
+          ],
         ],
+      ),
       ),
     );
   }

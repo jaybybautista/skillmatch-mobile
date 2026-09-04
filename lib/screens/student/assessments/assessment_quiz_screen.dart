@@ -702,6 +702,24 @@ class _QuestionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Halaga ng tanong. Iba-iba na ito ngayon, kaya kailangan niyang
+          // malaman kung alin ang mabigat bago siya sumagot.
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.chipBackground,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '${question.points} ${question.points == 1 ? 'point' : 'points'}',
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           Text(
             question.text,
             style: const TextStyle(

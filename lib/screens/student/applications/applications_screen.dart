@@ -9,6 +9,7 @@ import '../../../models/application.dart';
 import '../../../services/application_service.dart';
 import '../../../widgets/app_bottom_nav.dart';
 import '../../../widgets/empty_results.dart';
+import '../../../widgets/moa_tag.dart';
 import '../assessments/assessment_intro_screen.dart';
 import '../../../widgets/app_sidebar.dart';
 
@@ -479,14 +480,26 @@ class _ApplicationCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      application.companyName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                      ),
+                    // Ang tanda, nasa tabi ng pangalan, kaparehong-kapareho
+                    // ng nakita niya noong nagba-browse pa lang siya.
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            application.companyName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                        if (application.companyHasMoa) ...[
+                          const SizedBox(width: 6),
+                          const MoaTag(),
+                        ],
+                      ],
                     ),
                   ],
                 ),

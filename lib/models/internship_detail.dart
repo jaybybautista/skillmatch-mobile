@@ -35,6 +35,7 @@ class InternshipDetail {
     required this.title,
     required this.companyName,
     this.companyLogoUrl,
+    this.companyHasMoa = false,
     this.companyAbout,
     this.location,
     required this.slotsAvailable,
@@ -51,6 +52,10 @@ class InternshipDetail {
   final String title;
   final String companyName;
   final String? companyLogoUrl;
+
+  /// The company has a signed Memorandum of Agreement with the school, so
+  /// a placement there is officially sanctioned. Shown as a "With MOA" tag.
+  final bool companyHasMoa;
   final String? companyAbout;
   final String? location;
   final int slotsAvailable;
@@ -75,6 +80,7 @@ class InternshipDetail {
       title: json['title'] as String,
       companyName: json['company_name'] as String,
       companyLogoUrl: json['company_logo_url'] as String?,
+      companyHasMoa: json['company_has_moa'] as bool? ?? false,
       companyAbout: json['company_about'] as String?,
       location: json['location'] as String?,
       slotsAvailable: json['slots_available'] as int? ?? 0,

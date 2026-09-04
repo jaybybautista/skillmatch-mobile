@@ -4,6 +4,7 @@ import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
 import '../../../models/internship_detail.dart';
 import '../../../services/internship_service.dart';
+import '../../../widgets/moa_tag.dart';
 import '../reviews/reviews_section.dart';
 
 /// Internship posting detail — mirrors the web's internship detail page
@@ -368,6 +369,9 @@ class _InfoHeader extends StatelessWidget {
                   background: AppColors.primary,
                   foreground: Colors.white,
                 ),
+              // Nakapirma na ang paaralan at ang kompanya sa kasunduan, kaya
+              // opisyal na pwede kang ipadala dito para sa OJT.
+              if (detail.companyHasMoa) const MoaTag(compact: false),
             ],
           ),
         ],

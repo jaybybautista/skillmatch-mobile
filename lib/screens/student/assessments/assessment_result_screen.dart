@@ -92,17 +92,26 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
     );
   }
 
+  static const _amber = Color(0xFFB87700);
+  static const _amberBackground = Color(0xFFFFF4E5);
+  static const _green = Color(0xFF15803D);
+
   Widget _buildResult(AssessmentAttemptResult result) {
-    // Timing out is its own outcome — amber and a clock, so it never reads as
-    // an ordinary fail (or, worse, gets mistaken for a pass).
-    final accent = result.timedOut
-        ? const Color(0xFFB87700)
-        : result.passed
+    // Waiting on a person is its own outcome, and it is neither blue nor red:
+    // nothing has been decided, so nothing should look decided.
+    //
+    // Timing out is its own outcome too, so it never reads as an ordinary fail
+    // (or, worse, gets mistaken for a pass).
+    final underReview = result.isUnderReview;
+
+    final accent = underReview || result.timedOut
+        ? _amber
+        : result.passed == true
         ? const Color(0xFF1E4FD8)
         : const Color(0xFFE03E3E);
-    final accentBackground = result.timedOut
-        ? const Color(0xFFFFF4E5)
-        : result.passed
+    final accentBackground = underReview || result.timedOut
+        ? _amberBackground
+        : result.passed == true
         ? const Color(0xFFE8EEFF)
         : const Color(0xFFFFF1F1);
 
@@ -122,16 +131,34 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    result.timedOut
+                    underReview
+                        ? Icons.hourglass_top_outlined
+                        : result.timedOut
                         ? Icons.timer_off_outlined
-                        : result.passed
+                        : result.passed == true
                         ? Icons.school_outlined
                         : Icons.close,
                     size: 42,
                     color: accent,
                   ),
                 ),
-                const SizedBox(height: 26),
+                const SizedBox(height: 20),
+                if (underReview)
+                  _Pill(
+                    label: 'Under review',
+                    icon: Icons.schedule,
+                    color: _amber,
+                    background: _amberBackground,
+                  )
+                else if (result.wasReviewed)
+                  const _Pill(
+                    label: 'Final score',
+                    icon: Icons.check_circle_outline,
+                    color: _green,
+                    background: Color(0xFFECFDF5),
+                  ),
+                if (underReview || result.wasReviewed)
+                  const SizedBox(height: 14),
                 Text(
                   result.headline,
                   textAlign: TextAlign.center,
@@ -142,45 +169,56 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  'You scored ${result.score} out of ${result.totalPoints} points (${result.percentage}%)',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textMuted,
+
+                // Walang bilang habang hinihintay pa. Kalahati lang naman ang
+                // natsek, kaya mukhang bagsak yung marka kahit hindi pa
+                // nabibilang yung mga sinulat niya.
+                if (underReview)
+                  Text(
+                    'Your score will appear here once ${result.companyName} '
+                    'finishes reviewing.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textMuted,
+                      height: 1.5,
+                    ),
+                  )
+                else
+                  Text(
+                    'You scored ${result.score} out of ${result.totalPoints} '
+                    'points (${result.percentage}%)',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textMuted,
+                    ),
                   ),
-                ),
-                if (result.timedOut) ...[
+
+                if (!underReview && result.timedOut) ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: accentBackground,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      'Did not pass — time expired',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: accent,
-                      ),
-                    ),
+                  _Pill(
+                    label: 'Did not pass, time expired',
+                    icon: Icons.timer_off_outlined,
+                    color: accent,
+                    background: accentBackground,
                   ),
                 ],
-                const SizedBox(height: 18),
-                Text(
-                  result.message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    color: AppColors.textMuted,
-                    height: 1.55,
+
+                const SizedBox(height: 20),
+
+                if (underReview)
+                  _ReviewSteps(result: result)
+                else
+                  Text(
+                    result.message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: AppColors.textMuted,
+                      height: 1.55,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -221,6 +259,129 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
           TextButton(
             onPressed: _close,
             child: const Text('Back to Applications'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// What was settled already and what is still owed, one line each.
+///
+/// Left aligned rather than centred: this is a list of facts, not a sentence,
+/// and each line answers a different question the student has.
+class _ReviewSteps extends StatelessWidget {
+  const _ReviewSteps({required this.result});
+
+  final AssessmentAttemptResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final counts = result.reviewCounts;
+    final rows = <(IconData, Color, String)>[];
+
+    if (counts.autoChecked > 0) {
+      rows.add((
+        Icons.check_circle_outline,
+        const Color(0xFF16A34A),
+        '${counts.autoChecked} of ${counts.total} '
+            '${counts.total == 1 ? 'question' : 'questions'} '
+            '${counts.autoChecked == 1 ? 'was' : 'were'} checked automatically.',
+      ));
+    }
+
+    rows.add((
+      Icons.schedule,
+      _AssessmentResultScreenState._amber,
+      '${counts.awaiting} written '
+          '${counts.awaiting == 1 ? 'answer' : 'answers'} still '
+          '${counts.awaiting == 1 ? 'needs' : 'need'} to be read by '
+          '${result.companyName}.',
+    ));
+
+    // Tiyak na ito kahit hindi pa tapos yung repaso, kaya sinasabi na rin
+    // ngayon. Yung score lang ang hinihintay dito.
+    if (result.timedOut) {
+      rows.add((
+        Icons.info_outline,
+        AppColors.textMuted,
+        'This attempt was submitted automatically when the time ran out, so it '
+            'will not count as a pass.',
+      ));
+    }
+
+    rows.add((
+      Icons.notifications_none,
+      AppColors.textMuted,
+      "We'll notify you as soon as your result is ready. You can leave this "
+          'screen.',
+    ));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (icon, color, text) in rows)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 11),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(icon, size: 16, color: color),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: AppColors.textMuted,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.background,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),

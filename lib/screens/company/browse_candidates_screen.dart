@@ -7,7 +7,10 @@ import '../../core/app_theme.dart';
 import '../../core/company_navigation.dart';
 import '../../core/error_message.dart';
 import '../../models/company_application.dart';
+import '../../models/search_history_entry.dart';
 import '../../services/company_service.dart';
+import '../../services/search_history_service.dart';
+import '../../widgets/search_history_list.dart';
 import '../../widgets/matcha_launcher.dart';
 import '../../widgets/company_screen_header.dart';
 import '../../widgets/company_bottom_nav.dart';
@@ -33,10 +36,12 @@ class BrowseCandidatesScreen extends StatefulWidget {
   const BrowseCandidatesScreen({
     super.key,
     this.service,
+    this.historyService,
     this.bookmarksOnly = false,
   });
 
   final CompanyService? service;
+  final SearchHistoryService? historyService;
 
   /// When true this is the Bookmarks view rather than the full browse list.
   final bool bookmarksOnly;
@@ -47,7 +52,16 @@ class BrowseCandidatesScreen extends StatefulWidget {
 
 class _BrowseCandidatesScreenState extends State<BrowseCandidatesScreen> {
   late final CompanyService _service = widget.service ?? CompanyService();
+  late final SearchHistoryService _historyService =
+      widget.historyService ?? SearchHistoryService();
   final _searchController = TextEditingController();
+
+  /// Past searches only take up room while the box is focused and empty, so
+  /// the candidate list is not pushed down the rest of the time.
+  final _searchFocus = FocusNode();
+  final _historyKey = GlobalKey<SearchHistoryListState>();
+  bool _historyVisible = false;
+
   Timer? _debounce;
 
   bool _isLoading = true;
@@ -74,13 +88,22 @@ class _BrowseCandidatesScreenState extends State<BrowseCandidatesScreen> {
   void initState() {
     super.initState();
     _load();
+    _searchFocus.addListener(_syncHistoryVisibility);
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
+    _searchFocus.removeListener(_syncHistoryVisibility);
+    _searchFocus.dispose();
     super.dispose();
+  }
+
+  void _syncHistoryVisibility() {
+    final show = _searchFocus.hasFocus && _searchController.text.trim().isEmpty;
+    if (show == _historyVisible) return;
+    setState(() => _historyVisible = show);
   }
 
   Future<void> _load() async {
@@ -122,13 +145,32 @@ class _BrowseCandidatesScreenState extends State<BrowseCandidatesScreen> {
   }
 
   void _onSearchChanged(String _) {
+    _syncHistoryVisibility();
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), _load);
+  }
+
+  /// Recorded when the search is committed, not while typing - same rule as
+  /// the web, so half-typed words never reach the list.
+  Future<void> _rememberTerm(String term) async {
+    if (term.trim().length < 2) return;
+
+    try {
+      await _historyService.recordTerm(
+        SearchContext.candidates,
+        term.trim(),
+      );
+      await _historyKey.currentState?.reload();
+    } catch (_) {
+      // Dagdag lang ang pagtatala, hindi ito dapat maging harang sa paghahanap.
+    }
   }
 
   /// Opens the candidate's record. Coming back reloads when the bookmark was
   /// changed there, so the star on the card matches.
   Future<void> _openCandidate(Candidate candidate) async {
+    _rememberOpened(candidate);
+
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => CandidateDetailScreen(
@@ -139,6 +181,41 @@ class _BrowseCandidatesScreenState extends State<BrowseCandidatesScreen> {
       ),
     );
     if (changed == true && mounted) await _load();
+  }
+
+  Future<void> _rememberOpened(Candidate candidate) async {
+    try {
+      await _historyService.recordEntity(
+        SearchContext.candidates,
+        entityType: 'student',
+        entityId: candidate.id,
+        label: candidate.summary.name,
+        subtitle: candidate.summary.course,
+        imageUrl: candidate.summary.avatarUrl,
+        initials: candidate.summary.initials,
+      );
+      await _historyKey.currentState?.reload();
+    } catch (_) {
+      // Ganoon din dito.
+    }
+  }
+
+  /// Reopens a candidate straight from the remembered tile, skipping the
+  /// search that found them the first time.
+  void _openRemembered(SearchHistoryEntry entry) {
+    final id = entry.entityId;
+    if (id == null) return;
+
+    _searchFocus.unfocus();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CandidateDetailScreen(
+          studentId: id,
+          initialName: entry.label,
+          service: widget.service,
+        ),
+      ),
+    );
   }
 
   Future<void> _toggleBookmark(Candidate candidate) async {
@@ -236,7 +313,14 @@ class _BrowseCandidatesScreenState extends State<BrowseCandidatesScreen> {
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                           child: TextField(
                             controller: _searchController,
+                            focusNode: _searchFocus,
                             onChanged: _onSearchChanged,
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: (value) {
+                              _debounce?.cancel();
+                              _load();
+                              _rememberTerm(value);
+                            },
                             decoration: const InputDecoration(
                               hintText: 'Search by name, course, or skill...',
                               prefixIcon: Icon(
@@ -246,6 +330,22 @@ class _BrowseCandidatesScreenState extends State<BrowseCandidatesScreen> {
                             ),
                           ),
                         ),
+                        // Yung nakaraang hinanap, lumalabas lang habang bakante
+                        // at nakatutok yung kahon - kaya di natutulak pababa
+                        // yung listahan sa karaniwang tingin.
+                        if (_historyVisible)
+                          SearchHistoryList(
+                            key: _historyKey,
+                            context: SearchContext.candidates,
+                            service: widget.historyService,
+                            onTermPicked: (term) {
+                              _searchController.text = term;
+                              _searchFocus.unfocus();
+                              _syncHistoryVisibility();
+                              _load();
+                            },
+                            onEntityPicked: _openRemembered,
+                          ),
                         SizedBox(
                           height: 44,
                           child: ListView(

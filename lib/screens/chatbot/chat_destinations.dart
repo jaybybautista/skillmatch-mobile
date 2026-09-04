@@ -13,6 +13,7 @@ import '../company/company_records_screen.dart';
 import '../company/company_settings_screen.dart';
 import '../company/create_post_screen.dart';
 import '../student/applications/applications_screen.dart';
+import '../student/assessments/assessment_result_screen.dart';
 import '../student/bookmarks/bookmarks_screen.dart';
 import '../student/internship/internship_detail_screen.dart';
 import '../student/matches/internship_search_screen.dart';
@@ -149,6 +150,14 @@ final Map<String, _DestinationBuilder> _destinations = {
     final id = _intParam(params, 'review_id');
     if (id == null) return;
     _push(context, ReviewRepliesScreen(rootReviewId: id));
+  },
+  // Where the "your assessment has been reviewed" notification lands. The
+  // screen fetches the latest attempt itself, so the assessment id is all it
+  // needs to show the final score.
+  'assessment_result': (context, params) {
+    final id = _intParam(params, 'assessment_id');
+    if (id == null) return;
+    _push(context, AssessmentResultScreen(assessmentId: id));
   },
 
   // Public profiles — reached from people search and from tapping a

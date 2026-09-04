@@ -86,6 +86,61 @@ class PublicExperienceEntry {
   }
 }
 
+
+/// A project on someone else's profile.
+class PublicProjectEntry {
+  PublicProjectEntry({
+    this.title,
+    this.role,
+    this.description,
+    this.link,
+    this.startDate,
+    this.endDate,
+  });
+
+  final String? title;
+  final String? role;
+  final String? description;
+  final String? link;
+  final String? startDate;
+  final String? endDate;
+
+  factory PublicProjectEntry.fromJson(Map<String, dynamic> json) {
+    return PublicProjectEntry(
+      title: json['title'] as String?,
+      role: json['role'] as String?,
+      description: json['description'] as String?,
+      link: json['link'] as String?,
+      startDate: json['start_date'] as String?,
+      endDate: json['end_date'] as String?,
+    );
+  }
+}
+
+/// An award or recognition on someone else's profile.
+class PublicAchievementEntry {
+  PublicAchievementEntry({
+    this.title,
+    this.issuer,
+    this.dateAwarded,
+    this.description,
+  });
+
+  final String? title;
+  final String? issuer;
+  final String? dateAwarded;
+  final String? description;
+
+  factory PublicAchievementEntry.fromJson(Map<String, dynamic> json) {
+    return PublicAchievementEntry(
+      title: json['title'] as String?,
+      issuer: json['issuer'] as String?,
+      dateAwarded: json['date_awarded'] as String?,
+      description: json['description'] as String?,
+    );
+  }
+}
+
 /// Either a real profile, or a signal that the id resolved to the viewer's
 /// own account — the app should show the editable profile screen instead.
 class StudentPublicProfile {
@@ -104,6 +159,9 @@ class StudentPublicProfile {
     this.education = const [],
     this.certifications = const [],
     this.experiences = const [],
+    this.professionalSummary,
+    this.projects = const [],
+    this.achievements = const [],
   });
 
   final bool isSelf;
@@ -120,6 +178,12 @@ class StudentPublicProfile {
   final List<PublicEducationEntry> education;
   final List<PublicCertificationEntry> certifications;
   final List<PublicExperienceEntry> experiences;
+
+  /// What the student wrote about themselves. A company reads this first,
+  /// so it sits above the lists on the screen.
+  final String? professionalSummary;
+  final List<PublicProjectEntry> projects;
+  final List<PublicAchievementEntry> achievements;
 
   factory StudentPublicProfile.fromJson(Map<String, dynamic> json) {
     if (json['is_self'] == true) {
@@ -148,6 +212,13 @@ class StudentPublicProfile {
           .toList(),
       experiences: (json['experiences'] as List? ?? [])
           .map((e) => PublicExperienceEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      professionalSummary: json['professional_summary'] as String?,
+      projects: (json['projects'] as List? ?? [])
+          .map((e) => PublicProjectEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      achievements: (json['achievements'] as List? ?? [])
+          .map((e) => PublicAchievementEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -194,6 +265,7 @@ class CompanyPublicProfile {
     this.contactEmail,
     this.contactNumber,
     this.isVerified = false,
+    this.hasMoa = false,
     this.internshipCount = 0,
     this.openInternships = const [],
   });
@@ -211,6 +283,13 @@ class CompanyPublicProfile {
   final String? contactEmail;
   final String? contactNumber;
   final bool isVerified;
+
+  /// The company has a signed Memorandum of Agreement with the school. This is
+  /// a different fact from [isVerified]: verification only says the account is
+  /// genuine, while this one says a placement here is covered by an agreement
+  /// the school actually holds.
+  final bool hasMoa;
+
   final int internshipCount;
   final List<OpenInternshipSummary> openInternships;
 
@@ -229,6 +308,7 @@ class CompanyPublicProfile {
       contactEmail: json['contact_email'] as String?,
       contactNumber: json['contact_number'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,
+      hasMoa: json['has_moa'] as bool? ?? false,
       internshipCount: (json['internship_count'] as num?)?.toInt() ?? 0,
       openInternships: (json['open_internships'] as List? ?? [])
           .map((e) => OpenInternshipSummary.fromJson(e as Map<String, dynamic>))

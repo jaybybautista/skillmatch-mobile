@@ -224,10 +224,50 @@ class AssessmentQuiz {
   }
 }
 
+/// How many questions were settled on the spot and how many a person still
+/// has to read.
+class AssessmentReviewCounts {
+  const AssessmentReviewCounts({
+    this.total = 0,
+    this.autoChecked = 0,
+    this.awaiting = 0,
+  });
+
+  final int total;
+  final int autoChecked;
+
+  /// Written answers the company has not scored yet. A question left blank is
+  /// not counted here: there is nothing to read, so it is already a zero and
+  /// does not depend on the review.
+  final int awaiting;
+
+  factory AssessmentReviewCounts.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const AssessmentReviewCounts();
+
+    return AssessmentReviewCounts(
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      autoChecked: (json['auto_checked'] as num?)?.toInt() ?? 0,
+      awaiting: (json['awaiting'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 /// A graded attempt, as stored in `assessment_results`.
+///
+/// [score], [percentage] and [passed] are deliberately nullable. When the
+/// attempt has written answers nobody has read yet, the API sends them as null
+/// instead of a half-finished number, because a score built from only the
+/// auto-checked half reads as a fail even when the written answers would have
+/// carried it. Nothing is claimed until the company has looked.
+///
+/// Read [state] rather than testing the numbers: `under_review`, `passed`,
+/// `failed` or `timed_out`. Every word on the screen comes from the server as
+/// well, so the phone and the website cannot say different things about one
+/// attempt.
 class AssessmentAttemptResult {
   AssessmentAttemptResult({
     required this.assessmentTitle,
+    required this.state,
     required this.score,
     required this.totalPoints,
     required this.percentage,
@@ -235,31 +275,70 @@ class AssessmentAttemptResult {
     required this.headline,
     required this.message,
     required this.timedOut,
+    this.pendingReview = false,
+    this.wasReviewed = false,
+    this.companyName = 'the employer',
+    this.reviewCounts = const AssessmentReviewCounts(),
+    this.reviewDetails = const [],
     this.submittedAt,
+    this.reviewedAt,
   });
 
   final String assessmentTitle;
-  final int score;
+
+  /// One of `under_review`, `passed`, `failed`, `timed_out`.
+  final String state;
+
+  final int? score;
   final int totalPoints;
-  final int percentage;
-  final bool passed;
+  final int? percentage;
+  final bool? passed;
   final String headline;
   final String message;
+
+  /// Written answers are still with the company. No verdict and no score are
+  /// shown while this is true.
+  final bool pendingReview;
+
+  /// The company has since read the written answers, so the score on screen is
+  /// the final one rather than a freshly auto-graded guess.
+  final bool wasReviewed;
+
+  final String companyName;
+  final AssessmentReviewCounts reviewCounts;
+
+  /// The lines explaining what was settled and what is still owed, worded by
+  /// the server so both platforms read identically.
+  final List<String> reviewDetails;
 
   /// The countdown submitted this attempt. It is graded, but never a pass.
   final bool timedOut;
   final String? submittedAt;
+  final String? reviewedAt;
+
+  bool get isUnderReview => pendingReview || state == 'under_review';
 
   factory AssessmentAttemptResult.fromJson(Map<String, dynamic> json) =>
       AssessmentAttemptResult(
         assessmentTitle: json['assessment_title'] as String? ?? 'Assessment',
-        score: (json['score'] as num?)?.toInt() ?? 0,
+        state: json['state'] as String? ?? 'failed',
+        score: (json['score'] as num?)?.toInt(),
         totalPoints: (json['total_points'] as num?)?.toInt() ?? 0,
-        percentage: (json['percentage'] as num?)?.toInt() ?? 0,
-        passed: json['passed'] as bool? ?? false,
+        percentage: (json['percentage'] as num?)?.toInt(),
+        passed: json['passed'] as bool?,
         headline: json['headline'] as String? ?? 'Assessment complete',
         message: json['message'] as String? ?? '',
+        pendingReview: json['pending_review'] as bool? ?? false,
+        wasReviewed: json['was_reviewed'] as bool? ?? false,
+        companyName: json['company_name'] as String? ?? 'the employer',
+        reviewCounts: AssessmentReviewCounts.fromJson(
+          json['review_counts'] as Map<String, dynamic>?,
+        ),
+        reviewDetails: (json['review_details'] as List? ?? [])
+            .map((e) => e.toString())
+            .toList(),
         timedOut: json['timed_out'] as bool? ?? false,
         submittedAt: json['submitted_at'] as String?,
+        reviewedAt: json['reviewed_at'] as String?,
       );
 }

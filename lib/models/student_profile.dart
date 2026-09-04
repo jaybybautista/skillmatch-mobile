@@ -23,40 +23,187 @@ class EducationInfo {
 }
 
 class CertificationInfo {
-  CertificationInfo({this.title, this.issuingOrganization, this.issueDate});
+  CertificationInfo({
+    this.id,
+    this.title,
+    this.issuingOrganization,
+    this.issueDate,
+    this.issueDateRaw,
+    this.expiryDateRaw,
+    this.credentialUrl,
+  });
+
+  /// Needed to edit or remove this row. Null only on rows built by tests.
+  final int? id;
 
   final String? title;
   final String? issuingOrganization;
+
+  /// Already formatted for reading, e.g. "Mar 2026". The raw fields carry the
+  /// ISO date the edit form needs.
   final String? issueDate;
+  final String? issueDateRaw;
+  final String? expiryDateRaw;
+  final String? credentialUrl;
 
   factory CertificationInfo.fromJson(Map<String, dynamic> json) {
     return CertificationInfo(
+      id: (json['id'] as num?)?.toInt(),
       title: json['title'] as String?,
       issuingOrganization: json['issuing_organization'] as String?,
       issueDate: json['issue_date'] as String?,
+      issueDateRaw: json['issue_date_raw'] as String?,
+      expiryDateRaw: json['expiry_date_raw'] as String?,
+      credentialUrl: json['credential_url'] as String?,
     );
   }
 }
 
 class ExperienceInfo {
   ExperienceInfo({
+    this.id,
     this.position,
     this.organization,
+    this.type,
+    this.description,
+    this.startDate,
+    this.endDate,
+    this.startDateRaw,
+    this.endDateRaw,
+  });
+
+  final int? id;
+  final String? position;
+  final String? organization;
+
+  /// Either work or extracurricular, matching the choice the web offers.
+  final String? type;
+  final String? description;
+
+  final String? startDate;
+  final String? endDate;
+  final String? startDateRaw;
+  final String? endDateRaw;
+
+  factory ExperienceInfo.fromJson(Map<String, dynamic> json) {
+    return ExperienceInfo(
+      id: (json['id'] as num?)?.toInt(),
+      position: json['position'] as String?,
+      organization: json['organization'] as String?,
+      type: json['type'] as String?,
+      description: json['description'] as String?,
+      startDate: json['start_date'] as String?,
+      endDate: json['end_date'] as String?,
+      startDateRaw: json['start_date_raw'] as String?,
+      endDateRaw: json['end_date_raw'] as String?,
+    );
+  }
+}
+
+/// One school the student attended. Separate from [EducationInfo], which is
+/// the campus and course on their own student record.
+class EducationEntry {
+  EducationEntry({
+    this.id,
+    this.institution,
+    this.degree,
+    this.fieldOfStudy,
+    this.startYear,
+    this.endYear,
+  });
+
+  final int? id;
+  final String? institution;
+  final String? degree;
+  final String? fieldOfStudy;
+  final int? startYear;
+  final int? endYear;
+
+  String get period {
+    final start = startYear?.toString() ?? '';
+    final end = endYear?.toString() ?? 'Present';
+    return start.isEmpty ? end : '$start to $end';
+  }
+
+  factory EducationEntry.fromJson(Map<String, dynamic> json) {
+    return EducationEntry(
+      id: (json['id'] as num?)?.toInt(),
+      institution: json['institution'] as String?,
+      degree: json['degree'] as String?,
+      fieldOfStudy: json['field_of_study'] as String?,
+      startYear: (json['start_year'] as num?)?.toInt(),
+      endYear: (json['end_year'] as num?)?.toInt(),
+    );
+  }
+}
+
+/// One project on the student's profile. Typed in on the profile page, or
+/// lifted out of an uploaded resume by the OCR import; either way the student
+/// can edit it afterwards.
+class ProjectInfo {
+  ProjectInfo({
+    this.id,
+    this.startDateRaw,
+    this.endDateRaw,
+    this.title,
+    this.role,
+    this.description,
+    this.link,
     this.startDate,
     this.endDate,
   });
 
-  final String? position;
-  final String? organization;
+  final int? id;
+  final String? startDateRaw;
+  final String? endDateRaw;
+  final String? title;
+  final String? role;
+  final String? description;
+  final String? link;
   final String? startDate;
   final String? endDate;
 
-  factory ExperienceInfo.fromJson(Map<String, dynamic> json) {
-    return ExperienceInfo(
-      position: json['position'] as String?,
-      organization: json['organization'] as String?,
+  factory ProjectInfo.fromJson(Map<String, dynamic> json) {
+    return ProjectInfo(
+      id: (json['id'] as num?)?.toInt(),
+      startDateRaw: json['start_date_raw'] as String?,
+      endDateRaw: json['end_date_raw'] as String?,
+      title: json['title'] as String?,
+      role: json['role'] as String?,
+      description: json['description'] as String?,
+      link: json['link'] as String?,
       startDate: json['start_date'] as String?,
       endDate: json['end_date'] as String?,
+    );
+  }
+}
+
+/// A recognition or award. Same two sources as [ProjectInfo].
+class AchievementInfo {
+  AchievementInfo({
+    this.id,
+    this.title,
+    this.issuer,
+    this.dateAwarded,
+    this.dateAwardedRaw,
+    this.description,
+  });
+
+  final int? id;
+  final String? title;
+  final String? issuer;
+  final String? dateAwarded;
+  final String? dateAwardedRaw;
+  final String? description;
+
+  factory AchievementInfo.fromJson(Map<String, dynamic> json) {
+    return AchievementInfo(
+      id: (json['id'] as num?)?.toInt(),
+      title: json['title'] as String?,
+      issuer: json['issuer'] as String?,
+      dateAwarded: json['date_awarded'] as String?,
+      dateAwardedRaw: json['date_awarded_raw'] as String?,
+      description: json['description'] as String?,
     );
   }
 }
@@ -91,6 +238,9 @@ class StudentProfile {
     this.education,
     required this.certifications,
     required this.experiences,
+    this.projects = const [],
+    this.achievements = const [],
+    this.educationHistory = const [],
   });
 
   final String name;
@@ -110,6 +260,15 @@ class StudentProfile {
   final EducationInfo? education;
   final List<CertificationInfo> certifications;
   final List<ExperienceInfo> experiences;
+
+  /// The student decides the order of these two, so they arrive already
+  /// sorted and are rendered in the order given rather than by date.
+  final List<ProjectInfo> projects;
+  final List<AchievementInfo> achievements;
+
+  /// The schools the student attended. [education] above is the campus and
+  /// course on their student record, which is a different thing.
+  final List<EducationEntry> educationHistory;
 
   factory StudentProfile.fromJson(Map<String, dynamic> json) {
     return StudentProfile(
@@ -138,6 +297,15 @@ class StudentProfile {
           .toList(),
       experiences: (json['experiences'] as List? ?? [])
           .map((e) => ExperienceInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      projects: (json['projects'] as List? ?? [])
+          .map((e) => ProjectInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      achievements: (json['achievements'] as List? ?? [])
+          .map((e) => AchievementInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      educationHistory: (json['education_history'] as List? ?? [])
+          .map((e) => EducationEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }

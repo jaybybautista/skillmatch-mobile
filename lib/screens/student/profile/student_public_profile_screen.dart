@@ -137,6 +137,17 @@ class _StudentPublicProfileScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Nasa taas ito ng lahat. Ito ang unang binabasa ng kompanyang
+              // tumitingin sa aplikante, bago pa yung mga listahan.
+              if ((profile.professionalSummary ?? '').isNotEmpty)
+                ProfileSectionCard(
+                  icon: Icons.description_outlined,
+                  title: 'Professional Summary',
+                  child: Text(
+                    profile.professionalSummary!,
+                    style: const TextStyle(fontSize: 13, height: 1.5),
+                  ),
+                ),
               ProfileSectionCard(
                 icon: Icons.psychology_outlined,
                 title: 'Skills',
@@ -278,6 +289,107 @@ class _StudentPublicProfileScreenState
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
                                     exp.description!,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              if (profile.projects.isNotEmpty)
+                ProfileSectionCard(
+                  icon: Icons.code,
+                  title: 'Projects',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final project in profile.projects)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                project.title ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                              if ((project.role ?? '').isNotEmpty)
+                                Text(
+                                  project.role!,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              if ((project.description ?? '').isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    project.description!,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              if ((project.link ?? '').isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(
+                                    project.link!,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              if (profile.achievements.isNotEmpty)
+                ProfileSectionCard(
+                  icon: Icons.star_outline,
+                  title: 'Achievements',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final award in profile.achievements)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                award.title ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                              if ((award.issuer ?? '').isNotEmpty)
+                                Text(
+                                  award.issuer!,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              if ((award.description ?? '').isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    award.description!,
                                     style: const TextStyle(
                                       fontSize: 12.5,
                                       height: 1.4,

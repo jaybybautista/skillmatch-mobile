@@ -55,6 +55,8 @@ class DraftQuestion {
     : id = _nextDraftId++,
       textController = TextEditingController(),
       descriptionController = TextEditingController(),
+      answerKeyController = TextEditingController(),
+      pointsController = TextEditingController(text: '1'),
       options = List.generate(4, (_) => DraftOption());
 
   /// Rebuilds a draft from an assessment already stored on the server, so
@@ -64,6 +66,20 @@ class DraftQuestion {
       textController = TextEditingController(text: question.text),
       descriptionController = TextEditingController(
         text: question.description ?? '',
+      ),
+      // A written question keeps its answer key in the single choice flagged
+      // correct, which is where the web builder reads it back from as well.
+      pointsController = TextEditingController(
+        text: (question.points > 0 ? question.points : 1).toString(),
+      ),
+      answerKeyController = TextEditingController(
+        text: question.type.isFreeText
+            ? (question.choices
+                      .where((c) => c.isCorrect)
+                      .map((c) => c.text)
+                      .firstOrNull ??
+                  '')
+            : '',
       ),
       options = question.choices
           .map((c) => DraftOption(text: c.text))
@@ -92,6 +108,25 @@ class DraftQuestion {
   final int id;
   final TextEditingController textController;
   final TextEditingController descriptionController;
+
+  /// The expected answer for a written question. Leaving it empty is a
+  /// deliberate choice, not an omission: the question is then flagged for
+  /// review and the company scores it by hand from the answer sheet.
+  final TextEditingController answerKeyController;
+
+  /// What this question is worth. An essay is usually worth more than a
+  /// multiple choice, and the number set here becomes the ceiling the grader
+  /// scores against on the answer sheet.
+  final TextEditingController pointsController;
+
+  /// The points as a number, kept inside the range the server accepts so a
+  /// blank or nonsense box never blocks saving.
+  int get points {
+    final parsed = int.tryParse(pointsController.text.trim()) ?? 1;
+    if (parsed < 1) return 1;
+    return parsed > 100 ? 100 : parsed;
+  }
+
   List<DraftOption> options;
 
   QuestionType type = QuestionType.multipleChoice;
@@ -129,10 +164,17 @@ class DraftQuestion {
     'question_text': textController.text.trim(),
     'description': descriptionController.text.trim(),
     'image_url': _imagePayload() ?? '',
-    'choices': [
-      for (final option in options)
-        {'text': option.text, 'is_correct': isCorrect(option)},
-    ],
+    'points': points,
+    // A written question has no options — the shared service turns the
+    // answer key into the one correct choice, or marks the question for
+    // manual review when it is blank.
+    if (type.isFreeText) 'answer_key': answerKeyController.text.trim(),
+    'choices': type.isFreeText
+        ? const []
+        : [
+            for (final option in options)
+              {'text': option.text, 'is_correct': isCorrect(option)},
+          ],
   };
 
   /// A newly picked file is inlined as a `data:` URI, which is exactly what
@@ -163,6 +205,8 @@ class DraftQuestion {
   void dispose() {
     textController.dispose();
     descriptionController.dispose();
+    pointsController.dispose();
+    answerKeyController.dispose();
     for (final option in options) {
       option.dispose();
     }

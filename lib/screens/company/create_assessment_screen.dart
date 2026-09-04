@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/app_theme.dart';
 import '../../core/error_message.dart';
@@ -29,9 +30,10 @@ class CreateAssessmentScreen extends StatefulWidget {
     this.service,
   });
 
-  /// The open postings an assessment can screen for. At least one is
-  /// required; several are allowed, because one paper can screen for many
-  /// postings — same as the web's checkbox list.
+  /// The open postings an assessment can screen for. None is allowed and so
+  /// are several: one paper can screen for many postings, and a paper written
+  /// before there is a posting to attach it to waits in the library until the
+  /// company links it. Same as the web's checkbox list.
   ///
   /// Null when the caller hasn't already loaded them (the home screen's
   /// shortcut), in which case this screen fetches them itself.
@@ -197,7 +199,7 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
   /// Which postings this paper screens for. One reads as its title; several
   /// as a count, because the panel is narrow.
   String get _postingLabel {
-    if (_internshipIds.isEmpty) return 'None selected';
+    if (_internshipIds.isEmpty) return 'Not linked yet';
     if (_internshipIds.length > 1) return '${_internshipIds.length} postings';
 
     final id = _internshipIds.first;
@@ -303,11 +305,6 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
       _notify('Give the assessment a title first.');
       return;
     }
-    if (_internshipIds.isEmpty) {
-      _notify('Choose at least one posting this assessment screens for.');
-      return;
-    }
-
     final rawLimit = _timeLimitController.text.trim();
     final timeLimit = rawLimit.isEmpty ? null : int.tryParse(rawLimit);
     if (rawLimit.isNotEmpty &&
@@ -564,13 +561,14 @@ class _DetailsStep extends StatelessWidget {
         // already selected has to stay visible, because saving writes
         // exactly this set and anything unticked is unlinked.
         _FieldCard(
-          label: 'LINKED POSTINGS',
+          label: 'LINKED POSTINGS (OPTIONAL)',
           child: postings.isEmpty
               ? const Padding(
                   padding: EdgeInsets.symmetric(vertical: 6),
                   child: Text(
-                    'You have no open postings yet. Create one first, then '
-                    'come back here.',
+                    'You have no open postings yet, and that is fine. Write '
+                    'the assessment now and link it to a posting later from '
+                    'your library.',
                     style: TextStyle(color: AppColors.textMuted, fontSize: 13),
                   ),
                 )
@@ -587,8 +585,10 @@ class _DetailsStep extends StatelessWidget {
                     const Text(
                       'Pick every posting that should screen with this '
                       'assessment. Reusing one assessment across several '
-                      'postings beats building it again — edit it once and '
-                      'every posting that uses it follows.',
+                      'postings beats building it again: edit it once and '
+                      'every posting that uses it follows. Leaving this empty '
+                      'is fine too, and the assessment waits in your library '
+                      'under Not linked to a posting.',
                       style: TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 12,
@@ -748,6 +748,8 @@ class _AssessmentSidePanel extends StatelessWidget {
     (QuestionType.multipleChoice, Icons.radio_button_checked),
     (QuestionType.checkbox, Icons.check),
     (QuestionType.dropdown, Icons.keyboard_arrow_down),
+    (QuestionType.shortAnswer, Icons.short_text),
+    (QuestionType.longAnswer, Icons.notes),
   ];
 
   @override
@@ -1175,6 +1177,8 @@ class _QuestionCard extends StatelessWidget {
                           QuestionType.multipleChoice,
                           QuestionType.checkbox,
                           QuestionType.dropdown,
+                          QuestionType.shortAnswer,
+                          QuestionType.longAnswer,
                         ])
                           PopupMenuItem(
                             value: type,
@@ -1243,6 +1247,11 @@ class _QuestionCard extends StatelessWidget {
               controller: question.descriptionController,
               hintText: 'Type here your description',
             ),
+            const SizedBox(height: 14),
+            // Ito ang halaga ng tanong. Yung sanaysay, karaniwang mas mataas
+            // kaysa multiple choice - at ito rin ang magiging hangganan ng
+            // magbibigay ng puntos sa sagutang papel.
+            _PointsField(question: question),
             const SizedBox(height: 10),
             InkWell(
               onTap: onPickImage,
@@ -1294,6 +1303,10 @@ class _QuestionCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 16),
+            // Sulat na sagot - walang pagpipilian dito, yung answer key lang.
+            if (question.type.isFreeText)
+              _AnswerKeyField(question: question)
+            else ...[
             if (question.type == QuestionType.checkbox)
               for (final option in question.options) ...[
                 _OptionLabelRow(
@@ -1377,6 +1390,7 @@ class _QuestionCard extends StatelessWidget {
                 onChanged: (value) => onSetCorrectOption(value!),
               ),
             ],
+            ],
           ],
         ],
       ),
@@ -1387,6 +1401,75 @@ class _QuestionCard extends StatelessWidget {
   /// option list can't produce nonsense labels.
   static String _letterFor(int index) =>
       index < 26 ? String.fromCharCode(65 + index) : '${index + 1}';
+}
+
+/// The answer key for a written question, and a live note saying what
+/// leaving it empty means.
+///
+/// Filled in, the server checks the answer itself, ignoring capitalisation
+/// and stray spaces. Left blank, the question is flagged for review and the
+/// company scores it by hand from the answer sheet — the same two modes the
+/// web builder offers, decided by the same one field.
+class _AnswerKeyField extends StatefulWidget {
+  const _AnswerKeyField({required this.question});
+
+  final DraftQuestion question;
+
+  @override
+  State<_AnswerKeyField> createState() => _AnswerKeyFieldState();
+}
+
+class _AnswerKeyFieldState extends State<_AnswerKeyField> {
+  @override
+  void initState() {
+    super.initState();
+    widget.question.answerKeyController.addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.question.answerKeyController.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  void _onChanged() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final manual = widget.question.answerKeyController.text.trim().isEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'ANSWER KEY (OPTIONAL)',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 11,
+            letterSpacing: 0.4,
+            color: AppColors.textMuted,
+          ),
+        ),
+        const SizedBox(height: 6),
+        _GreyTextField(
+          controller: widget.question.answerKeyController,
+          hintText: 'Leave empty to grade this one yourself',
+        ),
+        const SizedBox(height: 8),
+        Text(
+          manual
+              ? 'No answer key, so this question will be marked for review. '
+                    'You score it from the submission.'
+              : 'Checked automatically. Capitalisation and extra spaces are ignored.',
+          style: TextStyle(
+            fontSize: 12,
+            height: 1.45,
+            color: manual ? AppColors.textMuted : AppColors.primary,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Renders whichever image the question currently has — a freshly picked
@@ -1539,18 +1622,97 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
+
+/// The points box on one question, with a note that changes with the type.
+///
+/// A written question is scored by a person later, so the number here is the
+/// ceiling they will be given. A checked question simply awards it when the
+/// answer is right.
+class _PointsField extends StatefulWidget {
+  const _PointsField({required this.question});
+
+  final DraftQuestion question;
+
+  @override
+  State<_PointsField> createState() => _PointsFieldState();
+}
+
+class _PointsFieldState extends State<_PointsField> {
+  @override
+  void initState() {
+    super.initState();
+    widget.question.pointsController.addListener(_handle);
+  }
+
+  @override
+  void dispose() {
+    widget.question.pointsController.removeListener(_handle);
+    super.dispose();
+  }
+
+  void _handle() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final points = widget.question.points;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 96,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _FieldLabel('Points'),
+              const SizedBox(height: 6),
+              _GreyTextField(
+                controller: widget.question.pointsController,
+                hintText: '1',
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 26),
+            child: Text(
+              widget.question.type.isFreeText
+                  ? 'Worth $points ${points == 1 ? 'point' : 'points'}. That is '
+                        'the most you can give this answer when you review it.'
+                  : 'Worth $points ${points == 1 ? 'point' : 'points'}, awarded '
+                        'when the answer is correct.',
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _GreyTextField extends StatelessWidget {
   const _GreyTextField({
     required this.controller,
     required this.hintText,
     this.minLines,
     this.maxLines = 1,
+    this.keyboardType,
   });
 
   final TextEditingController controller;
   final String hintText;
   final int? minLines;
   final int maxLines;
+  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
@@ -1563,6 +1725,10 @@ class _GreyTextField extends StatelessWidget {
         controller: controller,
         minLines: minLines,
         maxLines: maxLines,
+        keyboardType: keyboardType,
+        inputFormatters: keyboardType == TextInputType.number
+            ? [FilteringTextInputFormatter.digitsOnly]
+            : null,
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hintText,
