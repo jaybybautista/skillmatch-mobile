@@ -134,7 +134,8 @@ enum QuestionType {
   dropdown,
   identification,
   shortAnswer,
-  longAnswer;
+  longAnswer,
+  codeTracing;
 
   static QuestionType parse(String? raw) {
     switch (raw) {
@@ -148,17 +149,86 @@ enum QuestionType {
         return QuestionType.shortAnswer;
       case 'long_answer':
         return QuestionType.longAnswer;
+      case 'code_tracing':
+        return QuestionType.codeTracing;
       default:
         return QuestionType.multipleChoice;
     }
   }
 
-  /// True when the answer is free text rather than a choice id.
+  /// True when the answer is free text rather than a choice id. Kasama dito ang
+  /// code tracing - yung output na tinipa niya ang ipinapadala, teksto rin yun,
+  /// at teksto rin ang ihahambing ng server.
   bool get isFreeText =>
-      this == QuestionType.shortAnswer || this == QuestionType.longAnswer;
+      this == QuestionType.shortAnswer ||
+      this == QuestionType.longAnswer ||
+      this == QuestionType.codeTracing;
+
+  /// Binabasa niya yung code, tinitipa niya kung ano ang ipipirint nito.
+  bool get isCodeTracing => this == QuestionType.codeTracing;
 
   /// True when more than one choice may be selected.
   bool get isMultiSelect => this == QuestionType.checkbox;
+}
+
+/// Yung tanda ng wika na nakadikit sa isang code tracing na tanong. Pangalan,
+/// logo, kulay at isa o dalawang letra - galing sa ProgrammingLanguages ng
+/// server, kaya iisa ang itsura nito sa web at dito.
+class LanguageBadge {
+  const LanguageBadge({
+    required this.slug,
+    required this.label,
+    required this.mono,
+    required this.color,
+    required this.kind,
+    this.hasIcon = false,
+  });
+
+  final String slug;
+  final String label;
+
+  /// Yung isa o dalawang letra sa loob ng tanda. Ito ang lumalabas pag walang
+  /// logo yung wika, gaya ng SQL at ng Pseudocode.
+  final String mono;
+
+  /// Hex na may unahang #, gaya ng #3776AB. Likod ng tanda kapag walang logo.
+  final String color;
+
+  /// language o framework. Dito nagkakahiwalay ang dalawang pangkat sa picker.
+  final String kind;
+
+  /// May logo ba ang wikang ito. Sinasabi ito ng server, at dito nakikita ng
+  /// app kung dapat pa nitong hanapin yung file sa assets/devicon o tanda na
+  /// lang agad ang ilalabas.
+  final bool hasIcon;
+
+  static const LanguageBadge plain = LanguageBadge(
+    slug: '',
+    label: 'Plain text',
+    mono: '::',
+    color: '#6B7A99',
+    kind: 'language',
+  );
+
+  factory LanguageBadge.fromJson(Map<String, dynamic> json) => LanguageBadge(
+    slug: json['slug'] as String? ?? '',
+    label: json['label'] as String? ?? 'Plain text',
+    mono: json['mono'] as String? ?? '::',
+    color: json['color'] as String? ?? '#6B7A99',
+    kind: json['kind'] as String? ?? 'language',
+    // Address ng logo ang ipinapadala ng server. Hindi ito ginagamit dito,
+    // nakabalot na kasi sa app yung mga logo - pero sinasabi nito kung meron.
+    hasIcon: (json['icon'] as String?)?.isNotEmpty ?? false,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'slug': slug,
+    'label': label,
+    'mono': mono,
+    'color': color,
+    'kind': kind,
+    'has_icon': hasIcon,
+  };
 }
 
 class AssessmentQuestion {
@@ -169,6 +239,8 @@ class AssessmentQuestion {
     required this.type,
     required this.points,
     this.imageUrl,
+    this.language,
+    this.sourceCode,
     required this.choices,
   });
 
@@ -181,6 +253,13 @@ class AssessmentQuestion {
   /// Either an absolute http(s) URL or an inline `data:image/...;base64,` URI —
   /// the company question builder produces the latter.
   final String? imageUrl;
+
+  /// Code tracing lang ang may laman dito. Yung expected output, hindi
+  /// kailanman ipinapadala ng server habang sumasagot siya - yun mismo ang
+  /// sagot, at nasa telepono niya ito.
+  final LanguageBadge? language;
+  final String? sourceCode;
+
   final List<QuestionChoice> choices;
 
   factory AssessmentQuestion.fromJson(Map<String, dynamic> json) =>
@@ -191,6 +270,10 @@ class AssessmentQuestion {
         type: QuestionType.parse(json['question_type'] as String?),
         points: (json['points'] as num?)?.toInt() ?? 1,
         imageUrl: json['image_url'] as String?,
+        language: json['language'] is Map<String, dynamic>
+            ? LanguageBadge.fromJson(json['language'] as Map<String, dynamic>)
+            : null,
+        sourceCode: json['source_code'] as String?,
         choices: (json['choices'] as List? ?? const [])
             .map((e) => QuestionChoice.fromJson(e as Map<String, dynamic>))
             .toList(),

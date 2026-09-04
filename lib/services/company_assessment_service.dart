@@ -1,4 +1,5 @@
 import '../core/api_client.dart';
+import '../models/assessment.dart';
 import '../models/assessment_answer_sheet.dart';
 import '../models/assessment_submission.dart';
 import '../models/company_assessment.dart';
@@ -12,6 +13,22 @@ import '../models/company_assessment.dart';
 /// on the web shows its new questions here on the next refresh.
 class CompanyAssessmentService {
   final ApiClient _client = ApiClient.instance;
+
+  /// Yung mapipiling wika sa code tracing. Sa server nakuha, hindi nakasulat
+  /// sa app, kaya iisa lang ang listahan ng dropdown sa web at ng picker dito.
+  ///
+  /// Pag binuksan lang ang picker ito kinukuha, kaya walang bayad ito sa mga
+  /// tanong na hindi naman code tracing.
+  Future<List<LanguageBadge>> languages() async {
+    final response = await _client.get(
+      '/company/assessment-languages',
+      authenticated: true,
+    );
+
+    return (response['languages'] as List? ?? const [])
+        .map((e) => LanguageBadge.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   /// The library, plus the postings a new assessment can be attached to.
   Future<AssessmentLibrary> fetchLibrary() async {

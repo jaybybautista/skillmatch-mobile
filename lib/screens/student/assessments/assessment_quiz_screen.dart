@@ -9,6 +9,7 @@ import '../../../core/app_theme.dart';
 import '../../../models/assessment.dart';
 import '../../../services/assessment_service.dart';
 import '../../../services/quiz_state_store.dart';
+import '../../../widgets/code_viewer.dart';
 import 'assessment_result_screen.dart';
 
 /// One question at a time, with the countdown and progress header from the
@@ -827,6 +828,34 @@ class _AnswerInput extends StatelessWidget {
           maxLines: 6,
           textCapitalization: TextCapitalization.sentences,
           decoration: const InputDecoration(hintText: 'Type your answer'),
+        );
+
+      // Binabasa niya yung code, tinitipa niya kung ano ang ipipirint nito.
+      // Walang pinapatakbo dito - sa ulo niya ito sinasagot, kaya walang
+      // compiler na kailangan at walang hinihintay na server.
+      case QuestionType.codeTracing:
+        return CodeViewer(
+          badge: question.language ?? LanguageBadge.plain,
+          code: question.sourceCode ?? '',
+          note: 'Read the code. Type what it prints.',
+          children: [
+            const CodePanelHeader(
+              label: 'Your output',
+              note: 'Spacing and line breaks matter.',
+            ),
+            CodeField(
+              controller: textController!,
+              onChanged: onChanged,
+              minLines: 3,
+              maxLines: 10,
+              hintText: 'Type the output here',
+            ),
+            const CodeFoot(
+              text:
+                  'Trailing spaces at the end of a line are ignored, and so are '
+                  'extra blank lines at the very end.',
+            ),
+          ],
         );
 
       case QuestionType.multipleChoice:

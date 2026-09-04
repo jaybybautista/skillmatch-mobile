@@ -1,4 +1,5 @@
 import '../core/json_parse.dart';
+import 'assessment.dart';
 
 /// One question as it was answered, straight from `assessment_answers`.
 ///
@@ -18,6 +19,9 @@ class AnswerSheetRow {
     this.answerText,
     this.chosen = const [],
     this.correct = const [],
+    this.languageBadge,
+    this.sourceCode,
+    this.expectedOutput,
   });
 
   final int questionId;
@@ -49,6 +53,15 @@ class AnswerSheetRow {
   /// The answer key. Empty when the question is scored by hand.
   final List<String> correct;
 
+  /// Code tracing lang ang may laman sa tatlong ito. Yung code na binasa ng
+  /// estudyante, at yung dapat lumabas - kailangan nila ito para may
+  /// pagbasehan yung sinagot niya.
+  final LanguageBadge? languageBadge;
+  final String? sourceCode;
+  final String? expectedOutput;
+
+  bool get isCodeTracing => questionType == 'code_tracing';
+
   bool get isWritten => answerText != null && answerText!.trim().isNotEmpty;
 
   factory AnswerSheetRow.fromJson(Map<String, dynamic> json) => AnswerSheetRow(
@@ -68,6 +81,13 @@ class AnswerSheetRow {
         correct: (json['correct'] as List? ?? const [])
             .map((e) => e.toString())
             .toList(),
+        languageBadge: json['language_badge'] is Map<String, dynamic>
+            ? LanguageBadge.fromJson(
+                json['language_badge'] as Map<String, dynamic>,
+              )
+            : null,
+        sourceCode: json['source_code'] as String?,
+        expectedOutput: json['expected_output'] as String?,
       );
 }
 

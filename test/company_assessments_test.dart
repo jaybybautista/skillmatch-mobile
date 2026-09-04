@@ -896,6 +896,14 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// Nasa ilalim ng listahan ng uri yung Assessment info, at anim na yung
+    /// uri ngayon dahil sa code tracing. Kaya kailangan munang mag-scroll
+    /// bago ito makita sa maliit na screen ng test.
+    Future<void> scrollPanel(WidgetTester tester) async {
+      await tester.drag(find.text('Select type'), const Offset(0, -280));
+      await tester.pumpAndSettle();
+    }
+
     testWidgets('the panel button is on the questions step, not on details', (
       tester,
     ) async {
@@ -946,6 +954,9 @@ void main() {
       expect(find.text('Multiple Choice'), findsWidgets);
       expect(find.text('Checkboxes'), findsOneWidget);
       expect(find.text('Dropdown'), findsOneWidget);
+      expect(find.text('Code Tracing'), findsOneWidget);
+
+      await scrollPanel(tester);
 
       expect(find.text('Assessment info'), findsOneWidget);
       expect(find.text('Questions'), findsOneWidget);
@@ -960,6 +971,7 @@ void main() {
       final service = _FakeAssessmentService();
       await toQuestions(tester, service, timeLimit: '5');
       await openPanel(tester);
+      await scrollPanel(tester);
 
       expect(find.text('1'), findsWidgets, reason: 'one question so far');
       expect(find.text('5 min'), findsOneWidget);
@@ -972,6 +984,7 @@ void main() {
       final service = _FakeAssessmentService();
       await toQuestions(tester, service, timeLimit: '');
       await openPanel(tester);
+      await scrollPanel(tester);
 
       expect(find.text('No limit'), findsOneWidget);
     });

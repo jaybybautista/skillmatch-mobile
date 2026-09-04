@@ -60,6 +60,11 @@ dependencies:
   # across app restarts, the same way the web quiz uses localStorage.
   shared_preferences: ^2.3.2
 
+  # Pandrowing ng logo ng wika sa code tracing. SVG sila, kaya nananatiling
+  # malinaw kahit anong laki ng screen - at maliit lang sila kaysa sa PNG na
+  # tatlong sukat. Nasa assets/devicon yung mga file.
+  flutter_svg: ^2.0.10
+
 
 dev_dependencies:
   flutter_test:
@@ -94,6 +99,12 @@ flutter:
     - assets/ai_chatbot_logo.png
     - assets/banner-picture.png
     - assets/banner_company.png
+    # Yung logo ng mga wika sa code tracing. Kaparehong-kaparehong file ng
+    # nasa public/devicon ng Laravel. Nakabalot sila sa app, hindi kinukuha
+    # sa internet, kaya lumalabas pa rin sila habang nag-eexam kahit mahina
+    # ang signal. Buong folder ang nakasulat dito, kaya pag may naidagdag na
+    # wika, kopyahin lang yung file at ayos na.
+    - assets/devicon/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

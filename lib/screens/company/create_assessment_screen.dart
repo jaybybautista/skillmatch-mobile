@@ -10,7 +10,9 @@ import '../../models/assessment.dart';
 import '../../models/company_assessment.dart';
 import '../../services/company_assessment_service.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/code_viewer.dart';
 import '../../widgets/company_screen_header.dart';
+import '../../widgets/language_picker.dart';
 import 'assessment_draft.dart';
 
 /// The company's 2-step "Create Assessment" flow — Details, then Questions —
@@ -358,6 +360,17 @@ class _CreateAssessmentScreenState extends State<CreateAssessmentScreen> {
     if (_questions.every((q) => q.textController.text.trim().isEmpty)) {
       _notify('Add at least one question before saving.');
       return;
+    }
+
+    // Yung kulang sa code tracing, dito na sinasabi. Tinatanggihan din naman
+    // ito ng server, pero mas mabuting sabihin agad kaysa hintayin pa ang
+    // biyahe - lalo na pag mahaba na ang papel.
+    for (var i = 0; i < _questions.length; i++) {
+      final problem = _questions[i].tracingProblem;
+      if (problem != null) {
+        _notify('Question ${i + 1} $problem.');
+        return;
+      }
     }
 
     setState(() => _isSaving = true);
@@ -750,6 +763,7 @@ class _AssessmentSidePanel extends StatelessWidget {
     (QuestionType.dropdown, Icons.keyboard_arrow_down),
     (QuestionType.shortAnswer, Icons.short_text),
     (QuestionType.longAnswer, Icons.notes),
+    (QuestionType.codeTracing, Icons.terminal),
   ];
 
   @override
@@ -1179,6 +1193,7 @@ class _QuestionCard extends StatelessWidget {
                           QuestionType.dropdown,
                           QuestionType.shortAnswer,
                           QuestionType.longAnswer,
+                          QuestionType.codeTracing,
                         ])
                           PopupMenuItem(
                             value: type,
@@ -1303,8 +1318,12 @@ class _QuestionCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 16),
+            // Code tracing - binabasa niya yung code, tinitipa niya yung
+            // lumalabas. Sarili nitong kahon, hindi answer key na choice.
+            if (question.type.isCodeTracing)
+              _CodeTracingEditor(question: question)
             // Sulat na sagot - walang pagpipilian dito, yung answer key lang.
-            if (question.type.isFreeText)
+            else if (question.type.isFreeText)
               _AnswerKeyField(question: question)
             else ...[
             if (question.type == QuestionType.checkbox)
@@ -1401,6 +1420,139 @@ class _QuestionCard extends StatelessWidget {
   /// option list can't produce nonsense labels.
   static String _letterFor(int index) =>
       index < 26 ? String.fromCharCode(65 + index) : '${index + 1}';
+}
+
+/// Ang ginagawang code tracing na tanong.
+///
+/// Ganito rin ang itsura nito sa web builder, at sinadya yun. Bar sa taas na
+/// may tanda ng wika, bilang ng linya sa gilid, tapos yung code. Sa ilalim,
+/// yung dapat lumabas pag pinatakbo - yun ang susi, at yun ang ihahambing sa
+/// itinipa ng estudyante.
+///
+/// Walang pinapatakbong code dito. Sa ulo ito sinasagot, kaya walang compiler
+/// na kailangan at walang naghihintay na server.
+class _CodeTracingEditor extends StatefulWidget {
+  const _CodeTracingEditor({required this.question});
+
+  final DraftQuestion question;
+
+  @override
+  State<_CodeTracingEditor> createState() => _CodeTracingEditorState();
+}
+
+class _CodeTracingEditorState extends State<_CodeTracingEditor> {
+  @override
+  void initState() {
+    super.initState();
+    widget.question.expectedOutputController.addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.question.expectedOutputController.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  void _onChanged() => setState(() {});
+
+  Future<void> _pickLanguage() async {
+    final picked = await showLanguagePicker(
+      context,
+      currentSlug: widget.question.languageSlug,
+    );
+
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      widget.question.languageSlug = picked.slug;
+      widget.question.languageBadge = picked;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = widget.question.languageBadge ?? LanguageBadge.plain;
+    final noKey = widget.question.expectedOutputController.text.trim().isEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: CodeColors.shell,
+            border: Border.all(color: CodeColors.barBorder),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(7, 6, 7, 6),
+                decoration: const BoxDecoration(
+                  color: CodeColors.bar,
+                  border: Border(
+                    bottom: BorderSide(color: CodeColors.barBorder),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    LanguageChip(badge: badge, onTap: _pickLanguage),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Tap to change the language',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: CodeColors.note,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              CodeField(
+                controller: widget.question.sourceCodeController,
+                gutter: true,
+                minLines: 6,
+                maxLines: 24,
+                hintText: 'Paste or type the code here',
+              ),
+              const CodePanelHeader(
+                label: 'Expected output',
+                note: 'Exactly what this code prints.',
+              ),
+              CodeField(
+                controller: widget.question.expectedOutputController,
+                minLines: 2,
+                maxLines: 8,
+                hintText: 'What shows up when it runs',
+              ),
+              const CodeFoot(
+                text:
+                    'Checked as an exact match. Trailing spaces at the end of a '
+                    'line and extra blank lines at the very end are ignored, but '
+                    'capitalization and spacing inside a line are not.',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          noKey
+              ? 'The expected output is the answer key, so this question cannot '
+                    'be saved without it.'
+              : 'Checked automatically. Nobody has to read this one by hand.',
+          style: TextStyle(
+            fontSize: 12,
+            height: 1.45,
+            color: noKey ? AppColors.warning : AppColors.primary,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// The answer key for a written question, and a live note saying what
@@ -1681,7 +1833,10 @@ class _PointsFieldState extends State<_PointsField> {
           child: Padding(
             padding: const EdgeInsets.only(top: 26),
             child: Text(
-              widget.question.type.isFreeText
+              // Yung code tracing, hindi binabasa ng tao kahit teksto ang
+              // sagot - may susi ito, kaya kusa itong nakikilala.
+              widget.question.type.isFreeText &&
+                      !widget.question.type.isCodeTracing
                   ? 'Worth $points ${points == 1 ? 'point' : 'points'}. That is '
                         'the most you can give this answer when you review it.'
                   : 'Worth $points ${points == 1 ? 'point' : 'points'}, awarded '

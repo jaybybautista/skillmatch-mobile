@@ -130,6 +130,10 @@ class CompanyAssessmentQuestion {
     required this.type,
     required this.imageUrl,
     required this.points,
+    this.language,
+    this.languageBadge,
+    this.sourceCode,
+    this.expectedOutput,
     required this.choices,
   });
 
@@ -143,6 +147,18 @@ class CompanyAssessmentQuestion {
   final String? imageUrl;
 
   final int points;
+
+  /// Code tracing lang ang may laman sa mga ito. Kasama na yung expected
+  /// output, sila naman ang naglagay nun at sila ang may-ari ng papel.
+  ///
+  /// Dalawa ang wika. Yung [language], slug lang - yun ang ibinabalik sa
+  /// server pag ni-edit. Yung [languageBadge], yung pangalan at kulay - para
+  /// maipakita agad nang hindi na humihingi ng buong listahan.
+  final String? language;
+  final LanguageBadge? languageBadge;
+  final String? sourceCode;
+  final String? expectedOutput;
+
   final List<CompanyAssessmentChoice> choices;
 
   factory CompanyAssessmentQuestion.fromJson(Map<String, dynamic> json) =>
@@ -153,6 +169,14 @@ class CompanyAssessmentQuestion {
         type: QuestionType.parse(json['question_type'] as String?),
         imageUrl: json['image_url'] as String?,
         points: asInt(json['points'], 1),
+        language: json['language'] as String?,
+        languageBadge: json['language_badge'] is Map<String, dynamic>
+            ? LanguageBadge.fromJson(
+                json['language_badge'] as Map<String, dynamic>,
+              )
+            : null,
+        sourceCode: json['source_code'] as String?,
+        expectedOutput: json['expected_output'] as String?,
         choices: (json['choices'] as List? ?? const [])
             .map(
               (e) =>

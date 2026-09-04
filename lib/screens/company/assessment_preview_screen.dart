@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../models/assessment.dart';
 import '../../models/company_assessment.dart';
 import '../../services/company_assessment_service.dart';
+import '../../widgets/code_viewer.dart';
 import '../../widgets/company_screen_header.dart';
 import 'assessment_draft.dart';
 
@@ -317,12 +319,32 @@ class _QuestionPreviewCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          for (var i = 0; i < question.choices.length; i++)
-            _ChoiceRow(
-              letter: i < 26 ? String.fromCharCode(65 + i) : '${i + 1}',
-              choice: question.choices[i],
-              isRevealed: isRevealed,
-            ),
+          // Code tracing. Walang pipiliin, kaya yung code at yung dapat
+          // lumabas ang ipinapakita - at nakatago rin yung dapat lumabas
+          // hanggat hindi pa nila pinipindot yung pindutan sa ibaba.
+          if (question.type.isCodeTracing)
+            CodeViewer(
+              badge: question.languageBadge ?? LanguageBadge.plain,
+              code: question.sourceCode ?? '',
+              note: 'The student reads this and types what it prints.',
+              children: [
+                const CodePanelHeader(
+                  label: 'Expected output',
+                  note: 'Hidden from the student while answering.',
+                ),
+                CodeOutputText(
+                  text: isRevealed ? (question.expectedOutput ?? '') : '',
+                  placeholder: 'Hidden. Use the button below to show it.',
+                ),
+              ],
+            )
+          else
+            for (var i = 0; i < question.choices.length; i++)
+              _ChoiceRow(
+                letter: i < 26 ? String.fromCharCode(65 + i) : '${i + 1}',
+                choice: question.choices[i],
+                isRevealed: isRevealed,
+              ),
           const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerLeft,

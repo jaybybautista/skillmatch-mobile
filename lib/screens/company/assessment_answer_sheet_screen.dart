@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../models/assessment.dart';
 import '../../models/assessment_answer_sheet.dart';
 import '../../services/company_assessment_service.dart';
+import '../../widgets/code_viewer.dart';
 import '../../widgets/retake_open_tag.dart';
 
 /// One student's answer sheet, the phone's copy of the website's
@@ -504,6 +506,39 @@ class _QuestionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+
+          // Code tracing. Yung code na binasa niya, tapos yung tinipa niya sa
+          // tabi ng dapat lumabas - magkatabi para makita agad kung espasyo
+          // lang pala yung pinagkaiba nilang dalawa.
+          if (row.isCodeTracing)
+            CodeViewer(
+              badge: row.languageBadge ?? LanguageBadge.plain,
+              code: row.sourceCode ?? '',
+              note: 'The code they were given.',
+              children: [
+                CodePanelHeader(
+                  label: 'Their output',
+                  note: !row.isWritten
+                      ? 'Left blank.'
+                      : row.isCorrect == true
+                      ? 'Matches the expected output.'
+                      : 'Does not match the expected output.',
+                ),
+                CodeOutputText(text: row.answerText ?? ''),
+                const CodePanelHeader(
+                  label: 'Expected output',
+                  note: 'The answer key you set for this question.',
+                ),
+                CodeOutputText(text: row.expectedOutput ?? ''),
+                const CodeFoot(
+                  text:
+                      'Checked as an exact match. Trailing spaces at the end of '
+                      'a line and extra blank lines at the very end are ignored, '
+                      'but capitalization and spacing inside a line are not.',
+                ),
+              ],
+            )
+          else ...[
           const Text(
             'THEIR ANSWER',
             style: TextStyle(
@@ -627,6 +662,7 @@ class _QuestionCard extends StatelessWidget {
                     : AppColors.textMuted,
               ),
             ),
+          ],
           ],
         ],
       ),

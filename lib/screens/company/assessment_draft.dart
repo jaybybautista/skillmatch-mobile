@@ -18,6 +18,7 @@ extension QuestionTypeLabel on QuestionType {
     QuestionType.identification => 'Identification',
     QuestionType.shortAnswer => 'Short Answer',
     QuestionType.longAnswer => 'Long Answer',
+    QuestionType.codeTracing => 'Code Tracing',
   };
 
   /// The value the API stores in `questions.question_type`.
@@ -28,6 +29,7 @@ extension QuestionTypeLabel on QuestionType {
     QuestionType.identification => 'identification',
     QuestionType.shortAnswer => 'short_answer',
     QuestionType.longAnswer => 'long_answer',
+    QuestionType.codeTracing => 'code_tracing',
   };
 }
 
@@ -57,6 +59,8 @@ class DraftQuestion {
       descriptionController = TextEditingController(),
       answerKeyController = TextEditingController(),
       pointsController = TextEditingController(text: '1'),
+      sourceCodeController = TextEditingController(),
+      expectedOutputController = TextEditingController(),
       options = List.generate(4, (_) => DraftOption());
 
   /// Rebuilds a draft from an assessment already stored on the server, so
@@ -81,11 +85,19 @@ class DraftQuestion {
                   '')
             : '',
       ),
+      sourceCodeController = TextEditingController(
+        text: question.sourceCode ?? '',
+      ),
+      expectedOutputController = TextEditingController(
+        text: question.expectedOutput ?? '',
+      ),
       options = question.choices
           .map((c) => DraftOption(text: c.text))
           .toList() {
     type = question.type;
     imageUrl = question.imageUrl;
+    languageSlug = question.language;
+    languageBadge = question.languageBadge;
 
     // The four blank option slots a fresh question starts with are a UI
     // default, not a rule — a stored question keeps however many it has, and
@@ -118,6 +130,20 @@ class DraftQuestion {
   /// multiple choice, and the number set here becomes the ceiling the grader
   /// scores against on the answer sheet.
   final TextEditingController pointsController;
+
+  /// Code tracing lang gumagamit ng dalawang ito. Yung code na babasahin ng
+  /// estudyante, at yung dapat lumabas pag pinatakbo ito - yun ang susi.
+  final TextEditingController sourceCodeController;
+  final TextEditingController expectedOutputController;
+
+  /// Aling wika ang nakadikit sa code. Slug lang ito, gaya ng python o cpp -
+  /// yung pangalan at kulay, sa server na nanggagaling.
+  String? languageSlug;
+
+  /// Yung tanda na ipinapakita habang pinipili. Itinatabi ito para hindi na
+  /// kailangang tumawag ulit sa server para lang malaman kung ano ang kulay
+  /// ng napili niya.
+  LanguageBadge? languageBadge;
 
   /// The points as a number, kept inside the range the server accepts so a
   /// blank or nonsense box never blocks saving.
@@ -168,7 +194,16 @@ class DraftQuestion {
     // A written question has no options — the shared service turns the
     // answer key into the one correct choice, or marks the question for
     // manual review when it is blank.
-    if (type.isFreeText) 'answer_key': answerKeyController.text.trim(),
+    //
+    // Hindi kasama dito ang code tracing kahit teksto rin ang sagot nito. May
+    // sarili itong tatlong field sa ibaba, at doon nakalagay ang susi.
+    if (type.isFreeText && !type.isCodeTracing)
+      'answer_key': answerKeyController.text.trim(),
+    if (type.isCodeTracing) ...{
+      'language': languageSlug ?? '',
+      'source_code': sourceCodeController.text,
+      'expected_output': expectedOutputController.text,
+    },
     'choices': type.isFreeText
         ? const []
         : [
@@ -176,6 +211,25 @@ class DraftQuestion {
               {'text': option.text, 'is_correct': isCorrect(option)},
           ],
   };
+
+  /// Ano ang kulang sa code tracing na tanong na ito, kung meron man.
+  ///
+  /// Tinatanong ito bago pa ipadala. Tinatanggihan din naman ito ng server,
+  /// pero mas mabuting sabihin agad kaysa hintayin pa ang biyahe - lalo na
+  /// pag mahaba na ang papel at malayo na siyang nag-scroll.
+  String? get tracingProblem {
+    if (!type.isCodeTracing) return null;
+
+    if (sourceCodeController.text.trim().isEmpty) {
+      return 'needs the code the student will trace';
+    }
+
+    if (expectedOutputController.text.trim().isEmpty) {
+      return 'needs the output that code produces, which is the answer key';
+    }
+
+    return null;
+  }
 
   /// A newly picked file is inlined as a `data:` URI, which is exactly what
   /// the web builder stores for an inline image — so the student quiz renders
@@ -207,6 +261,8 @@ class DraftQuestion {
     descriptionController.dispose();
     pointsController.dispose();
     answerKeyController.dispose();
+    sourceCodeController.dispose();
+    expectedOutputController.dispose();
     for (final option in options) {
       option.dispose();
     }
