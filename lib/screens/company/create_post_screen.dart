@@ -38,6 +38,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   final _jobRole = TextEditingController();
   final _slot = TextEditingController();
+  // Dati walang kahon para dito, kaya address ng kompanya ang
+  // laging nakukuha - at pag blangko yun, "Location not set" ang
+  // lumalabas sa card.
+  final _location = TextEditingController();
 
   final _responsibilityInput = TextEditingController();
   final _responsibilities = <String>[];
@@ -54,6 +58,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (existing == null) return;
     _jobRole.text = existing.title;
     _slot.text = existing.openSlots.toString();
+    _location.text = existing.location;
     _responsibilities.addAll(existing.responsibilities);
     _skills.addAll(existing.skills);
   }
@@ -61,6 +66,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   @override
   void dispose() {
     _jobRole.dispose();
+    _location.dispose();
     _slot.dispose();
     _responsibilityInput.dispose();
     _skillInput.dispose();
@@ -139,12 +145,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               id: widget.posting!.id,
               jobRole: _jobRole.text.trim(),
               slots: slots,
+              location: _location.text.trim(),
               responsibilities: _responsibilities,
               skills: _skills,
             )
           : await _service.createPosting(
               jobRole: _jobRole.text.trim(),
               slots: slots,
+              location: _location.text.trim(),
               responsibilities: _responsibilities,
               skills: _skills,
             );
@@ -276,7 +284,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   };
 
   Widget _buildStep() => switch (_step) {
-    1 => _BasicInfoStep(jobRoleController: _jobRole, slotController: _slot),
+    1 => _BasicInfoStep(
+      jobRoleController: _jobRole,
+      slotController: _slot,
+      locationController: _location,
+    ),
     2 => _ResponsibilitiesStep(
       controller: _responsibilityInput,
       items: _responsibilities,
@@ -367,10 +379,12 @@ class _BasicInfoStep extends StatelessWidget {
   const _BasicInfoStep({
     required this.jobRoleController,
     required this.slotController,
+    required this.locationController,
   });
 
   final TextEditingController jobRoleController;
   final TextEditingController slotController;
+  final TextEditingController locationController;
 
   @override
   Widget build(BuildContext context) {
@@ -396,6 +410,18 @@ class _BasicInfoStep extends StatelessWidget {
             controller: slotController,
             hintText: 'e.g. 10',
             keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          const _FieldLabel('LOCATION'),
+          const SizedBox(height: 8),
+          _GreyTextField(
+            controller: locationController,
+            hintText: 'e.g. Urdaneta City, Pangasinan',
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Leave this blank to use your company address.',
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
         ],
       ),

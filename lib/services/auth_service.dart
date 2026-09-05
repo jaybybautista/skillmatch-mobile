@@ -13,6 +13,31 @@ import '../models/campus.dart';
 /// App\Http\Controllers\Api\AuthController) so anything that happens here —
 /// registering, logging in, resetting a password — updates the exact same
 /// `users`/`students` tables the web app reads from.
+/// Panakip lang pag hindi maabot ang server. Sa App\Support\Industries ang
+/// tunay na listahan - dito lang ito nakasulat para may mapipili pa rin sila
+/// kahit mahina ang signal habang nagpaparehistro.
+const List<String> kFallbackIndustries = [
+  'Information Technology',
+  'Software Development',
+  'Business Process Outsourcing',
+  'Banking & Finance',
+  'Insurance',
+  'Healthcare',
+  'Education',
+  'Engineering',
+  'Construction',
+  'Manufacturing',
+  'Retail & E-commerce',
+  'Food & Beverage',
+  'Hospitality & Tourism',
+  'Transportation & Logistics',
+  'Agriculture',
+  'Real Estate',
+  'Media & Communications',
+  'Government',
+  'Non-profit / NGO',
+];
+
 /// How long the account picker has to be up before a "cancel" is believable
 /// as a human dismissal. Anything faster never showed a picker at all.
 const _pickerDismissFloor = Duration(milliseconds: 1200);
@@ -84,6 +109,28 @@ class AuthService extends ChangeNotifier {
     return (response['campuses'] as List)
         .map((e) => Campus.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Yung mapipiling larangan ng kompanya.
+  ///
+  /// Sa server nakuha para iisa lang ang listahan ng web at ng app. Tatlong
+  /// magkakaibang kopya kasi ito dati - isa sa pagpaparehistro sa web, isa sa
+  /// profile sa web, isa dito - at hindi sila magkatugma. Kaya pag may pinili
+  /// sila sa isa, hindi ito nakikita ng isa, tas nabubura pagka-save.
+  ///
+  /// Pag hindi maabot ang server, [kFallbackIndustries] naman ang gamit, para
+  /// may mapipili pa rin sila.
+  Future<List<String>> fetchIndustries() async {
+    try {
+      final response = await _client.get('/auth/industries');
+      final industries = (response['industries'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList();
+
+      return industries.isEmpty ? kFallbackIndustries : industries;
+    } catch (_) {
+      return kFallbackIndustries;
+    }
   }
 
   Future<AppUser> login({

@@ -14,6 +14,8 @@ class AppTextField extends StatefulWidget {
     this.validator,
     this.textInputAction,
     this.onFieldSubmitted,
+    this.hintText,
+    this.onChanged,
   });
 
   final String label;
@@ -23,6 +25,13 @@ class AppTextField extends StatefulWidget {
   final String? Function(String?)? validator;
   final TextInputAction? textInputAction;
   final void Function(String)? onFieldSubmitted;
+
+  /// Yung maputlang pahiwatig sa loob ng kahon habang wala pang laman.
+  final String? hintText;
+
+  /// Kada tipa. Ginagamit ito ng Others, para agad-agad na masundan yung
+  /// isinusulat nila.
+  final ValueChanged<String>? onChanged;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -52,7 +61,9 @@ class _AppTextFieldState extends State<AppTextField> {
           validator: widget.validator,
           textInputAction: widget.textInputAction,
           onFieldSubmitted: widget.onFieldSubmitted,
+          onChanged: widget.onChanged,
           decoration: InputDecoration(
+            hintText: widget.hintText,
             suffixIcon: widget.obscureText
                 ? IconButton(
                     icon: Icon(
@@ -109,6 +120,15 @@ class AppDropdownField<T> extends StatelessWidget {
         DropdownButtonFormField<T>(
           initialValue: value,
           isExpanded: true,
+          // Pinapayagang tumangkad yung hilera kaysa sa nakatakdang 48.
+          //
+          // Dito nagkakaproblema yung mahahabang pangalan ng programa.
+          // "Bachelor of Science in Information Technology major in Web and
+          // Mobile Technologies" - hindi yun kasya sa isang linya sa telepono,
+          // at dati pinuputol ito ng ellipsis, kaya hindi nila mabasa kung
+          // alin ang pinipili nila. Ngayon, bumababa na lang ito sa susunod
+          // na linya.
+          itemHeight: null,
           icon: const Icon(
             Icons.keyboard_arrow_down,
             color: AppColors.textMuted,
@@ -118,7 +138,21 @@ class AppDropdownField<T> extends StatelessWidget {
               .map(
                 (item) => DropdownMenuItem<T>(
                   value: item,
-                  child: Text(itemLabel(item), overflow: TextOverflow.ellipsis),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Text(itemLabel(item), softWrap: true),
+                  ),
+                ),
+              )
+              .toList(),
+          // Yung nakikita sa loob ng kahon pag nakasara na. Kailangan itong
+          // sabihin nang hiwalay - kung hindi, yung mismong hilera ang
+          // ipinapakita nito, at kasama yung padding para sa listahan.
+          selectedItemBuilder: (context) => items
+              .map(
+                (item) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(itemLabel(item), softWrap: true),
                 ),
               )
               .toList(),

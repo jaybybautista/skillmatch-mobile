@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
@@ -308,37 +311,42 @@ class _QuestionPreviewCard extends StatelessWidget {
             const SizedBox(height: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              // Inline images are stored as `data:` URIs by both builders,
-              // which Image.network handles alongside real http URLs.
-              child: Image.network(
-                question.imageUrl!,
-                width: double.infinity,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const SizedBox.shrink(),
-              ),
+              child: _QuestionImage(url: question.imageUrl!),
             ),
           ],
           const SizedBox(height: 12),
           // Code tracing. Walang pipiliin, kaya yung code at yung dapat
           // lumabas ang ipinapakita - at nakatago rin yung dapat lumabas
           // hanggat hindi pa nila pinipindot yung pindutan sa ibaba.
-          if (question.type.isCodeTracing)
+          // Dalawa ang paraan ng pagsagot sa code tracing, at ang
+          // pagkakaroon ng pagpipilian mismo ang nagsasabi kung alin.
+          //
+          // Dati, kapag code tracing, yung code lang ang lumalabas at
+          // nilalaktawan na ang buong listahan ng pagpipilian - kaya yung
+          // tanong na pinipili pala ang sagot, mukhang walang sagot.
+          if (question.type.isCodeTracing) ...[
             CodeViewer(
               badge: question.languageBadge ?? LanguageBadge.plain,
               code: question.sourceCode ?? '',
-              note: 'The student reads this and types what it prints.',
-              children: [
-                const CodePanelHeader(
-                  label: 'Expected output',
-                  note: 'Hidden from the student while answering.',
-                ),
-                CodeOutputText(
-                  text: isRevealed ? (question.expectedOutput ?? '') : '',
-                  placeholder: 'Hidden. Use the button below to show it.',
-                ),
-              ],
-            )
-          else
+              note: question.choices.isEmpty
+                  ? 'The student reads this and types what it prints.'
+                  : 'The student reads this and picks what it prints.',
+              children: question.choices.isEmpty
+                  ? [
+                      const CodePanelHeader(
+                        label: 'Expected output',
+                        note: 'Hidden from the student while answering.',
+                      ),
+                      CodeOutputText(
+                        text: isRevealed ? (question.expectedOutput ?? '') : '',
+                        placeholder: 'Hidden. Use the button below to show it.',
+                      ),
+                    ]
+                  : const [],
+            ),
+            if (question.choices.isNotEmpty) const SizedBox(height: 12),
+          ],
+          if (!question.type.isCodeTracing || question.choices.isNotEmpty)
             for (var i = 0; i < question.choices.length; i++)
               _ChoiceRow(
                 letter: i < 26 ? String.fromCharCode(65 + i) : '${i + 1}',
@@ -394,6 +402,7 @@ class _ChoiceRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 20,
@@ -454,6 +463,64 @@ class _MetaPill extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Larawan ng tanong.
+///
+/// Dalawang anyo ang dumarating dito. Yung nasa server, address lang. Yung
+/// idinikit nila mismo sa builder, naka-base64 sa loob ng isang data: URI -
+/// at hindi kayang basahin ni Image.network ang ganun, tahimik lang itong
+/// bumabagsak. Dahil doon, parang walang larawan ang tanong.
+class _QuestionImage extends StatelessWidget {
+  const _QuestionImage({required this.url});
+
+  final String url;
+
+  static final Map<String, Uint8List?> _decoded = {};
+
+  static Uint8List? _bytesFor(String value) {
+    if (!value.startsWith('data:')) return null;
+
+    return _decoded.putIfAbsent(value, () {
+      final separator = value.indexOf(',');
+      if (separator == -1) return null;
+
+      try {
+        return base64Decode(value.substring(separator + 1));
+      } catch (_) {
+        return null;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const broken = Padding(
+      padding: EdgeInsets.all(12),
+      child: Text(
+        'Image unavailable',
+        style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+      ),
+    );
+
+    final bytes = _bytesFor(url);
+
+    if (bytes != null) {
+      return Image.memory(
+        bytes,
+        width: double.infinity,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => broken,
+      );
+    }
+
+    return Image.network(
+      url,
+      width: double.infinity,
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => broken,
     );
   }
 }

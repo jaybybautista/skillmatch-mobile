@@ -6,6 +6,7 @@ import '../../../core/app_theme.dart';
 import '../../../models/campus.dart';
 import '../../../services/auth_service.dart';
 import '../../../widgets/app_text_field.dart';
+import '../../../widgets/select_or_other_field.dart';
 import '../../../widgets/primary_button.dart';
 
 class RegisterForm extends StatefulWidget {
@@ -141,14 +142,22 @@ class _RegisterFormState extends State<RegisterForm> {
                     validator: (value) => value == null ? 'Please select a campus' : null,
                   ),
                   const SizedBox(height: 18),
-                  AppDropdownField<String>(
+                  // May Others dito. Hindi lahat ng programa ay nasa listahan
+                  // ng campus, kaya kailangan nilang masulat yung sarili nila
+                  // - kung hindi, hindi sila makakapagparehistro.
+                  SelectOrOtherField(
                     label: 'Course',
                     value: _selectedCourse,
-                    items: _selectedCampus?.programs ?? const [],
-                    itemLabel: (c) => c,
-                    hint: _selectedCampus == null ? 'Select a campus first' : 'Select your course',
-                    onChanged: (course) => setState(() => _selectedCourse = course),
-                    validator: (value) => value == null ? 'Please select a course' : null,
+                    options: _selectedCampus?.programs ?? const [],
+                    enabled: _selectedCampus != null,
+                    hint: 'Select your course',
+                    emptyHint: 'Select a campus first',
+                    otherLabel: 'Your course',
+                    otherHint: 'Type your course',
+                    onChanged: (course) =>
+                        setState(() => _selectedCourse = course),
+                    validator: (value) =>
+                        value == null ? 'Please select a course' : null,
                   ),
                 ],
               );

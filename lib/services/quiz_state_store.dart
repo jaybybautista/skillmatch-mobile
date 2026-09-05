@@ -70,6 +70,16 @@ class QuizStateStore {
     }
   }
 
+  /// Binubura yung naitabing hangganan.
+  ///
+  /// Sa server na kinukuwenta ang orasan, kaya wala na itong silbi - pero
+  /// naiwan ito sa mga telepono na nakagamit ng lumang bersyon, at
+  /// nakakalito kung may kukuha pa rin nito balang araw.
+  Future<void> clearDeadline() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_timerKey);
+  }
+
   /// The attempt's deadline as epoch milliseconds, created on first call so
   /// closing and reopening the app doesn't restart the clock.
   Future<int> deadlineFor(Duration limit) async {

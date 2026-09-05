@@ -1,26 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/app_theme.dart';
+import '../../../services/auth_service.dart';
 import '../../../widgets/app_text_field.dart';
+import '../../../widgets/select_or_other_field.dart';
 import '../../../widgets/primary_button.dart';
 import '../../company/company_setup_wizard_screen.dart';
 
-/// Industries offered in the [AppDropdownField] below. The web app's
-/// register.company page sources this list from the backend; until a mobile
-/// company-registration endpoint exists, it's kept as a fixed list here.
-const List<String> _kIndustries = [
-  'Technology',
-  'Manufacturing',
-  'Healthcare',
-  'Retail',
-  'Finance',
-  'Education',
-  'Construction',
-  'Hospitality',
-  'Agriculture',
-  'Transportation',
-  'Other',
-];
 
 /// The company sign-up form, reached from [RolePickerScreen] once "Company"
 /// has been chosen.
@@ -46,7 +33,20 @@ class _CompanyRegisterFormState extends State<CompanyRegisterForm> {
   final _confirmPasswordController = TextEditingController();
 
   String? _selectedIndustry;
+
+  /// Sa server kinukuha, para iisa lang ang listahan ng web at ng app.
+  /// May panakip ito pag hindi maabot ang server, kaya may mapipili pa rin
+  /// sila kahit mahina ang signal.
+  List<String> _industries = kFallbackIndustries;
   String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<AuthService>().fetchIndustries().then((industries) {
+      if (mounted) setState(() => _industries = industries);
+    });
+  }
 
   @override
   void dispose() {
@@ -89,14 +89,19 @@ class _CompanyRegisterFormState extends State<CompanyRegisterForm> {
                 (value == null || value.trim().isEmpty) ? 'Company name is required' : null,
           ),
           const SizedBox(height: 18),
-          AppDropdownField<String>(
+          // May Others dito. May kompanyang wala sa alinman sa mga larangan,
+          // kaya kailangan nilang masulat yung sarili nila.
+          SelectOrOtherField(
             label: 'Industry',
             value: _selectedIndustry,
-            items: _kIndustries,
-            itemLabel: (industry) => industry,
+            options: _industries,
             hint: 'Select your industry',
-            onChanged: (industry) => setState(() => _selectedIndustry = industry),
-            validator: (value) => value == null ? 'Please select an industry' : null,
+            otherLabel: 'Your industry',
+            otherHint: 'Type your industry',
+            onChanged: (industry) =>
+                setState(() => _selectedIndustry = industry),
+            validator: (value) =>
+                value == null ? 'Please select an industry' : null,
           ),
           const SizedBox(height: 18),
           AppTextField(

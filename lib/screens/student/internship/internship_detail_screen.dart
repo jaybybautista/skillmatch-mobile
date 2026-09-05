@@ -5,6 +5,7 @@ import '../../../core/app_theme.dart';
 import '../../../models/internship_detail.dart';
 import '../../../services/internship_service.dart';
 import '../../../widgets/moa_tag.dart';
+import '../../../widgets/availability_tag.dart';
 import '../reviews/reviews_section.dart';
 
 /// Internship posting detail — mirrors the web's internship detail page
@@ -183,7 +184,9 @@ class _InternshipDetailScreenState extends State<InternshipDetailScreen>
                     showWriteReview: _tabController.index == 2,
                     isApplied: isApplied,
                     isApplying: _isApplying,
-                    hasSlots: detail.slotsAvailable > 0,
+                    // Sarado man o naubos, pareho itong hindi na
+                    // tumatanggap - sa server ito napagpapasyahan.
+                    hasSlots: detail.isAccepting,
                     onApply: _apply,
                   ),
               ],
@@ -356,12 +359,13 @@ class _InfoHeader extends StatelessWidget {
             spacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              _Badge(
-                text: detail.slotsAvailable > 0
-                    ? '${detail.slotsAvailable} slots left'
-                    : 'No slots left',
-                background: const Color(0xFFFFF4E5),
-                foreground: const Color(0xFFE56B00),
+              AvailabilityTag(
+                state: detail.availabilityState,
+                label: detail.availabilityLabel.isNotEmpty
+                    ? detail.availabilityLabel
+                    : (detail.slotsAvailable > 0
+                          ? '${detail.slotsAvailable} slots available'
+                          : 'No slots left'),
               ),
               if (detail.matchScore != null)
                 _Badge(

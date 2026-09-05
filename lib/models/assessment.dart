@@ -286,12 +286,24 @@ class AssessmentQuiz {
     required this.id,
     required this.title,
     this.timeLimitMinutes,
+    this.secondsRemaining,
     required this.questions,
   });
 
   final int id;
   final String title;
   final int? timeLimitMinutes;
+
+  /// Ilang segundo pa ang natitira sa orasan niya, sabi ng server.
+  ///
+  /// Sa server ito kinukuwenta, hindi dito. Dati, sa SharedPreferences
+  /// nakatago ang hangganan at hindi ito nabubura pag muling ibinigay ang
+  /// papel - kaya pagbukas niya, yung hangganan pa rin ng lumang attempt ang
+  /// nakatala. Tapos na agad ang oras bago pa siya makasagot, at mukhang
+  /// hindi umaandar ang orasan.
+  ///
+  /// Null pag walang taning ang papel.
+  final int? secondsRemaining;
   final List<AssessmentQuestion> questions;
 
   factory AssessmentQuiz.fromJson(Map<String, dynamic> json) {
@@ -300,6 +312,7 @@ class AssessmentQuiz {
       id: (assessment['id'] as num).toInt(),
       title: assessment['title'] as String? ?? 'Assessment',
       timeLimitMinutes: (assessment['time_limit'] as num?)?.toInt(),
+      secondsRemaining: (assessment['seconds_remaining'] as num?)?.toInt(),
       questions: (json['questions'] as List? ?? const [])
           .map((e) => AssessmentQuestion.fromJson(e as Map<String, dynamic>))
           .toList(),

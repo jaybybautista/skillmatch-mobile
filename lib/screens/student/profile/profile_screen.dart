@@ -10,6 +10,7 @@ import '../placement/placement_screen.dart';
 import '../settings/settings_screen.dart';
 import 'image_viewer_screen.dart';
 import 'profile_photo_picker.dart';
+import 'entry_detail_sheet.dart';
 import 'profile_section_editor.dart';
 
 /// Profile screen — pulls real data from GET /api/student/profile (course,
@@ -1103,6 +1104,18 @@ class _EducationEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
+      onTap: () => showEntryDetails(
+        context,
+        title: entry.institution ?? 'Education',
+        icon: Icons.school_outlined,
+        details: [
+          EntryDetail('Institution', entry.institution),
+          EntryDetail('Degree', entry.degree),
+          EntryDetail('Field of study', entry.fieldOfStudy),
+          EntryDetail('Start year', entry.startYear?.toString()),
+          EntryDetail('End year', entry.endYear?.toString() ?? 'Ongoing'),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1160,21 +1173,55 @@ class _EducationEntryCard extends StatelessWidget {
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.child});
+  const _Card({required this.child, this.onTap});
 
   final Widget child;
 
+  /// Pag may nito, bumubukas ang kahon ng detalye kapag pinindot ito. Yung
+  /// tatlong tuldok, sarili niyang pindutan, kaya hindi sila nagkakabanggaan.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    if (onTap == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: child,
+      );
+    }
+
+    // Material ang puting likod, hindi Container.
+    //
+    // Dito nagmumukhang mabagal dati. Nakabalot noon ang InkWell sa isang
+    // Container na puti at makapal - at sa Material na nasa likod nun
+    // ipinipinta ang alon ng pindot, kaya natatabunan ito at walang
+    // lumalabas. Walang tugon ang tile sa daliri, tapos saka pa lang aahon
+    // ang kahon - kaya parang may hinihintay pa bago ito bumukas.
+    //
+    // Pag Material na ang mismong likod, sa ibabaw na nito ipinipinta ang
+    // alon, kaya may nakikita sila agad sa mismong sandali ng pindot.
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: child,
+        ),
       ),
-      child: child,
     );
   }
 }
@@ -1445,6 +1492,17 @@ class _CertificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
+      onTap: () => showEntryDetails(
+        context,
+        title: certification.title ?? 'Certification',
+        icon: Icons.verified_outlined,
+        details: [
+          EntryDetail('Certification', certification.title),
+          EntryDetail('Issuing organization', certification.issuingOrganization),
+          EntryDetail('Issued', certification.issueDate),
+          EntryDetail('Credential URL', certification.credentialUrl),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1480,6 +1538,19 @@ class _ExperienceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
+      onTap: () => showEntryDetails(
+        context,
+        title: experience.position ?? 'Experience',
+        icon: Icons.work_outline,
+        details: [
+          EntryDetail('Position', experience.position),
+          EntryDetail('Organization', experience.organization),
+          EntryDetail('Type', experience.type),
+          EntryDetail('Started', experience.startDate),
+          EntryDetail('Ended', experience.endDate ?? 'Present'),
+          EntryDetail('Description', experience.description),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1545,6 +1616,22 @@ class _ProjectCard extends StatelessWidget {
         : '${project.startDate} to ${project.endDate ?? 'Present'}';
 
     return _Card(
+      onTap: () => showEntryDetails(
+        context,
+        title: project.title ?? 'Project',
+        icon: Icons.lightbulb_outline,
+        details: [
+          EntryDetail('Project', project.title),
+          EntryDetail('Role', project.role),
+          EntryDetail('Started', project.startDate),
+          EntryDetail(
+            'Ended',
+            project.startDate == null ? null : (project.endDate ?? 'Present'),
+          ),
+          EntryDetail('Link', project.link),
+          EntryDetail('Description', project.description),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1622,6 +1709,17 @@ class _AchievementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
+      onTap: () => showEntryDetails(
+        context,
+        title: achievement.title ?? 'Achievement',
+        icon: Icons.emoji_events_outlined,
+        details: [
+          EntryDetail('Achievement', achievement.title),
+          EntryDetail('Issuer', achievement.issuer),
+          EntryDetail('Awarded', achievement.dateAwarded),
+          EntryDetail('Description', achievement.description),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

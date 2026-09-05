@@ -14,6 +14,11 @@ class _FakeAssessmentService extends AssessmentService {
   int submitCalls = 0;
   bool? lastSubmitTimedOut;
 
+  /// Ilang segundo pa ang natitira, sabi ng server. Doon na kinukuwenta ang
+  /// orasan, hindi na sa SharedPreferences - kaya dito na rin sinasabi ng
+  /// pagsubok kung tapos na ang oras.
+  int secondsRemaining = 300;
+
   @override
   Future<AssessmentQuiz> fetchQuiz(int assessmentId) async =>
       AssessmentQuiz.fromJson({
@@ -21,6 +26,7 @@ class _FakeAssessmentService extends AssessmentService {
           'id': assessmentId,
           'title': 'Design Intern',
           'time_limit': 5,
+          'seconds_remaining': secondsRemaining,
         },
         'questions': [
           {
@@ -189,14 +195,13 @@ void main() {
   testWidgets('an expired deadline auto-submits and is flagged as timed out', (
     tester,
   ) async {
-    // The deadline is wall-clock and persisted, so this is what a student who
-    // walked away and came back after the limit actually hits. (Pumping fake
-    // time wouldn't expire it — DateTime.now() is the real clock.)
-    SharedPreferences.setMockInitialValues({
-      'student_quiz_timer_end_1': DateTime.now().millisecondsSinceEpoch - 1000,
-    });
+    // Ito ang nakikita ng estudyanteng umalis tapos bumalik matapos ang
+    // taning. Sa server na ito nagmumula - dati kasi, sa SharedPreferences
+    // nakatago ang hangganan, at doon nasira: naiiwan doon ang hangganan ng
+    // lumang attempt, kaya patay agad ang orasan sa isang bagong pagkakataon.
+    SharedPreferences.setMockInitialValues({});
 
-    final service = _FakeAssessmentService();
+    final service = _FakeAssessmentService()..secondsRemaining = 0;
     await _pumpQuiz(tester, service);
     await _settle(tester);
 

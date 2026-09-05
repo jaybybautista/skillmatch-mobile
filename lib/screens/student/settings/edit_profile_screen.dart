@@ -7,6 +7,7 @@ import '../../../models/editable_profile.dart';
 import '../../../models/student_profile.dart' show ResumeInfo;
 import '../../../services/profile_service.dart';
 import '../../../widgets/primary_button.dart';
+import '../../../widgets/select_or_other_field.dart';
 
 /// Edit Profile — personal info plus the resume section, mirroring the web
 /// profile page: the same fields, and the same two upload options
@@ -326,10 +327,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   value: _campusId,
                   onChanged: _changeCampus,
                 ),
-                _CourseDropdown(
-                  programs: _programsForCampus,
-                  value: _course,
-                  onChanged: (v) => setState(() => _course = v),
+                // May Others dito. Hindi lahat ng programa ay nasa listahan
+                // ng campus - may galing sa setup wizard, may galing sa
+                // nabasang dokumento, may sinulat na lang mismo.
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: SelectOrOtherField(
+                    label: 'Course',
+                    value: _course,
+                    options: _programsForCampus,
+                    enabled: _programsForCampus.isNotEmpty,
+                    hint: 'Select program',
+                    emptyHint: 'Select a campus first',
+                    otherLabel: 'Your course',
+                    otherHint: 'Type your course',
+                    onChanged: (v) => setState(() => _course = v),
+                  ),
                 ),
                 _YearLevelDropdown(
                   value: _yearLevel,
@@ -698,73 +711,6 @@ class _CampusDropdown extends StatelessWidget {
               isDense: true,
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The Course picker: the chosen campus's programs, and nothing until a
-/// campus is chosen — which is exactly how the web form behaves.
-class _CourseDropdown extends StatelessWidget {
-  const _CourseDropdown({
-    required this.programs,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final List<String> programs;
-  final String? value;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final safeValue = programs.contains(value) ? value : null;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'COURSE',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textMuted,
-              letterSpacing: 0.4,
-            ),
-          ),
-          const SizedBox(height: 6),
-          DropdownButtonFormField<String>(
-            initialValue: safeValue,
-            isExpanded: true,
-            items: [
-              for (final program in programs)
-                DropdownMenuItem(
-                  value: program,
-                  child: Text(program, overflow: TextOverflow.ellipsis),
-                ),
-            ],
-            onChanged: programs.isEmpty ? null : onChanged,
-            decoration: InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: programs.isEmpty
-                  ? const Color(0xFFF1F3F6)
-                  : Colors.white,
-              hintText: programs.isEmpty
-                  ? 'Select a campus first'
-                  : 'Select program',
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 12,

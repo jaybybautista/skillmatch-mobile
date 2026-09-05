@@ -129,8 +129,13 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen>
 
       for (final question in quiz.questions) {
         if (question.type.isFreeText) {
+          // Yung naitabing sagot, hindi laging teksto. Yung code tracing na
+          // may pagpipilian, choice id ang naiimbak - kaya pag basta ito
+          // ipinilit na String, sumasabog ang pagbukas ng draft.
+          final saved = _answers[question.id];
+
           _textControllers[question.id] = TextEditingController(
-            text: _answers[question.id] as String? ?? '',
+            text: saved is String ? saved : '',
           );
         }
       }
@@ -156,15 +161,29 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen>
   }
 
   Future<void> _startTimer(AssessmentQuiz quiz) async {
-    final limit = quiz.timeLimitMinutes;
-    if (limit == null) return;
+    if (quiz.timeLimitMinutes == null) return;
 
-    // Stored on first use, so reopening the app resumes the same deadline
-    // instead of handing out a fresh allowance.
-    final deadline = await _store.deadlineFor(Duration(minutes: limit));
+    // Sa server galing ang natitirang oras, hindi sa telepono.
+    //
+    // Dito nasira dati. Nakatago sa SharedPreferences ang hangganan, at hindi
+    // ito nabubura pag muling ibinigay ang papel - kaya pagbukas niya, yung
+    // hangganan pa rin ng lumang attempt ang nakatala. Tapos na agad ang oras
+    // bago pa siya makasagot, at mukhang hindi umaandar ang orasan.
+    //
+    // Ang server ang may hawak ng simula, kaya doon na rin kinukuwenta ang
+    // natitira. Pareho ito ng ginagawa ng web.
+    // Pag walang sinabi ang server, buong taning na lang - lumang server yun,
+    // wala pang seconds_remaining. Mas mabuti nang umaandar ang orasan kaysa
+    // sa manatiling --:-- na parang walang taning ang papel.
+    final remaining =
+        quiz.secondsRemaining ?? (quiz.timeLimitMinutes! * 60);
+
+    // Naiwang susi ng lumang paraan, nililinis para hindi na makasagabal.
+    await _store.clearDeadline();
     if (!mounted) return;
 
-    _deadlineMs = deadline;
+    _deadlineMs =
+        DateTime.now().millisecondsSinceEpoch + (remaining * 1000);
     _tick();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
@@ -802,12 +821,26 @@ class _AnswerInput extends StatelessWidget {
         return DropdownButtonFormField<int>(
           initialValue: answer is int ? answer as int : null,
           isExpanded: true,
+          // Pinapayagang tumangkad ang hilera. Maraming linya ang ibang
+          // pagpipilian - output ng code halimbawa - at dati pinuputol ito
+          // ng ellipsis, kaya hindi nila mabasa ang pinipili nila.
+          itemHeight: null,
           hint: const Text('Select an answer'),
           items: [
             for (final choice in question.choices)
               DropdownMenuItem(
                 value: choice.id,
-                child: Text(choice.text, overflow: TextOverflow.ellipsis),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Text(choice.text, softWrap: true),
+                ),
+              ),
+          ],
+          selectedItemBuilder: (context) => [
+            for (final choice in question.choices)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(choice.text, softWrap: true),
               ),
           ],
           onChanged: onChanged,
@@ -834,27 +867,53 @@ class _AnswerInput extends StatelessWidget {
       // Walang pinapatakbo dito - sa ulo niya ito sinasagot, kaya walang
       // compiler na kailangan at walang hinihintay na server.
       case QuestionType.codeTracing:
-        return CodeViewer(
-          badge: question.language ?? LanguageBadge.plain,
-          code: question.sourceCode ?? '',
-          note: 'Read the code. Type what it prints.',
+        // Dalawa ang paraan ng pagsagot dito, at ang pagkakaroon ng
+        // pagpipilian mismo ang nagsasabi kung alin. May choices, pipili siya;
+        // wala, itatatipa niya. Ganun din ang pagtsetsek sa server, kaya walang
+        // bagong bagay na dapat itanong.
+        final picks = question.choices.isNotEmpty;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const CodePanelHeader(
-              label: 'Your output',
-              note: 'Spacing and line breaks matter.',
+            CodeViewer(
+              badge: question.language ?? LanguageBadge.plain,
+              code: question.sourceCode ?? '',
+              note: picks
+                  ? 'Read the code. Pick what it prints.'
+                  : 'Read the code. Type what it prints.',
+              children: picks
+                  ? const []
+                  : [
+                      const CodePanelHeader(
+                        label: 'Your output',
+                        note: 'Spacing and line breaks matter.',
+                      ),
+                      CodeField(
+                        controller: textController!,
+                        onChanged: onChanged,
+                        minLines: 3,
+                        maxLines: 10,
+                        hintText: 'Type the output here',
+                      ),
+                      const CodeFoot(
+                        text:
+                            'Trailing spaces at the end of a line are ignored, '
+                            'and so are extra blank lines at the very end.',
+                      ),
+                    ],
             ),
-            CodeField(
-              controller: textController!,
-              onChanged: onChanged,
-              minLines: 3,
-              maxLines: 10,
-              hintText: 'Type the output here',
-            ),
-            const CodeFoot(
-              text:
-                  'Trailing spaces at the end of a line are ignored, and so are '
-                  'extra blank lines at the very end.',
-            ),
+            if (picks) ...[
+              const SizedBox(height: 14),
+              for (final choice in question.choices)
+                _ChoiceTile(
+                  text: choice.text,
+                  selected: answer == choice.id,
+                  isCheckbox: false,
+                  monospace: true,
+                  onTap: () => onChanged(choice.id),
+                ),
+            ],
           ],
         );
 
@@ -883,12 +942,17 @@ class _ChoiceTile extends StatelessWidget {
     required this.selected,
     required this.isCheckbox,
     required this.onTap,
+    this.monospace = false,
   });
 
   final String text;
   final bool selected;
   final bool isCheckbox;
   final VoidCallback onTap;
+
+  /// Output ng code ang laman, kaya monospace - para tumapat ang espasyo at
+  /// makita nila kung ano talaga ang pinagkaiba ng dalawang mapipilian.
+  final bool monospace;
 
   @override
   Widget build(BuildContext context) {
@@ -916,7 +980,9 @@ class _ChoiceTile extends StatelessWidget {
                 child: Text(
                   text,
                   style: TextStyle(
-                    fontSize: 14.5,
+                    fontFamily: monospace ? 'monospace' : null,
+                    fontFamilyFallback: monospace ? kCodeFontFallback : null,
+                    fontSize: monospace ? 13 : 14.5,
                     height: 1.4,
                     color: AppColors.textDark,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.normal,

@@ -39,6 +39,9 @@ class InternshipDetail {
     this.companyAbout,
     this.location,
     required this.slotsAvailable,
+    this.availabilityState = 'open',
+    this.availabilityLabel = '',
+    this.isAccepting = true,
     this.matchScore,
     required this.isBookmarked,
     required this.isApplied,
@@ -59,6 +62,12 @@ class InternshipDetail {
   final String? companyAbout;
   final String? location;
   final int slotsAvailable;
+
+  /// Bukas pa ba ito. Sa server nagmumula, hindi kinukuwenta dito, para iisa
+  /// ang sagot ng web at ng app.
+  final String availabilityState;
+  final String availabilityLabel;
+  final bool isAccepting;
   final int? matchScore;
   final bool isBookmarked;
   final bool isApplied;
@@ -84,6 +93,9 @@ class InternshipDetail {
       companyAbout: json['company_about'] as String?,
       location: json['location'] as String?,
       slotsAvailable: json['slots_available'] as int? ?? 0,
+      availabilityState: json['availability_state'] as String? ?? 'open',
+      availabilityLabel: json['availability_label'] as String? ?? '',
+      isAccepting: json['is_accepting'] as bool? ?? true,
       matchScore: json['match_score'] as int?,
       isBookmarked: json['is_bookmarked'] as bool? ?? false,
       isApplied: json['is_applied'] as bool? ?? false,

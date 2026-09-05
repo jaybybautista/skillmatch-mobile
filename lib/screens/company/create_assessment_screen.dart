@@ -1337,6 +1337,7 @@ class _QuestionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Checkbox(
                       value: question.correctOptionIds.contains(option.id),
@@ -1347,6 +1348,10 @@ class _QuestionCard extends StatelessWidget {
                       child: _GreyTextField(
                         controller: option.controller,
                         hintText: 'Add answer…',
+                        // Maraming linya. May pagpipiliang output ng code, at
+                        // hindi yun kasya sa isang linya.
+                        minLines: 1,
+                        maxLines: 6,
                       ),
                     ),
                   ],
@@ -1370,6 +1375,7 @@ class _QuestionCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Radio<int>(
                             value: option.id,
@@ -1379,6 +1385,8 @@ class _QuestionCard extends StatelessWidget {
                             child: _GreyTextField(
                               controller: option.controller,
                               hintText: 'Add answer…',
+                              minLines: 1,
+                              maxLines: 6,
                             ),
                           ),
                         ],

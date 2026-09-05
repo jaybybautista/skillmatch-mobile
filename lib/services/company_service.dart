@@ -202,12 +202,16 @@ class CompanyService {
   Future<CompanyPosting> createPosting({
     required String jobRole,
     required int slots,
+    /// Saan sila papasok. Pag blangko, address ng kompanya ang
+    /// hinihiram ng server.
+    String? location,
     required List<String> responsibilities,
     required List<String> skills,
   }) async {
     final response = await _client.post('/company/postings', {
       'job_role': jobRole,
       'slots': slots,
+      'location': location ?? '',
       'responsibilities': responsibilities,
       'skills': skills,
     }, authenticated: true);
@@ -219,12 +223,16 @@ class CompanyService {
     required int id,
     required String jobRole,
     required int slots,
+    /// Saan sila papasok. Pag blangko, address ng kompanya ang
+    /// hinihiram ng server.
+    String? location,
     required List<String> responsibilities,
     required List<String> skills,
   }) async {
     final response = await _client.put('/company/postings/$id', {
       'job_role': jobRole,
       'slots': slots,
+      'location': location ?? '',
       'responsibilities': responsibilities,
       'skills': skills,
     }, authenticated: true);

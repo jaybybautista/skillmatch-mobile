@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
 import '../../core/error_message.dart';
 import '../../models/company_profile.dart';
+import '../../services/auth_service.dart';
 import '../../services/company_service.dart';
+import '../../widgets/select_or_other_field.dart';
 import '../../widgets/company_screen_header.dart';
 
 /// Editing the company's own profile — the phone's version of the website's
@@ -28,24 +30,12 @@ class EditCompanyProfileScreen extends StatefulWidget {
 }
 
 class _EditCompanyProfileScreenState extends State<EditCompanyProfileScreen> {
-  /// The same fifteen options the website's industry dropdown offers.
-  static const industries = [
-    'Information Technology',
-    'Software Development',
-    'BPO / Call Center',
-    'Manufacturing',
-    'Healthcare',
-    'Finance & Banking',
-    'Education',
-    'Retail & E-Commerce',
-    'Engineering',
-    'Media & Communications',
-    'Food & Beverage',
-    'Government',
-    'Non-Profit / NGO',
-    'Construction',
-    'Other',
-  ];
+  /// Sa server kinukuha, para iisa lang ang listahan ng web at ng app.
+  /// Tatlong magkakaibang kopya kasi ito dati at hindi sila magkatugma -
+  /// "Finance & Banking" dito, "Banking & Finance" sa web. Kaya pag may
+  /// pinili sila sa isa, walang lumalabas na napili sa isa.
+  List<String> industries = kFallbackIndustries;
+
 
   late final CompanyService _service = widget.service ?? CompanyService();
   final _formKey = GlobalKey<FormState>();
@@ -90,10 +80,13 @@ class _EditCompanyProfileScreenState extends State<EditCompanyProfileScreen> {
     return current;
   }
 
-  List<String> get _industryOptions {
-    final current = _industry;
-    if (current == null || industries.contains(current)) return industries;
-    return [current, ...industries];
+
+  @override
+  void initState() {
+    super.initState();
+    AuthService().fetchIndustries().then((fetched) {
+      if (mounted) setState(() => industries = fetched);
+    });
   }
 
   @override
@@ -341,19 +334,19 @@ class _EditCompanyProfileScreenState extends State<EditCompanyProfileScreen> {
   Widget _industryField() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String?>(
-        initialValue: _industry,
-        isExpanded: true,
-        decoration: const InputDecoration(labelText: 'Industry'),
-        items: [
-          const DropdownMenuItem<String?>(child: Text('Select industry…')),
-          for (final option in _industryOptions)
-            DropdownMenuItem<String?>(value: option, child: Text(option)),
-        ],
-        onChanged: _isSaving
-            ? null
-            : (value) => setState(() => _industry = value),
+      // May Others dito. May kompanyang wala sa alinman sa mga larangan,
+      // kaya kailangan nilang masulat yung sarili nila.
+      child: SelectOrOtherField(
+        label: 'Industry',
+        value: _industry,
+        options: industries,
+        enabled: !_isSaving,
+        hint: 'Select industry',
+        otherLabel: 'Your industry',
+        otherHint: 'Type your industry',
+        onChanged: (value) => setState(() => _industry = value),
       ),
     );
   }
+
 }

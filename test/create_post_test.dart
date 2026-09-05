@@ -18,11 +18,13 @@ class _FakeCompanyService extends CompanyService {
   List<String>? responsibilities;
   List<String>? skills;
   int? updatedId;
+  String? location;
 
   @override
   Future<CompanyPosting> createPosting({
     required String jobRole,
     required int slots,
+    String? location,
     required List<String> responsibilities,
     required List<String> skills,
   }) async {
@@ -30,6 +32,7 @@ class _FakeCompanyService extends CompanyService {
     if (error != null) throw error!;
     this.jobRole = jobRole;
     this.slots = slots;
+    this.location = location;
     this.responsibilities = List.of(responsibilities);
     this.skills = List.of(skills);
     return _posting(title: jobRole, slots: slots);
@@ -40,6 +43,7 @@ class _FakeCompanyService extends CompanyService {
     required int id,
     required String jobRole,
     required int slots,
+    String? location,
     required List<String> responsibilities,
     required List<String> skills,
   }) async {
@@ -48,6 +52,7 @@ class _FakeCompanyService extends CompanyService {
     updatedId = id;
     this.jobRole = jobRole;
     this.slots = slots;
+    this.location = location;
     this.responsibilities = List.of(responsibilities);
     this.skills = List.of(skills);
     return _posting(id: id, title: jobRole, slots: slots);

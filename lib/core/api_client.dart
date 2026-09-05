@@ -21,11 +21,21 @@ const _longRequestTimeout = Duration(seconds: 90);
 /// [errors] mirrors Laravel's validation error bag (field name -> messages),
 /// so screens can surface field-specific messages when present.
 class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode, this.errors});
+  ApiException(
+    this.message, {
+    this.statusCode,
+    this.errors,
+    this.isMaintenance = false,
+  });
 
   final String message;
   final int? statusCode;
   final Map<String, List<String>>? errors;
+
+  /// True when the backend is closed for maintenance. The server sends its own
+  /// wording in [message], so screens can show that instead of the generic
+  /// "something went wrong" they use for real failures.
+  final bool isMaintenance;
 
   String? fieldError(String field) => errors?[field]?.first;
 
@@ -245,6 +255,7 @@ class ApiClient {
       message,
       statusCode: response.statusCode,
       errors: errors,
+      isMaintenance: response.statusCode == 503 && data['maintenance'] == true,
     );
   }
 }

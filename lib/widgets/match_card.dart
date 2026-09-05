@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
 import '../models/internship.dart';
+import 'availability_tag.dart';
 import '../screens/student/internship/internship_detail_screen.dart';
 import '../services/internship_service.dart';
 import 'moa_tag.dart';
@@ -190,15 +191,18 @@ class _MatchCardState extends State<MatchCard> {
             const SizedBox(height: 16),
             Text(internship.title, style: AppFonts.title(fontSize: 18)),
             const SizedBox(height: 4),
-            Text(
-              internship.slotsAvailable > 0
-                  ? '${internship.slotsAvailable} slots left'
-                  : 'No slots left',
-              style: TextStyle(
-                color: internship.slotsAvailable > 0
-                    ? AppColors.danger
-                    : AppColors.textMuted,
-                fontSize: 13,
+            // Sarado man o naubos, sinasabi na nito - hindi lang yung bilang.
+            // Kulay pula kasi dati ang "may bakante pa", kabaligtaran ng ibig
+            // sabihin nun.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AvailabilityTag(
+                state: internship.availabilityState,
+                label: internship.availabilityLabel.isNotEmpty
+                    ? internship.availabilityLabel
+                    : (internship.slotsAvailable > 0
+                          ? '${internship.slotsAvailable} slots available'
+                          : 'No slots left'),
               ),
             ),
             const SizedBox(height: 14),

@@ -26,6 +26,9 @@ class Internship {
     this.companyHasMoa = false,
     this.location,
     required this.slotsAvailable,
+    this.availabilityState = 'open',
+    this.availabilityLabel = '',
+    this.isAccepting = true,
     required this.description,
     this.matchScore,
     this.distanceKm,
@@ -52,6 +55,17 @@ class Internship {
   final bool companyHasMoa;
   final String? location;
   final int slotsAvailable;
+
+  /// Bukas pa ba ito. Sa server nagmumula ang tatlong ito, hindi kinukuwenta
+  /// dito - para iisa ang sagot ng web at ng app.
+  ///
+  /// [availabilityState] ay open, full o closed. Magkaiba ang huling dalawa:
+  /// pwedeng magbukas ulit ang napuno kapag may umatras, pero yung sinarado,
+  /// sadyang isinara.
+  final String availabilityState;
+  final String availabilityLabel;
+  final bool isAccepting;
+
   final String description;
   final int? matchScore;
   final String? matchReason;
@@ -89,6 +103,9 @@ class Internship {
       companyHasMoa: json['company_has_moa'] as bool? ?? false,
       location: json['location'] as String?,
       slotsAvailable: json['slots_available'] as int? ?? 0,
+      availabilityState: json['availability_state'] as String? ?? 'open',
+      availabilityLabel: json['availability_label'] as String? ?? '',
+      isAccepting: json['is_accepting'] as bool? ?? true,
       description: json['description'] as String? ?? '',
       matchScore: json['match_score'] as int?,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
