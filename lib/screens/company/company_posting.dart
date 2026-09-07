@@ -20,7 +20,9 @@ class CompanyPosting {
     this.slotsFilled = 0,
     this.status = 'open',
     this.description,
+    this.jobDescription,
     this.responsibilities = const [],
+    this.qualifications = const [],
     this.skills = const [],
     this.postedAtHuman,
   });
@@ -33,7 +35,12 @@ class CompanyPosting {
   final int slotsFilled;
   final String status;
   final String? description;
+
+  /// The company's own overview of the role, separate from [description],
+  /// which the backend derives from the responsibilities for list previews.
+  final String? jobDescription;
   final List<String> responsibilities;
+  final List<String> qualifications;
   final List<String> skills;
   final String? postedAtHuman;
 
@@ -49,7 +56,11 @@ class CompanyPosting {
       slotsFilled: (json['slots_filled'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'open',
       description: json['description'] as String?,
+      jobDescription: json['job_description'] as String?,
       responsibilities: (json['responsibilities'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      qualifications: (json['qualifications'] as List? ?? const [])
           .map((e) => e.toString())
           .toList(),
       skills: (json['skills'] as List? ?? const [])

@@ -205,14 +205,20 @@ class CompanyService {
     /// Saan sila papasok. Pag blangko, address ng kompanya ang
     /// hinihiram ng server.
     String? location,
+    /// Buod ng trabaho. Nauuna ito sa listahan kapag binasa sa posting.
+    String? jobDescription,
     required List<String> responsibilities,
+    /// Hindi sapilitan, kaya pwedeng walang laman.
+    List<String> qualifications = const [],
     required List<String> skills,
   }) async {
     final response = await _client.post('/company/postings', {
       'job_role': jobRole,
       'slots': slots,
       'location': location ?? '',
+      'job_description': jobDescription ?? '',
       'responsibilities': responsibilities,
+      'qualifications': qualifications,
       'skills': skills,
     }, authenticated: true);
 
@@ -226,14 +232,20 @@ class CompanyService {
     /// Saan sila papasok. Pag blangko, address ng kompanya ang
     /// hinihiram ng server.
     String? location,
+    /// Buod ng trabaho. Nauuna ito sa listahan kapag binasa sa posting.
+    String? jobDescription,
     required List<String> responsibilities,
+    /// Hindi sapilitan, kaya pwedeng walang laman.
+    List<String> qualifications = const [],
     required List<String> skills,
   }) async {
     final response = await _client.put('/company/postings/$id', {
       'job_role': jobRole,
       'slots': slots,
       'location': location ?? '',
+      'job_description': jobDescription ?? '',
       'responsibilities': responsibilities,
+      'qualifications': qualifications,
       'skills': skills,
     }, authenticated: true);
 

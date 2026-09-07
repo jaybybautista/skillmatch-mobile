@@ -324,6 +324,18 @@ class _PostingDetailScreenState extends State<PostingDetailScreen> {
         const SizedBox(height: 14),
         _applicantsCard(),
         const SizedBox(height: 14),
+        // Buod muna, gaya ng ayos sa web at sa nakikita ng estudyante.
+        if ((posting.jobDescription ?? '').trim().isNotEmpty) ...[
+          _listCard(
+            icon: Icons.description_outlined,
+            title: 'Job description',
+            child: Text(
+              posting.jobDescription!.trim(),
+              style: const TextStyle(height: 1.45, color: AppColors.textDark),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
         _listCard(
           icon: Icons.assignment_outlined,
           title: 'Responsibilities',
@@ -358,6 +370,40 @@ class _PostingDetailScreenState extends State<PostingDetailScreen> {
                 ),
         ),
         const SizedBox(height: 14),
+        if (posting.qualifications.isNotEmpty) ...[
+          _listCard(
+            icon: Icons.verified_outlined,
+            title: 'Qualifications',
+            child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final item in posting.qualifications)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 6, right: 10),
+                              child: _Dot(),
+                            ),
+                            Expanded(
+                              child: Text(
+                                item,
+                                style: const TextStyle(
+                                  height: 1.45,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+          ),
+          const SizedBox(height: 14),
+        ],
         _listCard(
           icon: Icons.lightbulb_outline,
           title: 'Required skills',

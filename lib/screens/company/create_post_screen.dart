@@ -43,8 +43,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   // lumalabas sa card.
   final _location = TextEditingController();
 
+  // Buod ng trabaho. Nauuna ito sa listahan, gaya ng nakikita sa posting.
+  final _jobDescription = TextEditingController();
+
   final _responsibilityInput = TextEditingController();
   final _responsibilities = <String>[];
+
+  final _qualificationInput = TextEditingController();
+  final _qualifications = <String>[];
 
   final _skillInput = TextEditingController();
   final _skills = <String>[];
@@ -59,7 +65,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     _jobRole.text = existing.title;
     _slot.text = existing.openSlots.toString();
     _location.text = existing.location;
+    _jobDescription.text = existing.jobDescription ?? '';
     _responsibilities.addAll(existing.responsibilities);
+    _qualifications.addAll(existing.qualifications);
     _skills.addAll(existing.skills);
   }
 
@@ -68,7 +76,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     _jobRole.dispose();
     _location.dispose();
     _slot.dispose();
+    _jobDescription.dispose();
     _responsibilityInput.dispose();
+    _qualificationInput.dispose();
     _skillInput.dispose();
     super.dispose();
   }
@@ -103,6 +113,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         // silently at the step boundary is the easiest way to be told a step
         // is empty when it visibly isn't.
         _addResponsibility();
+        // Hindi sapilitan ang qualifications, pero yung naisulat na pero
+        // hindi pa naidadagdag, isinasama pa rin - nawawala kasi kung hindi.
+        _addQualification();
         if (_responsibilities.isEmpty) {
           _notify('Add at least one responsibility.');
           return false;
@@ -146,14 +159,18 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               jobRole: _jobRole.text.trim(),
               slots: slots,
               location: _location.text.trim(),
+              jobDescription: _jobDescription.text.trim(),
               responsibilities: _responsibilities,
+              qualifications: _qualifications,
               skills: _skills,
             )
           : await _service.createPosting(
               jobRole: _jobRole.text.trim(),
               slots: slots,
               location: _location.text.trim(),
+              jobDescription: _jobDescription.text.trim(),
               responsibilities: _responsibilities,
+              qualifications: _qualifications,
               skills: _skills,
             );
 
@@ -207,6 +224,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   void _removeResponsibility(int index) =>
       setState(() => _responsibilities.removeAt(index));
+
+  void _addQualification() {
+    final text = _qualificationInput.text.trim();
+    if (text.isEmpty || _qualifications.contains(text)) {
+      _qualificationInput.clear();
+      return;
+    }
+    setState(() {
+      _qualifications.add(text);
+      _qualificationInput.clear();
+    });
+  }
+
+  void _removeQualification(int index) =>
+      setState(() => _qualifications.removeAt(index));
 
   void _addSkill() {
     final text = _skillInput.text.trim();
@@ -272,13 +304,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   String get _stepTitle => switch (_step) {
     1 => 'Basic Info',
-    2 => 'Responsibilities',
+    2 => 'Work description',
     _ => 'Skills',
   };
 
   String get _stepSubtitle => switch (_step) {
     1 => "Let's start with the core details.",
-    2 => 'Outlining responsibilities.',
+    2 => 'Start with an overview of the role, then break it down.',
     _ =>
       'Specify the technical expertise and soft skills required for this internship.',
   };
@@ -289,11 +321,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       slotController: _slot,
       locationController: _location,
     ),
-    2 => _ResponsibilitiesStep(
-      controller: _responsibilityInput,
-      items: _responsibilities,
-      onAdd: _addResponsibility,
-      onRemove: _removeResponsibility,
+    2 => _WorkDescriptionStep(
+      jobDescriptionController: _jobDescription,
+      responsibilityController: _responsibilityInput,
+      responsibilities: _responsibilities,
+      onAddResponsibility: _addResponsibility,
+      onRemoveResponsibility: _removeResponsibility,
+      qualificationController: _qualificationInput,
+      qualifications: _qualifications,
+      onAddQualification: _addQualification,
+      onRemoveQualification: _removeQualification,
     ),
     _ => _SkillsStep(
       controller: _skillInput,
@@ -429,18 +466,118 @@ class _BasicInfoStep extends StatelessWidget {
   }
 }
 
-class _ResponsibilitiesStep extends StatelessWidget {
-  const _ResponsibilitiesStep({
+/// Step 2: the overview first, then the two lists that break it down. The
+/// order here is the order a student reads them on the posting.
+class _WorkDescriptionStep extends StatelessWidget {
+  const _WorkDescriptionStep({
+    required this.jobDescriptionController,
+    required this.responsibilityController,
+    required this.responsibilities,
+    required this.onAddResponsibility,
+    required this.onRemoveResponsibility,
+    required this.qualificationController,
+    required this.qualifications,
+    required this.onAddQualification,
+    required this.onRemoveQualification,
+  });
+
+  final TextEditingController jobDescriptionController;
+
+  final TextEditingController responsibilityController;
+  final List<String> responsibilities;
+  final VoidCallback onAddResponsibility;
+  final void Function(int index) onRemoveResponsibility;
+
+  final TextEditingController qualificationController;
+  final List<String> qualifications;
+  final VoidCallback onAddQualification;
+  final void Function(int index) onRemoveQualification;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldHeading('Job description'),
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF1F5),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: TextField(
+            controller: jobDescriptionController,
+            minLines: 3,
+            maxLines: 8,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              isCollapsed: true,
+              hintText:
+                  'Describe the role in a few sentences. What is this internship about?',
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+        const _FieldHeading('Responsibilities'),
+        _EntryListField(
+          controller: responsibilityController,
+          items: responsibilities,
+          onAdd: onAddResponsibility,
+          onRemove: onRemoveResponsibility,
+          hintText: 'Define what the intern will be doing on a day-to-day basis…',
+        ),
+        const SizedBox(height: 22),
+        const _FieldHeading('Qualifications'),
+        _EntryListField(
+          controller: qualificationController,
+          items: qualifications,
+          onAdd: onAddQualification,
+          onRemove: onRemoveQualification,
+          hintText: 'What should an applicant already have? One per entry…',
+        ),
+      ],
+    );
+  }
+}
+
+class _FieldHeading extends StatelessWidget {
+  const _FieldHeading(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.textDark,
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// One text box plus the rows it has already produced. Used for both
+/// responsibilities and qualifications so the two behave identically.
+class _EntryListField extends StatelessWidget {
+  const _EntryListField({
     required this.controller,
     required this.items,
     required this.onAdd,
     required this.onRemove,
+    required this.hintText,
   });
 
   final TextEditingController controller;
   final List<String> items;
   final VoidCallback onAdd;
   final void Function(int index) onRemove;
+  final String hintText;
 
   @override
   Widget build(BuildContext context) {
@@ -463,11 +600,10 @@ class _ResponsibilitiesStep extends StatelessWidget {
                   minLines: 2,
                   maxLines: 4,
                   onSubmitted: (_) => onAdd(),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
                     isCollapsed: true,
-                    hintText:
-                        'Define what the intern will be doing on a day-to-day basis…',
+                    hintText: hintText,
                   ),
                 ),
               ),

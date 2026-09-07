@@ -46,7 +46,9 @@ class InternshipDetail {
     required this.isBookmarked,
     required this.isApplied,
     required this.description,
+    this.jobDescription,
     this.responsibilities,
+    this.qualifications,
     required this.skills,
     required this.reviews,
   });
@@ -72,7 +74,12 @@ class InternshipDetail {
   final bool isBookmarked;
   final bool isApplied;
   final String description;
+
+  /// The company's overview of the role. Separate from [description], which
+  /// the backend derives by joining the responsibilities for list previews.
+  final String? jobDescription;
   final List<String>? responsibilities;
+  final List<String>? qualifications;
   final List<String> skills;
   final List<InternshipReview> reviews;
 
@@ -100,7 +107,11 @@ class InternshipDetail {
       isBookmarked: json['is_bookmarked'] as bool? ?? false,
       isApplied: json['is_applied'] as bool? ?? false,
       description: json['description'] as String? ?? '',
+      jobDescription: json['job_description'] as String?,
       responsibilities: (json['responsibilities'] as List?)
+          ?.map((e) => e.toString())
+          .toList(),
+      qualifications: (json['qualifications'] as List?)
           ?.map((e) => e.toString())
           .toList(),
       skills: (json['skills'] as List? ?? []).map((e) => e.toString()).toList(),

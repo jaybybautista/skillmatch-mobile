@@ -415,6 +415,43 @@ class _Badge extends StatelessWidget {
   }
 }
 
+/// Bulleted list shared by the responsibilities and qualifications sections,
+/// so the two read identically.
+class _BulletList extends StatelessWidget {
+  const _BulletList({required this.items});
+
+  final List<String> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final item in items)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('•  ', style: TextStyle(color: AppColors.textMuted)),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _SectionBox extends StatelessWidget {
   const _SectionBox({
     required this.title,
@@ -459,41 +496,31 @@ class _WorkDescriptionTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final responsibilities = detail.responsibilities;
+    final qualifications = detail.qualifications;
+    final jobDescription = detail.jobDescription?.trim() ?? '';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
       children: [
+        // Buod muna bago ang hati-hating listahan, kapareho ng ayos sa web.
+        if (jobDescription.isNotEmpty) ...[
+          _SectionBox(
+            title: 'Job description',
+            child: Text(
+              jobDescription,
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         _SectionBox(
           title: 'Responsibilities',
           child: responsibilities != null && responsibilities.isNotEmpty
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final item in responsibilities)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '•  ',
-                              style: TextStyle(color: AppColors.textMuted),
-                            ),
-                            Expanded(
-                              child: Text(
-                                item,
-                                style: const TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 14,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                )
+              ? _BulletList(items: responsibilities)
               : Text(
                   detail.description.isEmpty
                       ? 'No description provided.'
@@ -505,6 +532,13 @@ class _WorkDescriptionTab extends StatelessWidget {
                   ),
                 ),
         ),
+        if (qualifications != null && qualifications.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _SectionBox(
+            title: 'Qualifications',
+            child: _BulletList(items: qualifications),
+          ),
+        ],
         const SizedBox(height: 16),
         _SectionBox(
           title: 'Skills Needed',
