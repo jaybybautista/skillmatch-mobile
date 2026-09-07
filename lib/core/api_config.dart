@@ -3,19 +3,39 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 ///irun mo ito:
-///   php artisan serve --host=0.0.0.0 --port=8000
+///   php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 /// para mafetch niya
 
 class ApiConfig {
   ApiConfig._();
 
+  /// Saan nakaturo ang app.
+  ///
+  /// Isa lang dapat ang bukas dito. Kapag wala o kapag dalawa, hindi tatakbo.
+  ///
+  /// Hindi mo na rin kailangang galawin ito. Isabay mo na lang sa pagpapatakbo
+  /// kung saan ka naka-kabit ngayon:
+  ///   flutter run --dart-define=SKILLMATCH_HOST=192.168.100.51
+  ///
+  /// Nauuna ang dart-define kaysa sa nakasulat dito.
+
+  // Radmin VPN. Ito ang inaabot ng grupo kahit magkakaiba ang wifi nila. Sa
+  // emulator lang ito gumagana - walang Radmin sa Android, kaya hindi kayang
+  // sumali dito ang totoong cellphone.
+  // static const String _defaultHost = '26.29.85.220';
+
   ///same dapat ung ip teh ng wifi niyu, check mo nalang ipconfig tas same wifi dapat
   //wifi sa bahay
-  static const String _lanHost = '192.168.100.51';
+  static const String _defaultHost = '192.168.100.51';
   // defense wifi
-  // static const String _lanHost = '132.168.7.163';
+  // static const String _defaultHost = '132.168.7.163';
   //wifi ng ssc
-  // static const String _lanHost = '192.168.101.184';
+  // static const String _defaultHost = '192.168.101.184';
+
+  static const String _lanHost = String.fromEnvironment(
+    'SKILLMATCH_HOST',
+    defaultValue: _defaultHost,
+  );
 
   ///gawin mo siyang true teh if want mo gumamit ng emulator
   static const bool _useAndroidEmulator = false;
@@ -47,10 +67,31 @@ class ApiConfig {
     return 'localhost';
   }
 
+  /// Buong address, para sa tunnel gaya ng Cloudflare o ngrok.
+  ///
+  /// Dito lang dumadaan ang totoong cellphone kapag magkaiba kayo ng wifi.
+  /// Ang Radmin kasi, Windows lang - walang app sa Android o iOS.
+  ///
+  /// Patakbuhin mo muna ang tunnel, tapos yung address na ibibigay niya ang
+  /// ilalagay mo dito. Hindi ito pangalan na basta susulatin:
+  ///   cloudflared tunnel --url http://localhost/SkillMatch/SkillMatch/public
+  ///   flutter run --dart-define=SKILLMATCH_ORIGIN=yung_address_na_lumabas
+  ///
+  /// Kasama na dito ang https at ang landas, kaya hindi na ito dumadaan sa
+  /// _lanHost at sa _apachePath. Nauuna rin ito sa SKILLMATCH_HOST.
+  static const String _originOverride = String.fromEnvironment('SKILLMATCH_ORIGIN');
+
   /// Apache listens on port 80 and serves the project from a sub-path;
   /// artisan serve owns its port and serves from the root.
-  static String get _origin =>
-      _useApache ? 'http://$_host$_apachePath' : 'http://$_host:$port';
+  static String get _origin {
+    if (_originOverride.isNotEmpty) {
+      // Tinatanggal yung tirang tulis sa dulo, kung meron man, para hindi
+      // dumoble kapag idinugtong na ang /api.
+      return _originOverride.replaceAll(RegExp(r'/+$'), '');
+    }
+
+    return _useApache ? 'http://$_host$_apachePath' : 'http://$_host:$port';
+  }
 
   static String get baseUrl => '$_origin/api';
 
