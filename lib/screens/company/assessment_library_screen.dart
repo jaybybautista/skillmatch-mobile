@@ -528,39 +528,67 @@ class _AssessmentCard extends StatelessWidget {
               const SizedBox(height: 14),
               const Divider(height: 1),
               const SizedBox(height: 14),
-              Row(
+              // Wrap ito, hindi Row. Kapag kasya ang lahat sa isang linya,
+              // magkalayo sila gaya ng dati. Kapag hindi na kasya, bumababa
+              // na lang ang link sa susunod na linya imbes na umapaw o
+              // maputol ang teksto.
+              //
+              // Dating Row na may Spacer sa gitna. Nauubos ang Spacer kapag
+              // masikip, tapos umaapaw na - kahit sa mahabang bilang ng
+              // tanong o sa mahabang "View Submissions (128)".
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 10,
                 children: [
-                  const Icon(
-                    Icons.quiz_outlined,
-                    size: 17,
-                    color: AppColors.textMuted,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${assessment.questionCount} '
-                    'Question${assessment.questionCount == 1 ? '' : 's'}',
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 13,
-                    ),
-                  ),
-                  if (assessment.timeLimitMinutes != null) ...[
-                    const SizedBox(width: 16),
-                    const Icon(
-                      Icons.access_time_rounded,
-                      size: 17,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${assessment.timeLimitMinutes} Mins',
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 13,
+                  // Nakabalot din sa Wrap ang dalawang bilang, para kayang
+                  // maghiwalay kahit maliit ang telepono o pinalaki ng
+                  // gumagamit ang sukat ng teksto sa settings niya.
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 16,
+                    runSpacing: 6,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.quiz_outlined,
+                            size: 17,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${assessment.questionCount} '
+                            'Question${assessment.questionCount == 1 ? '' : 's'}',
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                  const Spacer(),
+                      if (assessment.timeLimitMinutes != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.access_time_rounded,
+                              size: 17,
+                              color: AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${assessment.timeLimitMinutes} Mins',
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
                   if (onViewSubmissions != null)
                     InkWell(
                       onTap: onViewSubmissions,
