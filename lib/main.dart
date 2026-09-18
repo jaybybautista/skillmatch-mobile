@@ -6,15 +6,20 @@ import 'core/api_client.dart';
 import 'core/app_routing.dart';
 import 'core/app_theme.dart';
 import 'screens/auth/auth_screen.dart';
+import 'screens/messaging/call_screens.dart';
 import 'screens/student/home/home_screen.dart';
 import 'screens/student/setup/setup_entry_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
+import 'services/messaging_service.dart';
 import 'services/profile_setup_service.dart';
 
 void main() {
   runApp(const SkillMatchApp());
 }
+
+/// Root navigator, so the incoming-call screen can be shown from anywhere.
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 class SkillMatchApp extends StatelessWidget {
   const SkillMatchApp({super.key, this.auth, this.setupService});
@@ -37,7 +42,13 @@ class SkillMatchApp extends StatelessWidget {
         title: 'SkillMatch',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
+        navigatorKey: rootNavigatorKey,
         navigatorObservers: [routeObserver],
+        // Rings for a call on any screen, like the web's banner.
+        builder: (context, child) => IncomingCallRinger(
+          navigatorKey: rootNavigatorKey,
+          child: child ?? const SizedBox.shrink(),
+        ),
         home: _SessionGate(setupService: setupService),
       ),
     );
@@ -76,6 +87,14 @@ class _SessionGateState extends State<_SessionGate> {
   /// or skipping the wizard bumps that, which is what makes this re-ask
   /// instead of sending the student straight back into setup.
   int _resolvedRevision = -1;
+
+  @override
+  void dispose() {
+    // The gate owns the session-wide messaging poll (badge + incoming
+    // calls); when it goes, so does the timer.
+    MessagingService.instance.stopPolling();
+    super.dispose();
+  }
 
   Future<void> _resolveSetupState(int revision) async {
     if (_isResolving) return;
@@ -119,13 +138,18 @@ class _SessionGateState extends State<_SessionGate> {
     }
 
     if (!auth.isLoggedIn) {
-      // Logging out invalidates any earlier answer.
+      // Logging out invalidates any earlier answer, and stops the messaging
+      // poll (badge + incoming calls) that runs for the whole session.
+      MessagingService.instance.stopPolling();
       if (_resolvedForLoggedIn) {
         _needsSetup = null;
         _resolvedForLoggedIn = false;
       }
       return const AuthScreen();
     }
+
+    // Signed in: watch for new messages and incoming calls app-wide.
+    MessagingService.instance.startPolling();
 
     // A company lands on its own home. The setup check below asks a
     // student-only endpoint, so running it for a company would both fail and

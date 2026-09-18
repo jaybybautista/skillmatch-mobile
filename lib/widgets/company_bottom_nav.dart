@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
+import '../services/messaging_service.dart';
+import 'app_bottom_nav.dart' show NavIconWithBadge;
 
 const List<({IconData icon, String label})> companyNavItems = [
   (icon: Icons.home_rounded, label: 'Home'),
   (icon: Icons.work_outline_rounded, label: 'Internship'),
   (icon: Icons.description_outlined, label: 'Assessment'),
   (icon: Icons.bookmark_border_rounded, label: 'Bookmark'),
+  (icon: Icons.chat_bubble_outline, label: 'Messages'),
 ];
 
 /// Bottom navigation bar for the company side of the app. Same visual shape
@@ -42,11 +45,12 @@ class CompanyBottomNav extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          companyNavItems[i].icon,
-                          color: i == currentIndex
-                              ? AppColors.primary
-                              : AppColors.textMuted,
+                        NavIconWithBadge(
+                          icon: companyNavItems[i].icon,
+                          active: i == currentIndex,
+                          badge: companyNavItems[i].label == 'Messages'
+                              ? MessagingService.instance.unreadCount
+                              : null,
                         ),
                         const SizedBox(height: 4),
                         Text(

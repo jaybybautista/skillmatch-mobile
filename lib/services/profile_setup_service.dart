@@ -69,18 +69,31 @@ class ProfileSetupService {
     }, authenticated: true);
   }
 
-  Future<Certification> addCertification({
+  /// Adds a certification with its proof file; the server reads the file
+  /// with OCR and marks it Verified or Unverified. Returns the row and the
+  /// server's message about that check.
+  Future<(Certification, String?)> addCertification({
     required String title,
     String? issuingOrganization,
     String? issueDate,
+    String? certificateNumber,
+    required String certificateFilePath,
   }) async {
-    final response = await _client.post('/student/setup/certifications', {
-      'title': title,
-      'issuing_organization': ?issuingOrganization,
-      'issue_date': ?issueDate,
-    }, authenticated: true);
-    return Certification.fromJson(
-      response['certification'] as Map<String, dynamic>,
+    final response = await _client.postMultipart(
+      '/student/setup/certifications',
+      fields: {
+        'title': title,
+        if (issuingOrganization != null && issuingOrganization.isNotEmpty) 'issuing_organization': issuingOrganization,
+        if (issueDate != null && issueDate.isNotEmpty) 'issue_date': issueDate,
+        if (certificateNumber != null && certificateNumber.isNotEmpty) 'certificate_number': certificateNumber,
+      },
+      filePath: certificateFilePath,
+      fileFieldName: 'certificate_file',
+      authenticated: true,
+    );
+    return (
+      Certification.fromJson(response['certification'] as Map<String, dynamic>),
+      response['message'] as String?,
     );
   }
 

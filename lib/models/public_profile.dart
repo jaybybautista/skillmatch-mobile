@@ -40,12 +40,22 @@ class PublicCertificationEntry {
     required this.issuingOrganization,
     required this.issueDate,
     required this.credentialUrl,
+    this.certificateNumber,
+    this.verificationStatus = 'no_file',
+    this.verificationLabel = 'No proof file',
+    this.certificateFileUrl,
   });
 
   final String? title;
   final String? issuingOrganization;
   final String? issueDate;
   final String? credentialUrl;
+  final String? certificateNumber;
+
+  /// verified | unverified | no_file, from the OCR check of the proof file.
+  final String verificationStatus;
+  final String verificationLabel;
+  final String? certificateFileUrl;
 
   factory PublicCertificationEntry.fromJson(Map<String, dynamic> json) {
     return PublicCertificationEntry(
@@ -53,6 +63,10 @@ class PublicCertificationEntry {
       issuingOrganization: json['issuing_organization'] as String?,
       issueDate: json['issue_date'] as String?,
       credentialUrl: json['credential_url'] as String?,
+      certificateNumber: json['certificate_number'] as String?,
+      verificationStatus: json['verification_status'] as String? ?? 'no_file',
+      verificationLabel: json['verification_label'] as String? ?? 'No proof file',
+      certificateFileUrl: json['certificate_file_url'] as String?,
     );
   }
 }
@@ -146,6 +160,7 @@ class PublicAchievementEntry {
 class StudentPublicProfile {
   StudentPublicProfile({
     required this.isSelf,
+    this.userId,
     this.name,
     this.avatarUrl,
     this.coverUrl,
@@ -165,6 +180,9 @@ class StudentPublicProfile {
   });
 
   final bool isSelf;
+
+  /// The account behind the profile, for the Message button.
+  final int? userId;
   final String? name;
   final String? avatarUrl;
   final String? coverUrl;
@@ -192,6 +210,7 @@ class StudentPublicProfile {
 
     return StudentPublicProfile(
       isSelf: false,
+      userId: (json['user_id'] as num?)?.toInt(),
       name: json['name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       coverUrl: json['cover_url'] as String?,
@@ -253,6 +272,7 @@ class OpenInternshipSummary {
 class CompanyPublicProfile {
   CompanyPublicProfile({
     required this.id,
+    this.userId,
     required this.name,
     this.industry,
     this.description,
@@ -271,6 +291,8 @@ class CompanyPublicProfile {
   });
 
   final int id;
+  /// Null for a company a coordinator added by hand (no account to message).
+  final int? userId;
   final String name;
   final String? industry;
   final String? description;
@@ -296,6 +318,7 @@ class CompanyPublicProfile {
   factory CompanyPublicProfile.fromJson(Map<String, dynamic> json) {
     return CompanyPublicProfile(
       id: json['id'] as int,
+      userId: (json['user_id'] as num?)?.toInt(),
       name: json['name'] as String? ?? 'Company',
       industry: json['industry'] as String?,
       description: json['description'] as String?,
@@ -320,6 +343,7 @@ class CompanyPublicProfile {
 class CoordinatorPublicProfile {
   CoordinatorPublicProfile({
     required this.isSelf,
+    this.userId,
     this.name,
     this.avatarUrl,
     this.coverUrl,
@@ -330,6 +354,7 @@ class CoordinatorPublicProfile {
   });
 
   final bool isSelf;
+  final int? userId;
   final String? name;
   final String? avatarUrl;
   final String? coverUrl;
@@ -345,6 +370,7 @@ class CoordinatorPublicProfile {
 
     return CoordinatorPublicProfile(
       isSelf: false,
+      userId: (json['user_id'] as num?)?.toInt(),
       name: json['name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       coverUrl: json['cover_url'] as String?,

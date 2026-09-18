@@ -449,10 +449,16 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final item = uploaded[index];
-          return _UploadCard(
-            item: item,
-            onTap: () => _viewUpload(item),
-            onMore: () => _showUploadActions(item),
+          return Column(
+            children: [
+              _UploadCard(
+                item: item,
+                onTap: () => _viewUpload(item),
+                onMore: () => _showUploadActions(item),
+              ),
+              if (item.submission.comments.isNotEmpty)
+                _CoordinatorComments(comments: item.submission.comments),
+            ],
           );
         },
       );
@@ -464,10 +470,18 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final item = _items[index];
-        return _RequirementCard(
-          item: item,
-          onTap: () => _viewTemplate(item),
-          onMore: () => _showTemplateActions(item),
+        return Column(
+          children: [
+            _RequirementCard(
+              item: item,
+              onTap: () => _viewTemplate(item),
+              onMore: () => _showTemplateActions(item),
+            ),
+            // Puna ng coordinator sa naisumiteng kopya - ipinapakita rin dito
+            // para hindi makaligtaan ang hinihinging rebisyon.
+            if (item.submission.comments.isNotEmpty)
+              _CoordinatorComments(comments: item.submission.comments),
+          ],
         );
       },
     );
@@ -840,4 +854,59 @@ _StatusStyle _statusFor(RequirementSubmissionInfo submission) {
     AppColors.textMuted,
     AppColors.chipBackground,
   );
+}
+
+/// The web's "Coordinator comments" box: what the coordinator wrote about
+/// this copy, newest last, with the hint to upload a corrected file.
+class _CoordinatorComments extends StatelessWidget {
+  const _CoordinatorComments({required this.comments});
+
+  final List<RequirementComment> comments;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFBE2B6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.comment_outlined, size: 15, color: Color(0xFF7A4B00)),
+              const SizedBox(width: 6),
+              Text(
+                'Coordinator comment${comments.length > 1 ? 's' : ''} (${comments.length})',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF7A4B00)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          for (final c in comments)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c.body, style: const TextStyle(fontSize: 13, height: 1.45, color: AppColors.textDark)),
+                  Text(
+                    '${c.author}${c.createdAtHuman != null ? ' · ${c.createdAtHuman}' : ''}${c.edited ? ' · edited' : ''}',
+                    style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          const Text(
+            'If a revision is asked for, upload a corrected copy: "Replace my copy" keeps the comments with the new file.',
+            style: TextStyle(fontSize: 11.5, color: Color(0xFF7A4B00), height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
 }

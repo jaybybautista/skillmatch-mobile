@@ -8,6 +8,7 @@ import '../../../services/auth_service.dart';
 import '../../../widgets/app_text_field.dart';
 import '../../../widgets/primary_button.dart';
 import '../forgot_password_screen.dart';
+import '../register_verify_screen.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key, required this.onSwitchToRegister});
@@ -55,6 +56,14 @@ class _LoginFormState extends State<LoginForm> {
       // The session gate at the root routes to the setup wizard or Home, so a
       // student who never finished setup still lands there after signing in.
       Navigator.of(context).popUntil((route) => route.isFirst);
+    } on TwoFactorRequiredException catch (e) {
+      // Password accepted; the authenticator code finishes the sign-in.
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => TwoFactorScreen(challenge: e.challenge, message: e.message),
+        ),
+      );
     } on ApiException catch (e) {
       _showLoginError(e.message);
     } catch (e) {

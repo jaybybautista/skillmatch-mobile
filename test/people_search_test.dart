@@ -5,6 +5,7 @@ import 'package:skillmatch/models/person_search_result.dart';
 import 'package:skillmatch/screens/student/matches/internship_search_screen.dart';
 import 'package:skillmatch/services/internship_service.dart';
 import 'package:skillmatch/services/people_search_service.dart';
+import 'package:skillmatch/models/match_details.dart';
 
 class _EmptyInternshipService extends InternshipService {
   @override
@@ -12,6 +13,23 @@ class _EmptyInternshipService extends InternshipService {
     String query = '',
     InternshipFilter filter = InternshipFilter.topMatches,
   }) async => const [];
+
+  // The screens page through results now; a fake that only knows the whole
+  // list answers page one with everything and no further pages.
+  @override
+  Future<InternshipPage<Internship>> fetchAllPage({
+    String query = '',
+    InternshipFilter filter = InternshipFilter.topMatches,
+    int page = 1,
+    int perPage = 10,
+  }) async {
+    if (page > 1) return InternshipPage(items: const [], hasMore: false, page: page);
+    return InternshipPage(
+      items: await fetchAll(query: query, filter: filter),
+      hasMore: false,
+      page: page,
+    );
+  }
 }
 
 class _FakePeopleService extends PeopleSearchService {

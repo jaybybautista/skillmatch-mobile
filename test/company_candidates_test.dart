@@ -72,6 +72,7 @@ class _FakeCompanyService extends CompanyService {
     String status = '',
     String query = '',
     int? internshipId,
+    bool preferredOnly = false,
   }) async {
     calls.add('fetchApplications:$status:$query');
     if (error != null) throw error!;
@@ -619,10 +620,18 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('All (4)'), findsOneWidget);
-      expect(find.text('Accepted (2)'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('Accepted (2)'));
+      // The chip row scrolls sideways now that every web status is there.
+      await tester.scrollUntilVisible(
+        find.text('Accepted (2)'),
+        150,
+        scrollable: find.descendant(
+          of: find.byType(ListView).first,
+          matching: find.byType(Scrollable),
+        ),
+      );
       await tester.pumpAndSettle();
+      expect(find.text('Accepted (2)'), findsOneWidget);
       await tester.tap(find.text('Accepted (2)'));
       await tester.pumpAndSettle();
 
@@ -644,6 +653,8 @@ void main() {
 
       await tester.tap(find.text('Ana Cruz'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Accept'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Accept'));
       await tester.pumpAndSettle();
 
@@ -664,6 +675,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Ana Cruz'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Reject'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Reject'));
       await tester.pumpAndSettle();
@@ -697,6 +710,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Ana Cruz'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Reject'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Reject'));
       await tester.pumpAndSettle();

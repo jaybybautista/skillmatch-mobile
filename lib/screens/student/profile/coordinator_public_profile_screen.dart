@@ -6,6 +6,7 @@ import '../../../models/public_profile.dart';
 import '../../../services/public_profile_service.dart';
 import '../../../widgets/public_profile_header.dart';
 import 'profile_screen.dart';
+import '../../../widgets/message_profile_button.dart';
 
 /// A coordinator's public profile — the mobile twin of
 /// Student\StudentPeerController::showCoordinator / student.coordinators.show.
@@ -121,6 +122,7 @@ class _CoordinatorPublicProfileScreenState
                     ),
                 ],
               ),
+              MessageProfileButton(userId: profile.userId),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 child: ProfileSectionCard(

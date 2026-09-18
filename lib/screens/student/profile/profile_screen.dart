@@ -12,6 +12,7 @@ import 'image_viewer_screen.dart';
 import 'profile_photo_picker.dart';
 import 'entry_detail_sheet.dart';
 import 'profile_section_editor.dart';
+import '../../../widgets/cert_badge.dart';
 
 /// Profile screen — pulls real data from GET /api/student/profile (course,
 /// campus, contact info, resume, skills, education, certifications,
@@ -398,22 +399,46 @@ class _ProfileBodyState extends State<_ProfileBody> {
           initial: entry?.credentialUrl,
           type: EditorFieldType.url,
         ),
+        EditorField(
+          key: 'certificate_number',
+          label: 'Certificate number (optional)',
+          initial: entry?.certificateNumber,
+          hint: 'As printed on the certificate',
+        ),
+        // Kailangan ang file sa bagong entry; sa pag-edit, pwedeng panatilihin
+        // ang nasa server na (mga lumang entry na wala pa ang kailangang magdagdag).
+        EditorField(
+          key: 'certificate_file',
+          label: 'Certificate file (photo, scan or PDF)',
+          type: EditorFieldType.file,
+          required: entry == null || !entry.hasFile,
+          hint: entry != null && entry.hasFile ? 'Current file kept (tap to replace)' : null,
+        ),
       ],
-      onSave: (values) => _service.saveCertification(
-        id: entry?.id,
-        title: values['title'] ?? '',
-        issuingOrganization: values['issuing_organization'],
-        issueDate: values['issue_date'],
-        expiryDate: values['expiry_date'],
-        credentialUrl: values['credential_url'],
-      ),
+      onSave: (values) async {
+        _lastCertificationMessage = await _service.saveCertification(
+          id: entry?.id,
+          title: values['title'] ?? '',
+          issuingOrganization: values['issuing_organization'],
+          issueDate: values['issue_date'],
+          expiryDate: values['expiry_date'],
+          credentialUrl: values['credential_url'],
+          certificateNumber: values['certificate_number'],
+          certificateFilePath: values['certificate_file'],
+        );
+      },
     );
 
     await _afterChange(
       saved,
-      entry == null ? 'Certification added.' : 'Certification updated.',
+      _lastCertificationMessage ?? (entry == null ? 'Certification added.' : 'Certification updated.'),
     );
+    _lastCertificationMessage = null;
   }
+
+  /// What the server said about the OCR check on the last save (verified,
+  /// or why it is unverified), shown instead of the generic toast.
+  String? _lastCertificationMessage;
 
   Future<void> _editExperience([ExperienceInfo? entry]) async {
     final saved = await showProfileSectionEditor(
@@ -1501,6 +1526,9 @@ class _CertificationCard extends StatelessWidget {
           EntryDetail('Issuing organization', certification.issuingOrganization),
           EntryDetail('Issued', certification.issueDate),
           EntryDetail('Credential URL', certification.credentialUrl),
+          EntryDetail('Certificate number', certification.certificateNumber),
+          EntryDetail('Verification', certification.verificationDetail ?? certification.verificationLabel),
+          EntryDetail('Certificate file', certification.certificateFileUrl),
         ],
       ),
       child: Row(
@@ -1508,6 +1536,7 @@ class _CertificationCard extends StatelessWidget {
         children: [
           Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _LabelValueRow(
                   label: 'Certificate',
@@ -1518,6 +1547,15 @@ class _CertificationCard extends StatelessWidget {
                   value: certification.issuingOrganization,
                 ),
                 _LabelValueRow(label: 'Issued', value: certification.issueDate),
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: CertBadge(
+                    status: certification.verificationStatus,
+                    label: certification.verificationLabel,
+                    detail: certification.verificationDetail,
+                    fileUrl: certification.certificateFileUrl,
+                  ),
+                ),
               ],
             ),
           ),

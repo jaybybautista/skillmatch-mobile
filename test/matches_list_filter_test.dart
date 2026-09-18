@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:skillmatch/models/internship.dart';
 import 'package:skillmatch/screens/student/matches/matches_list_screen.dart';
 import 'package:skillmatch/services/internship_service.dart';
+import 'package:skillmatch/models/match_details.dart';
 
 class _FakeInternshipService extends InternshipService {
   final filters = <InternshipFilter>[];
@@ -22,6 +23,23 @@ class _FakeInternshipService extends InternshipService {
         'distance_formatted': '12.4 km away',
       }),
     ];
+  }
+
+  // The screens page through results now; a fake that only knows the whole
+  // list answers page one with everything and no further pages.
+  @override
+  Future<InternshipPage<Internship>> fetchAllPage({
+    String query = '',
+    InternshipFilter filter = InternshipFilter.topMatches,
+    int page = 1,
+    int perPage = 10,
+  }) async {
+    if (page > 1) return InternshipPage(items: const [], hasMore: false, page: page);
+    return InternshipPage(
+      items: await fetchAll(query: query, filter: filter),
+      hasMore: false,
+      page: page,
+    );
   }
 }
 

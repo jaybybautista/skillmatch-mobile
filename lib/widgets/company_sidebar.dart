@@ -14,6 +14,8 @@ import '../screens/company/company_profile_screen.dart';
 import '../screens/company/company_records_screen.dart';
 import '../screens/company/company_settings_screen.dart';
 import '../screens/student/notifications/notifications_screen.dart';
+import '../screens/messaging/messages_screen.dart';
+import '../services/messaging_service.dart';
 import '../services/notification_service.dart';
 import '../services/auth_service.dart';
 
@@ -30,6 +32,7 @@ enum CompanySidebarItem {
   placements,
   records,
   notifications,
+  messages,
   profile,
   settings,
   none,
@@ -234,6 +237,17 @@ class CompanySidebar extends StatelessWidget {
                       context,
                       CompanySidebarItem.notifications,
                       NotificationsScreen.new,
+                    ),
+                  ),
+                  _CompanySidebarTile(
+                    icon: Icons.chat_bubble_outline,
+                    label: 'Messages',
+                    isActive: current == CompanySidebarItem.messages,
+                    badge: MessagingService.instance.unreadCount,
+                    onTap: () => _go(
+                      context,
+                      CompanySidebarItem.messages,
+                      MessagesScreen.new,
                     ),
                   ),
                   const Padding(

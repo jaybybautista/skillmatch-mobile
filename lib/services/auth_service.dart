@@ -133,6 +133,9 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Signs in. When the account has two-factor authentication on, the
+  /// password is right but a code is still needed: this throws
+  /// [TwoFactorRequiredException] carrying the challenge for [verifyTwoFactor].
   Future<AppUser> login({
     required String email,
     required String password,
@@ -142,29 +145,101 @@ class AuthService extends ChangeNotifier {
       'password': password,
     });
 
+    if (response['requires_2fa'] == true) {
+      throw TwoFactorRequiredException(
+        challenge: response['challenge'] as String? ?? '',
+        message: response['message'] as String? ?? 'Enter the 6-digit code from your authenticator app.',
+      );
+    }
+
     return _persistSession(response);
   }
 
-  Future<AppUser> register({
-    required String firstName,
-    required String lastName,
-    required String course,
-    required int campusId,
-    required String email,
-    required String password,
-    required String passwordConfirmation,
+  /// Second step of a 2FA sign-in: the authenticator code, or a recovery code.
+  Future<AppUser> verifyTwoFactor({
+    required String challenge,
+    String? code,
+    String? recoveryCode,
   }) async {
-    final response = await _client.post('/auth/register', {
-      'first_name': firstName,
-      'last_name': lastName,
-      'course': course,
-      'campus_id': campusId,
-      'email': email,
-      'password': password,
-      'password_confirmation': passwordConfirmation,
+    final response = await _client.post('/auth/login/2fa', {
+      'challenge': challenge,
+      if (code != null && code.isNotEmpty) 'code': code,
+      if (recoveryCode != null && recoveryCode.isNotEmpty) 'recovery_code': recoveryCode,
     });
 
     return _persistSession(response);
+  }
+
+  /// Starts a student sign-up. Like the web, the account is not created yet:
+  /// the server holds the form and emails a six-digit code, and
+  /// [verifyRegistration] turns it into an account.
+  Future<PendingRegistration> register({
+    required String firstName,
+    String? middleName,
+    required String lastName,
+    required String course,
+    required int campusId,
+    required String semester,
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+    required bool acceptedTerms,
+  }) async {
+    final response = await _client.post('/auth/register', {
+      'first_name': firstName,
+      if (middleName != null && middleName.isNotEmpty) 'middle_name': middleName,
+      'last_name': lastName,
+      'course': course,
+      'campus_id': campusId,
+      'semester': semester,
+      'email': email,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+      'terms': acceptedTerms ? '1' : '',
+    });
+
+    return PendingRegistration.fromJson(response);
+  }
+
+  /// Starts a company sign-up; same code step as [register].
+  Future<PendingRegistration> registerCompany({
+    required String companyName,
+    required String industry,
+    required String address,
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+    required bool acceptedTerms,
+  }) async {
+    final response = await _client.post('/auth/register-company', {
+      'company_name': companyName,
+      'industry': industry,
+      'address': address,
+      'email': email,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+      'terms': acceptedTerms ? '1' : '',
+    });
+
+    return PendingRegistration.fromJson(response);
+  }
+
+  /// The emailed code: on success the account exists and the session is kept.
+  Future<AppUser> verifyRegistration({required String email, required String code}) async {
+    final response = await _client.post('/auth/register/verify', {'email': email, 'code': code});
+    return _persistSession(response);
+  }
+
+  Future<String> resendRegistrationCode(String email) async {
+    final response = await _client.post('/auth/register/resend', {'email': email});
+    return response['message'] as String? ?? 'A new code was sent.';
+  }
+
+  /// The Terms and Conditions (with the data-privacy consent), from the same
+  /// text the website shows.
+  Future<TermsText> fetchTerms() async {
+    final response = await _client.get('/auth/terms');
+    return TermsText.fromJson(response);
   }
 
   /// Signs in with a native Google account picker, then exchanges the
@@ -343,4 +418,47 @@ class AuthService extends ChangeNotifier {
       'password_confirmation': passwordConfirmation,
     });
   }
+}
+
+/// Thrown by [AuthService.login] when the password was right but the account
+/// needs its authenticator code too.
+class TwoFactorRequiredException implements Exception {
+  const TwoFactorRequiredException({required this.challenge, required this.message});
+
+  final String challenge;
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// A sign-up the server is holding until the emailed code is entered.
+class PendingRegistration {
+  const PendingRegistration({required this.email, required this.message});
+
+  final String email;
+  final String message;
+
+  factory PendingRegistration.fromJson(Map<String, dynamic> json) => PendingRegistration(
+        email: json['email'] as String? ?? '',
+        message: json['message'] as String? ?? 'We sent a six-digit code to your email.',
+      );
+}
+
+/// The Terms and Conditions text and the consent wording.
+class TermsText {
+  const TermsText({required this.title, required this.text, required this.consent, required this.button});
+
+  final String title;
+  final String text;
+  final String consent;
+  final String button;
+
+  factory TermsText.fromJson(Map<String, dynamic> json) => TermsText(
+        title: json['title'] as String? ?? 'Terms and Conditions',
+        text: json['text'] as String? ?? '',
+        consent: json['consent'] as String? ??
+            'I have read and agree to the Terms and Conditions, and I consent to SkillMatch collecting and processing my personal data as described in its Data Privacy Notice.',
+        button: json['button'] as String? ?? 'I agree and consent',
+      );
 }

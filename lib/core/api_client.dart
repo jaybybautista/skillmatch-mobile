@@ -132,6 +132,21 @@ class ApiClient {
     return _decode(response);
   }
 
+  Future<Map<String, dynamic>> patch(
+    String path,
+    Map<String, dynamic> body, {
+    bool authenticated = false,
+  }) async {
+    final response = await http
+        .patch(
+          Uri.parse('${ApiConfig.baseUrl}$path'),
+          headers: await _headers(authenticated: authenticated),
+          body: jsonEncode(body),
+        )
+        .timeout(_requestTimeout, onTimeout: _throwTimeout);
+    return _decode(response);
+  }
+
   Future<Map<String, dynamic>> delete(
     String path, {
     bool authenticated = false,

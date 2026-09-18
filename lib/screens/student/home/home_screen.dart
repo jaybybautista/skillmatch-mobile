@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/api_client.dart';
 import '../../../core/app_navigation.dart';
 import '../../../core/app_theme.dart';
 import '../../../core/screen_refresh.dart';
 import '../../../models/internship.dart';
+import '../../../models/match_details.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/internship_service.dart';
 import '../../../widgets/matcha_launcher.dart';
 import '../../../widgets/app_bottom_nav.dart';
 import '../../../widgets/app_sidebar.dart';
-import '../../../widgets/match_card.dart';
+import '../../../widgets/paged_internship_list.dart';
 import '../bookmarks/bookmarks_screen.dart';
 import '../matches/internship_search_screen.dart';
 import '../matches/matches_list_screen.dart';
@@ -28,15 +28,22 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with RefreshOnReveal {
   final _internshipService = InternshipService();
-  late Future<List<Internship>> _recommendationsFuture = _internshipService
-      .fetchRecommendations(limit: 5);
+  final _scroll = ScrollController();
+
+  /// Five matches at a time; the list pulls the next five as the student
+  /// scrolls down. Kept in a field so the list does not restart on rebuilds.
+  Future<InternshipPage<Internship>> _recommendationLoader(int page) =>
+      _internshipService.fetchRecommendationsPage(page: page, perPage: 5);
+  int _refreshToken = 0;
 
   Future<void> _refresh() async {
-    final future = _internshipService.fetchRecommendations(limit: 5);
-    setState(() {
-      _recommendationsFuture = future;
-    });
-    await future;
+    setState(() => _refreshToken++);
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
   }
 
   // This screen is the launch gate's own, so it outlives everything pushed
@@ -160,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen> with RefreshOnReveal {
                   child: RefreshIndicator(
                     onRefresh: _refresh,
                     child: ListView(
+                      controller: _scroll,
                       padding: const EdgeInsets.fromLTRB(20, 24, 20, 110),
                       children: [
                         const _PromoBanner(),
@@ -188,46 +196,13 @@ class _HomeScreenState extends State<HomeScreen> with RefreshOnReveal {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        FutureBuilder<List<Internship>>(
-                          future: _recommendationsFuture,
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState !=
-                                ConnectionState.done) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 40),
-                                child: Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
-                            }
-
-                            if (snapshot.hasError || !snapshot.hasData) {
-                              final message = snapshot.error is ApiException
-                                  ? (snapshot.error as ApiException).message
-                                  : 'Could not load internship matches.';
-                              return _InlineMessage(
-                                text: message,
-                                onRetry: _refresh,
-                              );
-                            }
-
-                            final items = snapshot.data!;
-                            if (items.isEmpty) {
-                              return const _InlineMessage(
-                                text:
-                                    'No internship postings yet. Check back soon!',
-                              );
-                            }
-
-                            return Column(
-                              children: [
-                                for (final internship in items) ...[
-                                  MatchCard(internship: internship),
-                                  const SizedBox(height: 16),
-                                ],
-                              ],
-                            );
-                          },
+                        PagedInternshipList(
+                          controller: _scroll,
+                          loader: _recommendationLoader,
+                          refreshToken: _refreshToken,
+                          emptyTitle: 'No internship postings yet',
+                          emptyHint: 'Check back soon!',
+                          errorText: 'Could not load internship matches.',
                         ),
                       ],
                     ),
@@ -246,34 +221,6 @@ class _HomeScreenState extends State<HomeScreen> with RefreshOnReveal {
     );
   }
 }
-
-class _InlineMessage extends StatelessWidget {
-  const _InlineMessage({required this.text, this.onRetry});
-
-  final String text;
-  final Future<void> Function()? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Column(
-        children: [
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textMuted),
-          ),
-          if (onRetry != null) ...[
-            const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _HeaderIconButton extends StatelessWidget {
   const _HeaderIconButton({required this.icon, required this.onTap});
 

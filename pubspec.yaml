@@ -65,6 +65,14 @@ dependencies:
   # tatlong sukat. Nasa assets/devicon yung mga file.
   flutter_svg: ^2.0.10
 
+  # Messaging: photos from the camera or gallery for chat attachments and
+  # group photos.
+  image_picker: ^1.2.3
+  # Audio/video calls. SkillMatch does the ringing; the native Jitsi SDK
+  # joins the same room the website's iframe joins. Needs minSdk 26 (set in
+  # android/app/build.gradle.kts) and a native rebuild after `flutter pub get`.
+  jitsi_meet_flutter_sdk: ^13.1.1
+
 
 dev_dependencies:
   flutter_test:

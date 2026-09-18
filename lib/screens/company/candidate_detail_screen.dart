@@ -6,6 +6,7 @@ import '../../models/company_application.dart';
 import '../../services/company_service.dart';
 import '../../widgets/company_screen_header.dart';
 import '../student/profile/student_public_profile_screen.dart';
+import '../../widgets/cert_badge.dart';
 
 /// One candidate in full — the phone's version of the website's candidate
 /// page.
@@ -393,6 +394,16 @@ class _CredentialList extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12.5,
                       color: AppColors.textMuted,
+                    ),
+                  ),
+                if (items[i].verificationStatus != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: CertBadge(
+                      status: items[i].verificationStatus!,
+                      label: items[i].verificationLabel ?? '',
+                      fileUrl: items[i].fileUrl,
+                      compact: true,
                     ),
                   ),
                 if (items[i].detail != null && items[i].detail!.isNotEmpty) ...[

@@ -7,6 +7,8 @@ import '../../../services/internship_service.dart';
 import '../../../widgets/moa_tag.dart';
 import '../../../widgets/availability_tag.dart';
 import '../reviews/reviews_section.dart';
+import '../../../widgets/match_details_sheet.dart';
+import '../../../models/match_details.dart';
 
 /// Internship posting detail — mirrors the web's internship detail page
 /// (resources/views/student/internships/show.blade.php): gradient banner
@@ -368,10 +370,14 @@ class _InfoHeader extends StatelessWidget {
                           : 'No slots left'),
               ),
               if (detail.matchScore != null)
-                _Badge(
-                  text: '${detail.matchScore}% Match',
-                  background: AppColors.primary,
-                  foreground: Colors.white,
+                InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => showMatchDetailsSheet(context, detail.id),
+                  child: _Badge(
+                    text: '${detail.matchScore}% Match · Why?',
+                    background: AppColors.primary,
+                    foreground: Colors.white,
+                  ),
                 ),
               // Nakapirma na ang paaralan at ang kompanya sa kasunduan, kaya
               // opisyal na pwede kang ipadala dito para sa OJT.
@@ -575,6 +581,21 @@ class _WorkDescriptionTab extends StatelessWidget {
                   ],
                 ),
         ),
+        // Gustong applicant ng posting - kapareho ng kahon sa web.
+        if (detail.preferredCriteria != null) ...[
+          const SizedBox(height: 16),
+          _SectionBox(
+            title: 'Preferred applicants',
+            child: _PreferredApplicants(fit: detail.preferredCriteria!),
+          ),
+        ],
+        // Ang evaluation matrix at bakit ganito ang score - ang "Why this
+        // match" ng web posting page, dito mismo sa pahina.
+        const SizedBox(height: 16),
+        _SectionBox(
+          title: 'Why this match',
+          child: MatchDetailsSheet(internshipId: detail.id, inline: true),
+        ),
       ],
     );
   }
@@ -669,6 +690,72 @@ class _StickyFooter extends StatelessWidget {
                       ),
               ),
       ),
+    );
+  }
+}
+
+/// The posting's preferred program / year level / campus, each line marked
+/// whether the student fits it.
+class _PreferredApplicants extends StatelessWidget {
+  const _PreferredApplicants({required this.fit});
+
+  final PreferenceFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    final fits = fit.fits;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (fits != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: fits ? const Color(0xFFEAFAF1) : const Color(0xFFFFF4E5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              fits
+                  ? 'You fit the preferred profile for this posting.'
+                  : 'You are outside the preferred profile. You can still apply; the company may prioritize others.',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: fits ? const Color(0xFF1A7F4B) : const Color(0xFFB87700),
+                height: 1.4,
+              ),
+            ),
+          ),
+        for (final c in fit.checks)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  c.ok == null ? Icons.remove : (c.ok! ? Icons.check_circle : Icons.cancel),
+                  size: 16,
+                  color: c.ok == null ? AppColors.textMuted : (c.ok! ? const Color(0xFF1A7F4B) : const Color(0xFFC83232)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textDark),
+                      children: [
+                        TextSpan(text: '${c.label}: ', style: const TextStyle(fontWeight: FontWeight.w700)),
+                        TextSpan(text: c.wanted ?? 'Any'),
+                        if (c.yours != null)
+                          TextSpan(text: '  ·  yours: ${c.yours}', style: const TextStyle(color: AppColors.textMuted)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

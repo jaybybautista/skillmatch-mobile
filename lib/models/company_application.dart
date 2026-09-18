@@ -2,6 +2,7 @@ import '../core/json_parse.dart';
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
+import 'meeting.dart';
 
 /// The student attached to an application or candidate row.
 class CandidateSummary {
@@ -62,12 +63,28 @@ class CompanyApplication {
     this.assignedAssessmentTitle,
     this.matchScore,
     this.matchedSkills = const [],
+    this.transitions = const [],
+    this.isClosed = false,
+    this.preferredFit,
+    this.preferredSummary,
+    this.meetings = const [],
   });
 
   final int id;
   final String status;
   final String statusLabel;
   final String? rejectionReason;
+
+  /// Where the company may move this application from its current status,
+  /// as the web's action buttons offer them.
+  final List<StatusOption> transitions;
+  final bool isClosed;
+
+  /// Whether the applicant fits the posting's preferred program / year /
+  /// campus; null when the posting set no preference.
+  final bool? preferredFit;
+  final String? preferredSummary;
+  final List<Meeting> meetings;
 
   /// True when the last status change can still be reverted (one level).
   final bool canUndo;
@@ -107,8 +124,32 @@ class CompanyApplication {
       student: CandidateSummary.fromJson(
         json['student'] as Map<String, dynamic>? ?? const {},
       ),
+      transitions: json['transitions'] is List
+          ? [
+              for (final t in json['transitions'] as List)
+                StatusOption.fromJson(t as Map<String, dynamic>),
+            ]
+          : defaultTransitionsFor(json['status'] as String? ?? 'pending'),
+      isClosed: json['is_closed'] as bool? ?? false,
+      preferredFit: json['preferred_fit'] as bool?,
+      preferredSummary: json['preferred_summary'] as String?,
+      meetings: [
+        for (final m in (json['meetings'] as List? ?? const []))
+          Meeting.fromJson(m as Map<String, dynamic>),
+      ],
     );
   }
+}
+
+/// A status the company may move an application to.
+class StatusOption {
+  const StatusOption({required this.key, required this.label});
+
+  final String key;
+  final String label;
+
+  factory StatusOption.fromJson(Map<String, dynamic> json) =>
+      StatusOption(key: json['key'] as String? ?? '', label: json['label'] as String? ?? '');
 }
 
 /// Per-status totals driving the filter chips.
@@ -203,11 +244,19 @@ class CandidateCredential {
     required this.title,
     required this.subtitle,
     this.detail,
+    this.verificationStatus,
+    this.verificationLabel,
+    this.fileUrl,
   });
 
   final String title;
   final String subtitle;
   final String? detail;
+
+  /// Certifications only: the OCR check of the proof file and the file.
+  final String? verificationStatus;
+  final String? verificationLabel;
+  final String? fileUrl;
 
   factory CandidateCredential.education(Map<String, dynamic> json) {
     final start = json['start_year'];
@@ -228,6 +277,9 @@ class CandidateCredential {
       CandidateCredential(
         title: json['title'] as String? ?? 'Certification',
         subtitle: json['issuing_organization'] as String? ?? '',
+        verificationStatus: json['verification_status'] as String? ?? 'no_file',
+        verificationLabel: json['verification_label'] as String? ?? 'No proof file',
+        fileUrl: json['certificate_file_url'] as String?,
       );
 
   factory CandidateCredential.experience(Map<String, dynamic> json) =>
@@ -279,4 +331,31 @@ class CandidateDetail {
         .map((e) => CandidateCredential.experience(e as Map<String, dynamic>))
         .toList(),
   );
+}
+
+/// The web's ApplicationStatusService::TRANSITIONS, used only when a payload
+/// carries no `transitions` list (older server, or a test fixture).
+List<StatusOption> defaultTransitionsFor(String status) {
+  const labels = {
+    'under_review': 'Under review',
+    'shortlisted': 'Shortlisted',
+    'assessment': 'Assessment',
+    'interview': 'Interview',
+    'offered': 'Offered',
+    'accepted': 'Accepted',
+    'on_hold': 'On hold',
+    'rejected': 'Rejected',
+  };
+  const map = {
+    'pending': ['under_review', 'shortlisted', 'interview', 'offered', 'accepted', 'on_hold', 'rejected'],
+    'under_review': ['shortlisted', 'assessment', 'interview', 'offered', 'accepted', 'on_hold', 'rejected'],
+    'shortlisted': ['assessment', 'interview', 'offered', 'accepted', 'on_hold', 'rejected'],
+    'assessment': ['shortlisted', 'interview', 'offered', 'accepted', 'on_hold', 'rejected'],
+    'interview': ['offered', 'accepted', 'on_hold', 'rejected'],
+    'offered': ['accepted', 'on_hold', 'rejected'],
+    'on_hold': ['under_review', 'shortlisted', 'interview', 'offered', 'accepted', 'rejected'],
+  };
+  return [
+    for (final key in map[status] ?? const <String>[]) StatusOption(key: key, label: labels[key] ?? key),
+  ];
 }

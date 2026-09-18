@@ -270,12 +270,11 @@ class _ResumeListScreenState extends State<ResumeListScreen>
                     await _service.renameResume(resume.id, title);
                     _refresh();
                   } on ApiException catch (e) {
-                    if (mounted)
-                      {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(e.message)));
-                      }
+                    if (mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(e.message)));
+                    }
                   }
                 },
               ),
@@ -314,12 +313,11 @@ class _ResumeListScreenState extends State<ResumeListScreen>
       await _service.deleteResume(resume.id);
       _refresh();
     } on ApiException catch (e) {
-      if (mounted)
-        {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(e.message)));
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     }
   }
 
@@ -327,103 +325,144 @@ class _ResumeListScreenState extends State<ResumeListScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: const AppSidebar(current: SidebarItem.resumeBuilder),
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        title: Text(
-          'Resume Builder',
-          style: AppFonts.title(color: Colors.white),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.upload_file_outlined),
-            tooltip: 'Import Resume',
-            onPressed: _openImport,
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddResumeSheet,
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: FutureBuilder<List<ResumeSummary>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (snapshot.hasError || !snapshot.hasData) {
-              final message = snapshot.error is ApiException
-                  ? (snapshot.error as ApiException).message
-                  : 'Could not load your resumes.';
-              return ListView(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 60,
-                  horizontal: 32,
-                ),
+      backgroundColor: AppColors.primaryDark,
+      body: Column(
+        children: [
+          // Same header as Applications / Home: menu, title, then the
+          // page actions, with the content sheet curving up under it.
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 16, 20),
+              child: Row(
                 children: [
-                  Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.textMuted),
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: TextButton(
-                      onPressed: _refresh,
-                      child: const Text('Retry'),
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu, color: Colors.white),
+                      onPressed: Scaffold.of(context).openDrawer,
+                      tooltip: 'Menu',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Resume Builder',
+                      style: AppFonts.title(color: Colors.white, fontSize: 24),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.upload_file_outlined,
+                      color: Colors.white,
+                    ),
+                    tooltip: 'Import Resume',
+                    onPressed: _openImport,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    tooltip: 'New resume',
+                    onPressed: _showAddResumeSheet,
+                  ),
                 ],
-              );
-            }
-
-            final resumes = snapshot.data!;
-            if (resumes.isEmpty) {
-              return ListView(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 60,
-                  horizontal: 32,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
                 ),
-                children: [
-                  const Icon(
-                    Icons.description_outlined,
-                    size: 40,
-                    color: AppColors.textMuted,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'No resumes yet. Tap + to create your first one.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textMuted),
-                  ),
-                ],
-              );
-            }
-
-            return ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                for (final resume in resumes) ...[
-                  _ResumeRow(
-                    resume: resume,
-                    onTap: () => _openResume(resume.id),
-                    onMenuTap: () => _showResumeOptionsSheet(resume),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ],
-            );
-          },
-        ),
+                child: _buildBody(),
+              ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: 2,
         onSelect: (i) => handleAppNavTap(context, i),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: FutureBuilder<List<ResumeSummary>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError || !snapshot.hasData) {
+            final message = snapshot.error is ApiException
+                ? (snapshot.error as ApiException).message
+                : 'Could not load your resumes.';
+            return ListView(
+              padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
+              children: [
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton(
+                    onPressed: _refresh,
+                    child: const Text('Retry'),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          final resumes = snapshot.data!;
+          if (resumes.isEmpty) {
+            return ListView(
+              padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
+              children: [
+                const Icon(
+                  Icons.description_outlined,
+                  size: 40,
+                  color: AppColors.textMuted,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'No resumes yet. Tap + to create your first one.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textMuted),
+                ),
+              ],
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              for (final resume in resumes) ...[
+                _ResumeRow(
+                  resume: resume,
+                  onTap: () => _openResume(resume.id),
+                  onMenuTap: () => _showResumeOptionsSheet(resume),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

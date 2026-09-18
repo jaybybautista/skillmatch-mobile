@@ -9,6 +9,7 @@ import '../../../services/profile_setup_service.dart';
 import 'setup_entry_screen.dart';
 import 'setup_review_screen.dart';
 import 'setup_scaffold.dart';
+import '../../../widgets/cert_badge.dart';
 
 /// Steps 1–5 of the first-run wizard, in one screen so the answers stay
 /// together as the student moves back and forth.
@@ -782,6 +783,8 @@ class _CertificationSheetState extends State<_CertificationSheet> {
   final _title = TextEditingController();
   final _organization = TextEditingController();
   final _issueDate = TextEditingController();
+  final _number = TextEditingController();
+  String? _filePath;
   bool _isSaving = false;
 
   @override
@@ -789,6 +792,7 @@ class _CertificationSheetState extends State<_CertificationSheet> {
     _title.dispose();
     _organization.dispose();
     _issueDate.dispose();
+    _number.dispose();
     super.dispose();
   }
 
@@ -799,16 +803,28 @@ class _CertificationSheetState extends State<_CertificationSheet> {
       );
       return;
     }
+    if (_filePath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Upload a photo, scan or PDF of the certificate. It is checked against the details you typed.')),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
     try {
-      final certification = await widget.service.addCertification(
+      final (certification, message) = await widget.service.addCertification(
         title: _title.text.trim(),
         issuingOrganization: _organization.text.trim(),
         issueDate: _issueDate.text.trim(),
+        certificateNumber: _number.text.trim(),
+        certificateFilePath: _filePath!,
       );
-      if (mounted) Navigator.of(context).pop(certification);
+      if (!mounted) return;
+      if (message != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+      Navigator.of(context).pop(certification);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
@@ -836,6 +852,33 @@ class _CertificationSheetState extends State<_CertificationSheet> {
           label: 'Issue date',
           controller: _issueDate,
           hintText: 'e.g. 2023',
+        ),
+        const SizedBox(height: 14),
+        SetupField(
+          label: 'Certificate number (optional)',
+          controller: _number,
+          hintText: 'As printed on the certificate',
+        ),
+        const SizedBox(height: 14),
+        // Kailangan ang file: ito ang binabasa ng OCR at inihahambing sa
+        // isinulat, kapareho ng web.
+        OutlinedButton.icon(
+          onPressed: () async {
+            final path = await pickCertificateFile(context);
+            if (path != null) setState(() => _filePath = path);
+          },
+          icon: const Icon(Icons.upload_file_outlined, size: 18),
+          label: Text(
+            _filePath == null ? 'Certificate file (photo, scan or PDF)' : _filePath!.split(RegExp(r'[\\/]')).last,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          style: OutlinedButton.styleFrom(alignment: Alignment.centerLeft, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Required. The file is read with OCR and checked against the details you typed.',
+          style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, height: 1.4),
         ),
       ],
     );

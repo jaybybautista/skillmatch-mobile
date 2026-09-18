@@ -1,3 +1,5 @@
+import 'match_details.dart';
+
 class InternshipReview {
   InternshipReview({
     required this.id,
@@ -51,6 +53,7 @@ class InternshipDetail {
     this.qualifications,
     required this.skills,
     required this.reviews,
+    this.preferredCriteria,
   });
 
   final int id;
@@ -82,6 +85,10 @@ class InternshipDetail {
   final List<String>? qualifications;
   final List<String> skills;
   final List<InternshipReview> reviews;
+
+  /// The posting's preferred program / year level / campus and whether
+  /// this student fits; null when the company set none.
+  final PreferenceFit? preferredCriteria;
 
   String get companyInitials {
     final trimmed = companyName.trim();
@@ -118,6 +125,9 @@ class InternshipDetail {
       reviews: (json['reviews'] as List? ?? [])
           .map((e) => InternshipReview.fromJson(e as Map<String, dynamic>))
           .toList(),
+      preferredCriteria: json['preferred_criteria'] is Map<String, dynamic>
+          ? PreferenceFit.fromJson(json['preferred_criteria'] as Map<String, dynamic>)
+          : null,
     );
   }
 }

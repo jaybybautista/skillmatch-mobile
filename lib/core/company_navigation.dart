@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../screens/company/assessment_library_screen.dart';
+import '../screens/messaging/messages_screen.dart';
 import '../screens/company/browse_candidates_screen.dart';
 import '../screens/company/company_postings_screen.dart';
 import '../widgets/company_bottom_nav.dart';
@@ -21,7 +22,7 @@ void handleCompanyNavTap(BuildContext context, int index) {
 
   if (index < 0 || index >= companyNavItems.length) return;
 
-  if (index > 3) {
+  if (index > 4) {
     messenger.showSnackBar(
       SnackBar(content: Text('${companyNavItems[index].label} is coming soon.')),
     );
@@ -47,6 +48,10 @@ void handleCompanyNavTap(BuildContext context, int index) {
         MaterialPageRoute(
           builder: (_) => const BrowseCandidatesScreen(bookmarksOnly: true),
         ),
+      );
+    case 4:
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const MessagesScreen()),
       );
   }
 }

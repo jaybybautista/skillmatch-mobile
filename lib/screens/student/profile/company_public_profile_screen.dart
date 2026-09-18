@@ -7,6 +7,7 @@ import '../../../services/public_profile_service.dart';
 import '../../../widgets/public_profile_header.dart';
 import '../internship/internship_detail_screen.dart';
 import '../reviews/reviews_section.dart';
+import '../../../widgets/message_profile_button.dart';
 
 /// A company's public profile — the mobile twin of
 /// Student\StudentCompanyController::show / student.companies.show.
@@ -127,6 +128,7 @@ class _CompanyPublicProfileScreenState
               ),
           ],
         ),
+        MessageProfileButton(userId: company.userId),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: Column(

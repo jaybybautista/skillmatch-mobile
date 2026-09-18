@@ -8,6 +8,24 @@ import '../../../services/auth_service.dart';
 import '../../../widgets/app_text_field.dart';
 import '../../../widgets/select_or_other_field.dart';
 import '../../../widgets/primary_button.dart';
+import '../register_verify_screen.dart';
+import 'terms_consent_field.dart';
+
+/// The OJT semesters a student can pick at sign-up, as the web lists them.
+/// The school year is taken from today's date on the server.
+const kSemesters = <({String key, String label})>[
+  (key: 'first', label: 'First semester'),
+  (key: 'second', label: 'Second semester'),
+  (key: 'midyear', label: 'Mid-year'),
+];
+
+/// Which semester today falls in, same rule as the server.
+String currentSemesterKey([DateTime? now]) {
+  final month = (now ?? DateTime.now()).month;
+  if (month >= 8) return 'first';
+  if (month <= 5) return 'second';
+  return 'midyear';
+}
 
 class RegisterForm extends StatefulWidget {
   const RegisterForm({super.key, required this.onSwitchToLogin});
@@ -21,6 +39,7 @@ class RegisterForm extends StatefulWidget {
 class _RegisterFormState extends State<RegisterForm> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
+  final _middleNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -29,6 +48,9 @@ class _RegisterFormState extends State<RegisterForm> {
   Future<List<Campus>>? _campusesFuture;
   Campus? _selectedCampus;
   String? _selectedCourse;
+  String _semester = currentSemesterKey();
+  bool _acceptedTerms = false;
+  String? _termsError;
 
   bool _isLoading = false;
   String? _errorText;
@@ -42,6 +64,7 @@ class _RegisterFormState extends State<RegisterForm> {
   @override
   void dispose() {
     _firstNameController.dispose();
+    _middleNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -55,30 +78,42 @@ class _RegisterFormState extends State<RegisterForm> {
       setState(() => _errorText = 'Please select your campus and course.');
       return;
     }
+    if (!_acceptedTerms) {
+      setState(() => _termsError = 'Please read and accept the Terms and Conditions, including consent to data collection, to create your account.');
+      return;
+    }
 
     setState(() {
       _isLoading = true;
       _errorText = null;
+      _termsError = null;
     });
 
     try {
-      await context.read<AuthService>().register(
+      final pending = await context.read<AuthService>().register(
             firstName: _firstNameController.text.trim(),
+            middleName: _middleNameController.text.trim(),
             lastName: _lastNameController.text.trim(),
             course: _selectedCourse!,
             campusId: _selectedCampus!.id,
+            semester: _semester,
             email: _emailController.text.trim(),
             password: _passwordController.text,
             passwordConfirmation: _confirmPasswordController.text,
+            acceptedTerms: _acceptedTerms,
           );
 
       if (!mounted) return;
-      // Pop back to the session gate instead of pushing Home directly: a
-      // brand-new account is by definition first-run, and the gate is what
-      // decides between the profile-setup wizard and Home.
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      // Like the web: the account exists only after the emailed code. The
+      // verify screen stores the session and unwinds to the gate, which
+      // then decides between the setup wizard and Home.
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RegisterVerifyScreen(email: pending.email, message: pending.message),
+        ),
+      );
     } on ApiException catch (e) {
-      setState(() => _errorText = e.message);
+      setState(() => _errorText = e.fieldError('terms') ?? e.message);
     } catch (_) {
       setState(() => _errorText = 'Could not reach the server. Please check your connection.');
     } finally {
@@ -98,6 +133,12 @@ class _RegisterFormState extends State<RegisterForm> {
             controller: _firstNameController,
             textInputAction: TextInputAction.next,
             validator: (value) => (value == null || value.trim().isEmpty) ? 'First name is required' : null,
+          ),
+          const SizedBox(height: 18),
+          AppTextField(
+            label: 'Middle name (optional)',
+            controller: _middleNameController,
+            textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 18),
           AppTextField(
@@ -164,6 +205,16 @@ class _RegisterFormState extends State<RegisterForm> {
             },
           ),
           const SizedBox(height: 18),
+          // Semester ng OJT; ang school year ay kusang kinukuha ng server
+          // mula sa petsa (SY na kasalukuyan), gaya ng web.
+          AppDropdownField<String>(
+            label: 'Semester (SY ${_schoolYearLabel()})',
+            value: _semester,
+            items: [for (final s in kSemesters) s.key],
+            itemLabel: (key) => kSemesters.firstWhere((s) => s.key == key).label,
+            onChanged: (value) => setState(() => _semester = value ?? _semester),
+          ),
+          const SizedBox(height: 18),
           AppTextField(
             label: 'Email',
             controller: _emailController,
@@ -200,6 +251,15 @@ class _RegisterFormState extends State<RegisterForm> {
               return null;
             },
           ),
+          const SizedBox(height: 14),
+          TermsConsentField(
+            value: _acceptedTerms,
+            errorText: _termsError,
+            onChanged: (v) => setState(() {
+              _acceptedTerms = v;
+              if (v) _termsError = null;
+            }),
+          ),
           if (_errorText != null) ...[
             const SizedBox(height: 12),
             Text(_errorText!, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
@@ -210,5 +270,12 @@ class _RegisterFormState extends State<RegisterForm> {
         ],
       ),
     );
+  }
+
+  /// "2026-2027": a school year starts in August, same as the server.
+  String _schoolYearLabel() {
+    final now = DateTime.now();
+    final start = now.month >= 8 ? now.year : now.year - 1;
+    return '$start-${start + 1}';
   }
 }

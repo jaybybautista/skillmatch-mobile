@@ -211,6 +211,9 @@ class CompanyService {
     /// Hindi sapilitan, kaya pwedeng walang laman.
     List<String> qualifications = const [],
     required List<String> skills,
+    List<String> preferredPrograms = const [],
+    List<int> preferredYearLevels = const [],
+    List<int> preferredCampuses = const [],
   }) async {
     final response = await _client.post('/company/postings', {
       'job_role': jobRole,
@@ -220,6 +223,9 @@ class CompanyService {
       'responsibilities': responsibilities,
       'qualifications': qualifications,
       'skills': skills,
+      'preferred_programs': preferredPrograms,
+      'preferred_year_levels': preferredYearLevels,
+      'preferred_campuses': preferredCampuses,
     }, authenticated: true);
 
     return CompanyPosting.fromJson(response['posting'] as Map<String, dynamic>);
@@ -238,6 +244,9 @@ class CompanyService {
     /// Hindi sapilitan, kaya pwedeng walang laman.
     List<String> qualifications = const [],
     required List<String> skills,
+    List<String> preferredPrograms = const [],
+    List<int> preferredYearLevels = const [],
+    List<int> preferredCampuses = const [],
   }) async {
     final response = await _client.put('/company/postings/$id', {
       'job_role': jobRole,
@@ -247,9 +256,18 @@ class CompanyService {
       'responsibilities': responsibilities,
       'qualifications': qualifications,
       'skills': skills,
+      'preferred_programs': preferredPrograms,
+      'preferred_year_levels': preferredYearLevels,
+      'preferred_campuses': preferredCampuses,
     }, authenticated: true);
 
     return CompanyPosting.fromJson(response['posting'] as Map<String, dynamic>);
+  }
+
+  /// The program / year level / campus choices for "Preferred applicants".
+  Future<PreferenceOptions> fetchPreferenceOptions() async {
+    final response = await _client.get('/company/postings/preference-options', authenticated: true);
+    return PreferenceOptions.fromJson(response);
   }
 
   /// Flips a posting between open and closed, the same toggle the web has.
@@ -274,6 +292,7 @@ class CompanyService {
     String status = '',
     String query = '',
     int? internshipId,
+    bool preferredOnly = false,
   }) async {
     final params = <String, String>{
       if (status.isNotEmpty) 'status': status,
@@ -281,6 +300,8 @@ class CompanyService {
       // Narrows to one posting, which is what the per-posting applicant list
       // asks for.
       if (internshipId != null) 'internship_id': '$internshipId',
+      // Only applicants who fit the posting's preferred criteria.
+      if (preferredOnly) 'preferred': '1',
     };
     final suffix = params.isEmpty
         ? ''

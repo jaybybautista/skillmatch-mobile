@@ -6,6 +6,8 @@ import '../../../models/public_profile.dart';
 import '../../../services/public_profile_service.dart';
 import '../../../widgets/public_profile_header.dart';
 import 'profile_screen.dart';
+import '../../../widgets/message_profile_button.dart';
+import '../../../widgets/cert_badge.dart';
 
 /// A read-only view of another student — the mobile twin of
 /// Student\StudentPeerController::show / student.students.show.
@@ -132,6 +134,7 @@ class _StudentPublicProfileScreenState
               ),
           ],
         ),
+        MessageProfileButton(userId: profile.userId),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           child: Column(
@@ -248,6 +251,17 @@ class _StudentPublicProfileScreenState
                                 style: const TextStyle(
                                   fontSize: 12.5,
                                   color: AppColors.textMuted,
+                                ),
+                              ),
+                              // Verified / Unverified / No proof file, with the
+                              // file one tap away - same as the web badge.
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: CertBadge(
+                                  status: cert.verificationStatus,
+                                  label: cert.verificationLabel,
+                                  fileUrl: cert.certificateFileUrl,
+                                  compact: true,
                                 ),
                               ),
                             ],

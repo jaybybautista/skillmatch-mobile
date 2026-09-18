@@ -182,12 +182,20 @@ class Certification {
     required this.title,
     this.issuingOrganization,
     this.issueDate,
+    this.verificationStatus = 'no_file',
+    this.verificationLabel = 'No proof file',
+    this.verificationDetail,
+    this.certificateFileUrl,
   });
 
   final int id;
   final String title;
   final String? issuingOrganization;
   final String? issueDate;
+  final String verificationStatus;
+  final String verificationLabel;
+  final String? verificationDetail;
+  final String? certificateFileUrl;
 
   String get subtitle => [
     if (issuingOrganization != null && issuingOrganization!.isNotEmpty)
@@ -198,6 +206,10 @@ class Certification {
   factory Certification.fromJson(Map<String, dynamic> json) => Certification(
     id: (json['id'] as num).toInt(),
     title: json['title'] as String? ?? '',
+    verificationStatus: json['verification_status'] as String? ?? 'no_file',
+    verificationLabel: json['verification_label'] as String? ?? 'No proof file',
+    verificationDetail: json['verification_detail'] as String?,
+    certificateFileUrl: json['certificate_file_url'] as String?,
     issuingOrganization: json['issuing_organization'] as String?,
     issueDate: json['issue_date'] as String?,
   );

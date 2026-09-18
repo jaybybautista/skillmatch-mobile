@@ -6,6 +6,7 @@ import 'package:skillmatch/screens/student/matches/internship_search_screen.dart
 import 'package:skillmatch/services/internship_service.dart';
 import 'package:skillmatch/services/search_history_service.dart';
 import 'package:skillmatch/widgets/search_history_list.dart';
+import 'package:skillmatch/models/match_details.dart';
 
 class _FakeInternshipService extends InternshipService {
   @override
@@ -13,6 +14,23 @@ class _FakeInternshipService extends InternshipService {
     String query = '',
     InternshipFilter filter = InternshipFilter.topMatches,
   }) async => const [];
+
+  // The screens page through results now; a fake that only knows the whole
+  // list answers page one with everything and no further pages.
+  @override
+  Future<InternshipPage<Internship>> fetchAllPage({
+    String query = '',
+    InternshipFilter filter = InternshipFilter.topMatches,
+    int page = 1,
+    int perPage = 10,
+  }) async {
+    if (page > 1) return InternshipPage(items: const [], hasMore: false, page: page);
+    return InternshipPage(
+      items: await fetchAll(query: query, filter: filter),
+      hasMore: false,
+      page: page,
+    );
+  }
 }
 
 /// Stands in for the server so the list can be driven without a network.

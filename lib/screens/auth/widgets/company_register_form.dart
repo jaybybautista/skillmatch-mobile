@@ -5,18 +5,16 @@ import '../../../core/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../widgets/app_text_field.dart';
 import '../../../widgets/select_or_other_field.dart';
+import '../../../core/api_client.dart';
 import '../../../widgets/primary_button.dart';
-import '../../company/company_setup_wizard_screen.dart';
-
+import '../register_verify_screen.dart';
+import 'terms_consent_field.dart';
 
 /// The company sign-up form, reached from [RolePickerScreen] once "Company"
-/// has been chosen.
-///
-/// TODO: not wired to the backend yet — there is no company-registration
-/// endpoint in [AuthService] and no company dashboard for a new account to
-/// land on. [_submit] only validates the form and moves into the (also
-/// locally-held) [CompanySetupWizardScreen] for now; hook up real API calls
-/// once those exist.
+/// has been chosen. Same flow as the web: the form is held by the server,
+/// a six-digit code is emailed, and the account exists once the code is
+/// entered; the gate then lands the company on its home (pending
+/// verification by an admin, like a web sign-up).
 class CompanyRegisterForm extends StatefulWidget {
   const CompanyRegisterForm({super.key});
 
@@ -39,6 +37,9 @@ class _CompanyRegisterFormState extends State<CompanyRegisterForm> {
   /// sila kahit mahina ang signal.
   List<String> _industries = kFallbackIndustries;
   String? _errorText;
+  bool _acceptedTerms = false;
+  String? _termsError;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -58,20 +59,46 @@ class _CompanyRegisterFormState extends State<CompanyRegisterForm> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedIndustry == null) {
       setState(() => _errorText = 'Please select your industry.');
       return;
     }
+    if (!_acceptedTerms) {
+      setState(() => _termsError = 'Please read and accept the Terms and Conditions, including consent to data collection, to create your account.');
+      return;
+    }
 
-    setState(() => _errorText = null);
+    setState(() {
+      _errorText = null;
+      _termsError = null;
+      _isLoading = true;
+    });
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CompanySetupWizardScreen(companyName: _companyNameController.text.trim()),
-      ),
-    );
+    try {
+      final pending = await context.read<AuthService>().registerCompany(
+            companyName: _companyNameController.text.trim(),
+            industry: _selectedIndustry!,
+            address: _addressController.text.trim(),
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            passwordConfirmation: _confirmPasswordController.text,
+            acceptedTerms: _acceptedTerms,
+          );
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RegisterVerifyScreen(email: pending.email, message: pending.message),
+        ),
+      );
+    } on ApiException catch (e) {
+      setState(() => _errorText = e.fieldError('terms') ?? e.message);
+    } catch (_) {
+      setState(() => _errorText = 'Could not reach the server. Please check your connection.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -147,12 +174,21 @@ class _CompanyRegisterFormState extends State<CompanyRegisterForm> {
               return null;
             },
           ),
+          const SizedBox(height: 14),
+          TermsConsentField(
+            value: _acceptedTerms,
+            errorText: _termsError,
+            onChanged: (v) => setState(() {
+              _acceptedTerms = v;
+              if (v) _termsError = null;
+            }),
+          ),
           if (_errorText != null) ...[
             const SizedBox(height: 12),
             Text(_errorText!, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
           ],
           const SizedBox(height: 20),
-          PrimaryButton(label: 'Create Account', onPressed: _submit),
+          PrimaryButton(label: 'Create Account', isLoading: _isLoading, onPressed: _submit),
           const SizedBox(height: 16),
         ],
       ),

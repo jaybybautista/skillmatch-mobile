@@ -154,6 +154,13 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
   List<Internship>? _results;
   List<PersonSearchResult>? _peopleResults;
 
+  /// Internship results come a page at a time; scrolling near the bottom
+  /// asks for the next one.
+  final _resultsScroll = ScrollController();
+  int _resultsPage = 1;
+  bool _hasMoreResults = false;
+  bool _loadingMore = false;
+
   /// Which tab is active. Internships is the original, and default, behavior.
   _SearchScope _scope = _SearchScope.internship;
 
@@ -168,6 +175,7 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
   @override
   void initState() {
     super.initState();
+    _resultsScroll.addListener(_onResultsScroll);
     // The student tapped a search bar to get here, so the keyboard should
     // already be up.
     WidgetsBinding.instance.addPostFrameCallback(
@@ -180,7 +188,37 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
     _debounce?.cancel();
     _controller.dispose();
     _focusNode.dispose();
+    _resultsScroll.dispose();
     super.dispose();
+  }
+
+  void _onResultsScroll() {
+    if (!_resultsScroll.hasClients) return;
+    final position = _resultsScroll.position;
+    if (position.pixels >= position.maxScrollExtent - 320) _loadMoreResults();
+  }
+
+  Future<void> _loadMoreResults() async {
+    if (_loadingMore || !_hasMoreResults || _results == null) return;
+    final query = _shownQuery;
+    final filter = _filter;
+    setState(() => _loadingMore = true);
+    try {
+      final page = await _service.fetchAllPage(
+        query: query,
+        filter: filter,
+        page: _resultsPage + 1,
+      );
+      if (!mounted || _shownQuery != query || _filter != filter) return;
+      setState(() {
+        _results = [..._results!, ...page.items];
+        _resultsPage = page.page;
+        _hasMoreResults = page.hasMore && page.items.isNotEmpty;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   void _onChanged(String value) {
@@ -243,10 +281,13 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
 
     try {
       if (scope == _SearchScope.internship) {
-        final results = await _service.fetchAll(query: query, filter: _filter);
+        final page = await _service.fetchAllPage(query: query, filter: _filter, page: 1);
         if (!stillCurrent()) return;
         setState(() {
-          _results = results;
+          _results = page.items;
+          _resultsPage = page.page;
+          _hasMoreResults = page.hasMore && page.items.isNotEmpty;
+          _loadingMore = false;
           _shownQuery = query;
           _isLoading = false;
         });
@@ -610,22 +651,37 @@ class _InternshipSearchScreenState extends State<InternshipSearchScreen> {
     }
 
     return ListView.separated(
+      controller: _resultsScroll,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-      itemCount: results.length + 1,
+      itemCount: results.length + 2,
       separatorBuilder: (_, _) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         if (index == 0) {
           final count = results.length;
+          final more = _hasMoreResults ? '+' : '';
           return Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               _isCompany
-                  ? '$count ${count == 1 ? 'result' : 'results'} for "$_shownQuery"'
-                  : '$count ${count == 1 ? 'result' : 'results'} for '
+                  ? '$count$more ${count == 1 ? 'result' : 'results'} for "$_shownQuery"'
+                  : '$count$more ${count == 1 ? 'result' : 'results'} for '
                         '"$_shownQuery" · ${_filter.label}',
               style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
             ),
           );
+        }
+
+        // Footer: a spinner while the next page loads.
+        if (index == results.length + 1) {
+          return _loadingMore
+              ? const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : const SizedBox.shrink();
         }
 
         final internship = results[index - 1];

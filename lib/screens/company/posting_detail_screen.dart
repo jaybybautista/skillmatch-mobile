@@ -418,6 +418,26 @@ class _PostingDetailScreenState extends State<PostingDetailScreen> {
                 ),
         ),
         const SizedBox(height: 14),
+        // Gustong applicant - kapareho ng seksyon sa web posting page.
+        _listCard(
+          icon: Icons.how_to_reg_outlined,
+          title: 'Preferred applicants',
+          child: posting.hasPreferences
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (posting.preferredSummary != null)
+                      Text(posting.preferredSummary!, style: const TextStyle(fontSize: 13.5, height: 1.5, color: AppColors.textDark)),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Applicants who fit are marked Preferred in your applications list; everyone can still apply.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.4),
+                    ),
+                  ],
+                )
+              : const _EmptyLine('No preference set: anyone is welcome. Edit the posting to pick programs, year levels or campuses.'),
+        ),
+        const SizedBox(height: 14),
         _assessmentsCard(),
       ],
     );

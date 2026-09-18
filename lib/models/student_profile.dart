@@ -31,10 +31,25 @@ class CertificationInfo {
     this.issueDateRaw,
     this.expiryDateRaw,
     this.credentialUrl,
+    this.certificateNumber,
+    this.verificationStatus = 'no_file',
+    this.verificationLabel = 'No proof file',
+    this.verificationDetail,
+    this.certificateFileUrl,
   });
 
   /// Needed to edit or remove this row. Null only on rows built by tests.
   final int? id;
+
+  /// The proof file and its OCR check (verified / unverified / no_file), as
+  /// the web badge shows them.
+  final String? certificateNumber;
+  final String verificationStatus;
+  final String verificationLabel;
+  final String? verificationDetail;
+  final String? certificateFileUrl;
+
+  bool get hasFile => certificateFileUrl != null && certificateFileUrl!.isNotEmpty;
 
   final String? title;
   final String? issuingOrganization;
@@ -55,6 +70,11 @@ class CertificationInfo {
       issueDateRaw: json['issue_date_raw'] as String?,
       expiryDateRaw: json['expiry_date_raw'] as String?,
       credentialUrl: json['credential_url'] as String?,
+      certificateNumber: json['certificate_number'] as String?,
+      verificationStatus: json['verification_status'] as String? ?? 'no_file',
+      verificationLabel: json['verification_label'] as String? ?? 'No proof file',
+      verificationDetail: json['verification_detail'] as String?,
+      certificateFileUrl: json['certificate_file_url'] as String?,
     );
   }
 }

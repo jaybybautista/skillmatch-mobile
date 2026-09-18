@@ -71,5 +71,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>SkillMatch uses the camera for video calls and for photos you send in chat.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SkillMatch uses the microphone for audio and video calls.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SkillMatch lets you pick photos to send in chat and as a group photo.</string>
 </dict>
 </plist>

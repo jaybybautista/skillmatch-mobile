@@ -6,7 +6,10 @@ import '../../../core/api_client.dart';
 import '../../../core/app_navigation.dart';
 import '../../../core/app_theme.dart';
 import '../../../models/application.dart';
+import '../../../models/meeting.dart';
 import '../../../services/application_service.dart';
+import '../../../services/meeting_service.dart';
+import '../../../widgets/meeting_card.dart';
 import '../../../widgets/app_bottom_nav.dart';
 import '../../../widgets/empty_results.dart';
 import '../../../widgets/moa_tag.dart';
@@ -132,6 +135,91 @@ class _ApplicationsScreenState extends State<ApplicationsScreen>
       default:
         return 'Application status updated for "$title".';
     }
+  }
+
+  final _meetings = MeetingService();
+
+  void _toast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Accept or decline the company's offer, like the web's offer box.
+  Future<void> _respondToOffer(ApplicationSummary application, bool accept) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(accept ? 'Accept the offer?' : 'Decline this offer?'),
+        content: Text(accept
+            ? 'Accept the offer for ${application.internshipTitle}? Your coordinator will then set up your placement.'
+            : 'Declining cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: accept ? const Color(0xFF16A34A) : AppColors.danger),
+            child: Text(accept ? 'Accept offer' : 'Decline'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      _toast(await _meetings.respondToOffer(application.id, accept: accept));
+      await _load();
+    } on ApiException catch (e) {
+      _toast(e.message);
+    }
+  }
+
+  /// Confirm, or ask for another time (with a date and an optional note).
+  Future<void> _respondToMeeting(ApplicationSummary application, Meeting meeting, String action) async {
+    DateTime? proposedAt;
+    String? note;
+
+    if (action == 'reschedule') {
+      final picked = await pickDateTime(context);
+      if (picked == null || !mounted) return;
+      proposedAt = picked;
+      final noteController = TextEditingController();
+      note = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Ask to reschedule'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('You are available on ${formatPickedDateTime(picked)}.', style: const TextStyle(fontSize: 13)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                maxLength: 500,
+                decoration: const InputDecoration(hintText: 'Note (optional), e.g. I have a class at that time', counterText: ''),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.of(context).pop(noteController.text.trim()), child: const Text('Send request')),
+          ],
+        ),
+      );
+      if (note == null || !mounted) return;
+    }
+
+    try {
+      final (updated, message) = await _meetings.respond(meeting.id, action: action, proposedAt: proposedAt, note: note);
+      if (!mounted) return;
+      setState(() => _result = _result?.replacing(application.withMeeting(updated)));
+      _toast(message);
+    } on ApiException catch (e) {
+      _toast(e.message);
+    }
+  }
+
+  Future<void> _joinMeeting(Meeting meeting) async {
+    if (await _meetings.joinWithFeedback(context, meeting.id)) _load();
   }
 
   Future<void> _load() async {
@@ -280,7 +368,11 @@ class _ApplicationsScreenState extends State<ApplicationsScreen>
           for (final application in result.applications) ...[
             _ApplicationCard(
               application: application,
+              pipeline: result.pipeline,
               onTakeAssessment: () => _takeAssessment(application),
+              onOffer: (accept) => _respondToOffer(application, accept),
+              onMeetingRespond: (m, action) => _respondToMeeting(application, m, action),
+              onJoinMeeting: (m) => _joinMeeting(m),
             ),
             const SizedBox(height: 14),
           ],
@@ -440,11 +532,19 @@ class _ReassignmentBadge extends StatelessWidget {
 class _ApplicationCard extends StatelessWidget {
   const _ApplicationCard({
     required this.application,
+    required this.pipeline,
     required this.onTakeAssessment,
+    required this.onOffer,
+    required this.onMeetingRespond,
+    required this.onJoinMeeting,
   });
 
   final ApplicationSummary application;
+  final List<PipelineStep> pipeline;
   final VoidCallback onTakeAssessment;
+  final void Function(bool accept) onOffer;
+  final void Function(Meeting meeting, String action) onMeetingRespond;
+  final void Function(Meeting meeting) onJoinMeeting;
 
   @override
   Widget build(BuildContext context) {
@@ -542,9 +642,185 @@ class _ApplicationCard extends StatelessWidget {
                 ),
               ),
             ),
+            // The web's stepper: how far along pending -> accepted this is.
+            if (pipeline.isNotEmpty && application.pipelineIndex != null) ...[
+              const SizedBox(height: 12),
+              _PipelineStepper(steps: pipeline, current: application.pipelineIndex!),
+            ],
+            if (application.statusHint != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                application.statusHint!,
+                style: const TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.45),
+              ),
+            ],
+          ],
+          if (application.offerPending) ...[
+            const SizedBox(height: 12),
+            _OfferBox(companyName: application.companyName, onOffer: onOffer),
+          ],
+          if (application.meetings.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _MeetingsSection(
+              meetings: application.meetings,
+              onRespond: onMeetingRespond,
+              onJoin: onJoinMeeting,
+            ),
           ],
         ],
       ),
+    );
+  }
+}
+
+/// pending -> under review -> shortlisted -> assessment -> interview ->
+/// offered -> accepted, with the reached steps filled in.
+class _PipelineStepper extends StatelessWidget {
+  const _PipelineStepper({required this.steps, required this.current});
+
+  final List<PipelineStep> steps;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < steps.length; i++) ...[
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i <= current ? AppColors.primary : Colors.white,
+                  border: Border.all(color: i <= current ? AppColors.primary : AppColors.border, width: 2),
+                ),
+              ),
+              if (i < steps.length - 1)
+                Expanded(
+                  child: Container(height: 2, color: i < current ? AppColors.primary : AppColors.border),
+                ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(steps.first.label, style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
+            Text(
+              'Step ${current + 1} of ${steps.length}: ${steps[current].label}',
+              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+            ),
+            Text(steps.last.label, style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// "You have an offer!" with Accept / Decline, like the web's offer box.
+class _OfferBox extends StatelessWidget {
+  const _OfferBox({required this.companyName, required this.onOffer});
+
+  final String companyName;
+  final void Function(bool accept) onOffer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDF2F8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFBCFE8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('You have an offer!', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF9D174D))),
+          const SizedBox(height: 4),
+          Text(
+            '$companyName offered you this internship. Accept to move forward - your coordinator will set up the placement - or decline if you are going elsewhere.',
+            style: const TextStyle(fontSize: 12.5, color: Color(0xFF831843), height: 1.45),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => onOffer(true),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A)),
+                  child: const Text('Accept offer'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => onOffer(false),
+                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF9F1239), side: const BorderSide(color: Color(0xFFFECDD3))),
+                  child: const Text('Decline'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The application's online meetings: open ones with their actions, then
+/// up to two past ones, as the web lists them.
+class _MeetingsSection extends StatelessWidget {
+  const _MeetingsSection({required this.meetings, required this.onRespond, required this.onJoin});
+
+  final List<Meeting> meetings;
+  final void Function(Meeting meeting, String action) onRespond;
+  final void Function(Meeting meeting) onJoin;
+
+  @override
+  Widget build(BuildContext context) {
+    final open = meetings.where((m) => m.isOpen).toList();
+    final past = meetings.where((m) => !m.isOpen).take(2).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Online meeting${meetings.length > 1 ? 's' : ''}'.toUpperCase(),
+          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: AppColors.textMuted),
+        ),
+        for (final m in open)
+          MeetingCard(
+            meeting: m,
+            actions: [
+              if (m.isJoinable)
+                FilledButton.icon(
+                  onPressed: () => onJoin(m),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A), visualDensity: VisualDensity.compact),
+                  icon: Icon(m.isVideo ? Icons.videocam : Icons.call, size: 16),
+                  label: const Text('Join meeting'),
+                )
+              else if (m.isMissed)
+                const Text('The time has passed. Ask the company for a new schedule.', style: TextStyle(fontSize: 11.5, color: AppColors.textMuted))
+              else
+                Text('Room opens on ${m.opensLabel}.', style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+              if (m.status == 'scheduled' && !m.isMissed)
+                TextButton(onPressed: () => onRespond(m, 'confirm'), child: const Text('Confirm')),
+              if (m.status == 'scheduled' || m.status == 'confirmed')
+                TextButton(
+                  onPressed: () => onRespond(m, 'reschedule'),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.textMuted),
+                  child: const Text('Ask to reschedule'),
+                ),
+            ],
+          ),
+        for (final m in past) MeetingCard(meeting: m, compact: true),
+      ],
     );
   }
 }

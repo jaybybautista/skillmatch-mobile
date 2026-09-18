@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../screens/messaging/messages_screen.dart';
 import '../screens/student/applications/applications_screen.dart';
 import '../screens/student/requirements/requirements_screen.dart';
 import '../screens/student/resume/resume_list_screen.dart';
@@ -25,7 +26,7 @@ void handleAppNavTap(BuildContext context, int index) {
 
   if (index < 0 || index >= appNavItems.length) return;
 
-  if (index > 3) {
+  if (index > 4) {
     messenger.showSnackBar(
       SnackBar(content: Text('${appNavItems[index].label} is coming soon.')),
     );
@@ -49,6 +50,10 @@ void handleAppNavTap(BuildContext context, int index) {
     case 3:
       navigator.push(
         MaterialPageRoute(builder: (_) => const RequirementsScreen()),
+      );
+    case 4:
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const MessagesScreen()),
       );
   }
 }

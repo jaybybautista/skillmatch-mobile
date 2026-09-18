@@ -27,6 +27,11 @@ void main() {
 
     expect(find.text('My placement'), findsOneWidget);
 
+    // Messages joined the list above these, so the bottom entries sit past
+    // the test viewport until the drawer is scrolled.
+    await tester.scrollUntilVisible(find.text('Requirements'), 80);
+    await tester.pumpAndSettle();
+
     // The same order the web sidebar uses, so someone moving between the two
     // finds it in the same place.
     final roadmap = tester.getTopLeft(find.text('Skill Roadmap')).dy;

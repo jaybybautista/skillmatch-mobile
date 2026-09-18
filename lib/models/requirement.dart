@@ -1,3 +1,29 @@
+/// A coordinator's comment on the student's uploaded copy (a revision
+/// request, or why it was not accepted) - the web's "Coordinator comments".
+class RequirementComment {
+  const RequirementComment({
+    required this.id,
+    required this.body,
+    required this.author,
+    this.createdAtHuman,
+    this.edited = false,
+  });
+
+  final int id;
+  final String body;
+  final String author;
+  final String? createdAtHuman;
+  final bool edited;
+
+  factory RequirementComment.fromJson(Map<String, dynamic> json) => RequirementComment(
+        id: (json['id'] as num).toInt(),
+        body: json['body'] as String? ?? '',
+        author: json['author'] as String? ?? 'Coordinator',
+        createdAtHuman: json['created_at_human'] as String?,
+        edited: json['edited'] as bool? ?? false,
+      );
+}
+
 /// The student's own working copy of one requirement — mirrors a
 /// `requirement_submissions` row, the same one the coordinator sees on the
 /// web submissions grid.
@@ -11,6 +37,7 @@ class RequirementSubmissionInfo {
     this.fileKind,
     this.submittedAt,
     this.updatedAtHuman,
+    this.comments = const [],
   });
 
   final bool hasUpload;
@@ -21,6 +48,7 @@ class RequirementSubmissionInfo {
   final String? fileKind;
   final String? submittedAt;
   final String? updatedAtHuman;
+  final List<RequirementComment> comments;
 
   bool get isSubmitted => status == 'submitted';
 
@@ -34,6 +62,10 @@ class RequirementSubmissionInfo {
       fileKind: json['file_kind'] as String?,
       submittedAt: json['submitted_at'] as String?,
       updatedAtHuman: json['updated_at_human'] as String?,
+      comments: [
+        for (final c in (json['comments'] as List? ?? const []))
+          RequirementComment.fromJson(c as Map<String, dynamic>),
+      ],
     );
   }
 }

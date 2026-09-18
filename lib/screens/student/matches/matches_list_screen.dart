@@ -2,12 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
 import '../../../models/internship.dart';
+import '../../../models/match_details.dart';
 import '../../../services/internship_service.dart';
-import '../../../widgets/empty_results.dart';
-import '../../../widgets/match_card.dart';
+import '../../../widgets/paged_internship_list.dart';
 import 'internship_search_screen.dart' show InternshipFilterButton;
 
 /// Full "Top Matches For You" list — real internship postings from
@@ -27,17 +26,33 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
   late final InternshipService _internshipService =
       widget.service ?? InternshipService();
   final _searchController = TextEditingController();
-
-  late Future<List<Internship>> _internshipsFuture = _internshipService
-      .fetchAll(filter: _filter);
+  final _scroll = ScrollController();
   Timer? _debounce;
 
   /// Same three orderings as the web's internships page.
   InternshipFilter _filter = InternshipFilter.topMatches;
 
+  /// One page at a time: the list asks for the next page as the student
+  /// scrolls. Kept in a field so it only changes on a new search/ordering
+  /// (the list starts over whenever it changes).
+  late Future<InternshipPage<Internship>> Function(int page) _loader = _makeLoader();
+  int _refreshToken = 0;
+
+  Future<InternshipPage<Internship>> Function(int page) _makeLoader() {
+    final query = _searchController.text.trim();
+    final filter = _filter;
+    return (page) => _internshipService.fetchAllPage(
+          query: query,
+          filter: filter,
+          page: page,
+          perPage: 10,
+        );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
+    _scroll.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -45,12 +60,7 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
-      setState(() {
-        _internshipsFuture = _internshipService.fetchAll(
-          query: value.trim(),
-          filter: _filter,
-        );
-      });
+      setState(() => _loader = _makeLoader());
     });
   }
 
@@ -59,22 +69,12 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
     if (filter == _filter) return;
     setState(() {
       _filter = filter;
-      _internshipsFuture = _internshipService.fetchAll(
-        query: _searchController.text.trim(),
-        filter: filter,
-      );
+      _loader = _makeLoader();
     });
   }
 
   Future<void> _refresh() async {
-    final future = _internshipService.fetchAll(
-      query: _searchController.text.trim(),
-      filter: _filter,
-    );
-    setState(() {
-      _internshipsFuture = future;
-    });
-    await future;
+    setState(() => _refreshToken++);
   }
 
   @override
@@ -117,6 +117,7 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                 child: RefreshIndicator(
                   onRefresh: _refresh,
                   child: ListView(
+                    controller: _scroll,
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
                     children: [
                       TextField(
@@ -145,72 +146,16 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      FutureBuilder<List<Internship>>(
-                        future: _internshipsFuture,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState !=
-                              ConnectionState.done) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 40),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-
-                          if (snapshot.hasError || !snapshot.hasData) {
-                            final message = snapshot.error is ApiException
-                                ? (snapshot.error as ApiException).message
-                                : 'Could not load internships.';
-                            return _InlineMessage(
-                              text: message,
-                              onRetry: _refresh,
-                            );
-                          }
-
-                          final items = snapshot.data!;
-                          if (items.isEmpty) {
-                            return EmptyResults(
-                              title: 'No internships found',
-                              hint: _searchController.text.trim().isEmpty
-                                  ? 'Check back once new postings are published.'
-                                  : 'Try a different keyword.',
-                            );
-                          }
-
-                          return Column(
-                            children: [
-                              for (final internship in items) ...[
-                                MatchCard(internship: internship),
-                                // Only present on the proximity ordering, which
-                                // is the only time it's what's being sorted on.
-                                if (internship.distanceLabel != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: 6,
-                                      left: 4,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.place_outlined,
-                                          size: 14,
-                                          color: AppColors.textMuted,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          internship.distanceLabel!,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.textMuted,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                const SizedBox(height: 16),
-                              ],
-                            ],
-                          );
-                        },
+                      PagedInternshipList(
+                        controller: _scroll,
+                        loader: _loader,
+                        refreshToken: _refreshToken,
+                        emptyHint: _searchController.text.trim().isEmpty
+                            ? 'Check back once new postings are published.'
+                            : 'Try a different keyword.',
+                        // Only present on the proximity ordering, which is
+                        // the only time it's what's being sorted on.
+                        showDistance: _filter == InternshipFilter.proximity,
                       ),
                     ],
                   ),
@@ -223,34 +168,6 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
     );
   }
 }
-
-class _InlineMessage extends StatelessWidget {
-  const _InlineMessage({required this.text, this.onRetry});
-
-  final String text;
-  final Future<void> Function()? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Column(
-        children: [
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textMuted),
-          ),
-          if (onRetry != null) ...[
-            const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _HeaderIconButton extends StatelessWidget {
   const _HeaderIconButton({required this.icon, required this.onTap});
 

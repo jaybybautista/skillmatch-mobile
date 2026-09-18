@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'meeting.dart';
+
 /// One row of the student's applications list — the same `applications`
 /// record the web page renders, including its resolved status label and
 /// colours so both platforms stay in step.
@@ -19,6 +21,11 @@ class ApplicationSummary {
     required this.hasPendingAssessment,
     required this.isReassignment,
     this.assessmentId,
+    this.statusHint,
+    this.pipelineIndex,
+    this.isClosed = false,
+    this.offerPending = false,
+    this.meetings = const [],
   });
 
   final int id;
@@ -47,6 +54,19 @@ class ApplicationSummary {
   final bool isReassignment;
   final int? assessmentId;
 
+  /// One line under the strip explaining what the status means for the
+  /// student (the web's STUDENT_HINTS); null while a test is in the way.
+  final String? statusHint;
+
+  /// Position on the pending -> accepted stepper, null when off it
+  /// (rejected, withdrawn, on hold, offer declined).
+  final int? pipelineIndex;
+  final bool isClosed;
+
+  /// The company made an offer; Accept / Decline are shown.
+  final bool offerPending;
+  final List<Meeting> meetings;
+
   factory ApplicationSummary.fromJson(Map<String, dynamic> json) {
     return ApplicationSummary(
       id: json['id'] as int,
@@ -69,8 +89,52 @@ class ApplicationSummary {
       hasPendingAssessment: json['has_pending_assessment'] as bool? ?? false,
       isReassignment: json['is_reassignment'] as bool? ?? false,
       assessmentId: (json['assessment_id'] as num?)?.toInt(),
+      statusHint: json['status_hint'] as String?,
+      pipelineIndex: (json['pipeline_index'] as num?)?.toInt(),
+      isClosed: json['is_closed'] as bool? ?? false,
+      offerPending: json['offer_pending'] as bool? ?? false,
+      meetings: [
+        for (final m in (json['meetings'] as List? ?? const [])) Meeting.fromJson(m as Map<String, dynamic>),
+      ],
     );
   }
+
+  ApplicationSummary withMeeting(Meeting updated) => copyWith(
+        meetings: [for (final m in meetings) m.id == updated.id ? updated : m],
+      );
+
+  ApplicationSummary copyWith({List<Meeting>? meetings}) => ApplicationSummary(
+        id: id,
+        status: status,
+        statusLabel: statusLabel,
+        statusBackground: statusBackground,
+        statusTextColor: statusTextColor,
+        internshipTitle: internshipTitle,
+        companyName: companyName,
+        companyHasMoa: companyHasMoa,
+        companyLogoUrl: companyLogoUrl,
+        companyInitial: companyInitial,
+        appliedAt: appliedAt,
+        hasPendingAssessment: hasPendingAssessment,
+        isReassignment: isReassignment,
+        assessmentId: assessmentId,
+        statusHint: statusHint,
+        pipelineIndex: pipelineIndex,
+        isClosed: isClosed,
+        offerPending: offerPending,
+        meetings: meetings ?? this.meetings,
+      );
+}
+
+/// A step of the application pipeline (pending -> accepted), from the API.
+class PipelineStep {
+  const PipelineStep({required this.key, required this.label});
+
+  final String key;
+  final String label;
+
+  factory PipelineStep.fromJson(Map<String, dynamic> json) =>
+      PipelineStep(key: json['key'] as String? ?? '', label: json['label'] as String? ?? '');
 }
 
 /// The list plus the flags driving the notification banner. The web shows one
@@ -81,11 +145,15 @@ class ApplicationsResult {
     required this.applications,
     required this.hasNewAssessment,
     required this.hasReassignment,
+    this.pipeline = const [],
   });
 
   final List<ApplicationSummary> applications;
   final bool hasNewAssessment;
   final bool hasReassignment;
+
+  /// The stepper's steps, in order, as the server names them.
+  final List<PipelineStep> pipeline;
 
   factory ApplicationsResult.fromJson(Map<String, dynamic> json) {
     return ApplicationsResult(
@@ -94,8 +162,18 @@ class ApplicationsResult {
           .toList(),
       hasNewAssessment: json['has_new_assessment'] as bool? ?? false,
       hasReassignment: json['has_reassignment'] as bool? ?? false,
+      pipeline: [
+        for (final p in (json['pipeline'] as List? ?? const [])) PipelineStep.fromJson(p as Map<String, dynamic>),
+      ],
     );
   }
+
+  ApplicationsResult replacing(ApplicationSummary updated) => ApplicationsResult(
+        applications: [for (final a in applications) a.id == updated.id ? updated : a],
+        hasNewAssessment: hasNewAssessment,
+        hasReassignment: hasReassignment,
+        pipeline: pipeline,
+      );
 }
 
 /// The lightweight snapshot polled every 15 seconds — enough to notice a

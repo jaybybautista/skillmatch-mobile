@@ -25,6 +25,10 @@ class CompanyPosting {
     this.qualifications = const [],
     this.skills = const [],
     this.postedAtHuman,
+    this.preferredPrograms = const [],
+    this.preferredYearLevels = const [],
+    this.preferredCampuses = const [],
+    this.preferredSummary,
   });
 
   final int id;
@@ -43,6 +47,16 @@ class CompanyPosting {
   final List<String> qualifications;
   final List<String> skills;
   final String? postedAtHuman;
+
+  /// Preferred applicants (the web's "Preferred applicants" section):
+  /// base programs, year levels and campus ids, plus the server's summary.
+  final List<String> preferredPrograms;
+  final List<int> preferredYearLevels;
+  final List<int> preferredCampuses;
+  final String? preferredSummary;
+
+  bool get hasPreferences =>
+      preferredPrograms.isNotEmpty || preferredYearLevels.isNotEmpty || preferredCampuses.isNotEmpty;
 
   bool get isOpen => status == 'open';
 
@@ -67,8 +81,35 @@ class CompanyPosting {
           .map((e) => e.toString())
           .toList(),
       postedAtHuman: json['posted_at_human'] as String?,
+      preferredPrograms: (json['preferred_programs'] as List? ?? const []).map((e) => e.toString()).toList(),
+      preferredYearLevels: (json['preferred_year_levels'] as List? ?? const []).map((e) => (e as num).toInt()).toList(),
+      preferredCampuses: (json['preferred_campuses'] as List? ?? const []).map((e) => (e as num).toInt()).toList(),
+      preferredSummary: json['preferred_summary'] as String?,
     );
   }
+}
+
+/// The choices for a posting's preferred applicants, from
+/// GET /api/company/postings/preference-options (the same lists the web
+/// form offers).
+class PreferenceOptions {
+  const PreferenceOptions({required this.programs, required this.years, required this.campuses});
+
+  final List<String> programs;
+  final List<({int value, String label})> years;
+  final List<({int id, String name})> campuses;
+
+  factory PreferenceOptions.fromJson(Map<String, dynamic> json) => PreferenceOptions(
+        programs: (json['programs'] as List? ?? const []).map((e) => e.toString()).toList(),
+        years: [
+          for (final y in (json['years'] as List? ?? const []))
+            (value: ((y as Map)['value'] as num).toInt(), label: y['label'].toString()),
+        ],
+        campuses: [
+          for (final c in (json['campuses'] as List? ?? const []))
+            (id: ((c as Map)['id'] as num).toInt(), name: c['name'].toString()),
+        ],
+      );
 }
 
 /// The six application buckets behind a posting, as counted by

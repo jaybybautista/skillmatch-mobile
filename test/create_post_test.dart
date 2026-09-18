@@ -19,6 +19,21 @@ class _FakeCompanyService extends CompanyService {
   List<String>? skills;
   int? updatedId;
   String? location;
+  List<int>? preferredYears;
+
+  @override
+  Future<PreferenceOptions> fetchPreferenceOptions() async {
+    return PreferenceOptions.fromJson({
+      'programs': ['BS Information Technology'],
+      'years': [
+        {'value': 3, 'label': '3rd year'},
+        {'value': 4, 'label': '4th year'},
+      ],
+      'campuses': [
+        {'id': 1, 'name': 'Urdaneta City Campus'},
+      ],
+    });
+  }
 
   @override
   Future<CompanyPosting> createPosting({
@@ -27,9 +42,15 @@ class _FakeCompanyService extends CompanyService {
     String? location,
     required List<String> responsibilities,
     required List<String> skills,
+    String? jobDescription,
+    List<String> qualifications = const [],
+    List<String> preferredPrograms = const [],
+    List<int> preferredYearLevels = const [],
+    List<int> preferredCampuses = const [],
   }) async {
     calls.add('create');
     if (error != null) throw error!;
+    preferredYears = List.of(preferredYearLevels);
     this.jobRole = jobRole;
     this.slots = slots;
     this.location = location;
@@ -46,9 +67,15 @@ class _FakeCompanyService extends CompanyService {
     String? location,
     required List<String> responsibilities,
     required List<String> skills,
+    String? jobDescription,
+    List<String> qualifications = const [],
+    List<String> preferredPrograms = const [],
+    List<int> preferredYearLevels = const [],
+    List<int> preferredCampuses = const [],
   }) async {
     calls.add('update');
     if (error != null) throw error!;
+    preferredYears = List.of(preferredYearLevels);
     updatedId = id;
     this.jobRole = jobRole;
     this.slots = slots;
@@ -93,8 +120,8 @@ Future<void> _pump(WidgetTester tester, Widget screen) async {
   await tester.pumpAndSettle();
 }
 
-/// Fills step 1, adds one responsibility, adds one skill, and stops on the
-/// last step without submitting.
+/// Fills step 1, adds one responsibility, adds one skill, then moves on to
+/// the last step (preferred applicants) without submitting.
 Future<void> _fillAllSteps(
   WidgetTester tester, {
   String role = 'Backend Intern',
@@ -107,7 +134,7 @@ Future<void> _fillAllSteps(
   await tester.tap(find.text('Next'));
   await tester.pumpAndSettle();
 
-  await tester.enterText(find.byType(TextField).first, responsibility);
+  await tester.enterText(find.byType(TextField).at(1), responsibility);
   await tester.tap(find.byIcon(Icons.add).first);
   await tester.pumpAndSettle();
   await tester.tap(find.text('Next'));
@@ -115,6 +142,8 @@ Future<void> _fillAllSteps(
 
   await tester.enterText(find.byType(TextField).first, skill);
   await tester.tap(find.byIcon(Icons.add).first);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Next'));
   await tester.pumpAndSettle();
 }
 
@@ -127,6 +156,9 @@ void main() {
       await _pump(tester, CreatePostScreen(service: service));
 
       await _fillAllSteps(tester);
+      expect(find.text('Preferred applicants'), findsOneWidget);
+      await tester.tap(find.text('4th year'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Post'));
       await tester.pumpAndSettle();
 
@@ -135,6 +167,7 @@ void main() {
       expect(service.slots, 3);
       expect(service.responsibilities, ['Build API endpoints']);
       expect(service.skills, ['Laravel']);
+      expect(service.preferredYears, [4]);
     });
 
     testWidgets('will not advance without a job role and a slot count', (
@@ -187,13 +220,14 @@ void main() {
       expect(find.text('Add at least one responsibility.'), findsOneWidget);
       await _clearSnackBar(tester);
 
-      await tester.enterText(find.byType(TextField).first, 'Build things');
+      await tester.enterText(find.byType(TextField).at(1), 'Build things');
       await tester.tap(find.byIcon(Icons.add).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Post'));
+      // Skills is step 3; without one, Next refuses to move on.
+      await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       expect(find.text('Add at least one required skill.'), findsOneWidget);
       expect(service.calls, isEmpty);
@@ -211,13 +245,15 @@ void main() {
       await tester.pumpAndSettle();
 
       // Typed, but "+" never tapped.
-      await tester.enterText(find.byType(TextField).first, 'Write tests');
+      await tester.enterText(find.byType(TextField).at(1), 'Write tests');
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
 
       expect(find.text('Skills'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField).first, 'PHP');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Post'));
       await tester.pumpAndSettle();
 
@@ -236,8 +272,7 @@ void main() {
       expect(service.calls, ['create']);
       expect(find.textContaining('Could not post'), findsOneWidget);
       // Still on the wizard, with the work intact.
-      expect(find.text('Skills'), findsOneWidget);
-      expect(find.text('Laravel'), findsWidgets);
+      expect(find.text('Preferred applicants'), findsOneWidget);
     });
   });
 
@@ -273,6 +308,10 @@ void main() {
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       expect(find.text('Figma'), findsOneWidget);
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text('Preferred applicants'), findsOneWidget);
 
       await tester.tap(find.text('Save changes'));
       await tester.pumpAndSettle();

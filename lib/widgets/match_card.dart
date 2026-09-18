@@ -5,6 +5,7 @@ import '../models/internship.dart';
 import 'availability_tag.dart';
 import '../screens/student/internship/internship_detail_screen.dart';
 import '../services/internship_service.dart';
+import 'match_details_sheet.dart';
 import 'moa_tag.dart';
 
 class MatchCard extends StatefulWidget {
@@ -142,7 +143,44 @@ class _MatchCardState extends State<MatchCard> {
                     ],
                   ),
                 ),
-                if (internship.matchScore != null)
+                // Tapping the score opens the match details sheet (the
+                // web's "Why this match": evaluation matrix, skills you
+                // have / are missing, preferred applicants) so the card
+                // itself stays short.
+                if (internship.matchScore != null && widget.showBookmark)
+                  Tooltip(
+                    message: 'Why this match',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => showMatchDetailsSheet(context, internship.id),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryDark,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${internship.matchScore}% Match',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.info_outline, size: 13, color: Colors.white70),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else if (internship.matchScore != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,

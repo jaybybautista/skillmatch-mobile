@@ -162,29 +162,40 @@ class ProfileService {
     await _client.delete('/student/profile/education/$id', authenticated: true);
   }
 
-  Future<void> saveCertification({
+  /// Saves a certification. The proof file (photo, scan or PDF) goes along
+  /// as multipart and the server checks it with OCR against the details; a
+  /// new entry must have one, an edit may keep the file it already has.
+  /// Returns the server's message (verified, or why it is unverified).
+  Future<String?> saveCertification({
     int? id,
     required String title,
     String? issuingOrganization,
     String? issueDate,
     String? expiryDate,
     String? credentialUrl,
+    String? certificateNumber,
+    String? certificateFilePath,
   }) async {
-    final body = {
+    final fields = <String, String>{
       'title': title,
-      'issuing_organization': issuingOrganization,
-      'issue_date': issueDate,
-      'expiry_date': expiryDate,
-      'credential_url': credentialUrl,
+      'issuing_organization': ?issuingOrganization,
+      'issue_date': ?issueDate,
+      'expiry_date': ?expiryDate,
+      'credential_url': ?credentialUrl,
+      'certificate_number': ?certificateNumber,
+      // PHP only reads multipart bodies on POST, so an edit is a POST that
+      // Laravel treats as PUT.
+      if (id != null) '_method': 'PUT',
     };
 
-    if (id == null) {
-      await _client.post('/student/profile/certifications', body,
-          authenticated: true);
-    } else {
-      await _client.put('/student/profile/certifications/$id', body,
-          authenticated: true);
-    }
+    final response = await _client.postMultipart(
+      id == null ? '/student/profile/certifications' : '/student/profile/certifications/$id',
+      fields: fields,
+      filePath: certificateFilePath,
+      fileFieldName: certificateFilePath != null ? 'certificate_file' : null,
+      authenticated: true,
+    );
+    return response['message'] as String?;
   }
 
   Future<void> deleteCertification(int id) async {

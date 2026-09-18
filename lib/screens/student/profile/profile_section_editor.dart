@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/app_theme.dart';
+import '../../../widgets/cert_badge.dart';
 
 /// What kind of input a field needs.
-enum EditorFieldType { text, multiline, date, year, choice, url }
+enum EditorFieldType { text, multiline, date, year, choice, url, file }
 
 /// One field in a profile section editor.
 ///
@@ -264,6 +265,52 @@ class _EditorSheetState extends State<_EditorSheet> {
         ],
         onChanged: (value) => controller.text = value ?? '',
         validator: validate,
+      );
+    }
+
+    if (field.type == EditorFieldType.file) {
+      // The controller holds the picked local path; [field.hint] describes
+      // what is already on the server (e.g. "Current file kept").
+      final picked = controller.text;
+      return FormField<String>(
+        validator: (_) => field.required && picked.isEmpty ? '${field.label} is required.' : null,
+        builder: (state) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(field.label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+            const SizedBox(height: 6),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final path = await pickCertificateFile(context);
+                if (path == null) return;
+                setState(() => controller.text = path);
+                state.didChange(path);
+              },
+              icon: const Icon(Icons.upload_file_outlined, size: 18),
+              label: Text(
+                picked.isEmpty
+                    ? (field.hint ?? 'Choose a photo, scan or PDF')
+                    : picked.split(RegExp(r'[\\/]')).last,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: OutlinedButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'The file is read with OCR and checked against the title, organization and certificate number you typed.',
+              style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, height: 1.4),
+            ),
+            if (state.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(state.errorText!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
+              ),
+          ],
+        ),
       );
     }
 

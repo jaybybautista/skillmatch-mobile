@@ -29,7 +29,7 @@ class CreatePostScreen extends StatefulWidget {
 }
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
-  static const _totalSteps = 3;
+  static const _totalSteps = 4;
 
   late final CompanyService _service = widget.service ?? CompanyService();
 
@@ -55,6 +55,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _skillInput = TextEditingController();
   final _skills = <String>[];
 
+  // Gustong applicant (programa, year level, campus). Lahat ay opsyonal.
+  final _preferredPrograms = <String>{};
+  final _preferredYears = <int>{};
+  final _preferredCampuses = <int>{};
+  late final Future<PreferenceOptions> _preferenceOptions = _service.fetchPreferenceOptions();
+
   bool get _isEditing => widget.posting != null;
 
   @override
@@ -68,6 +74,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     _jobDescription.text = existing.jobDescription ?? '';
     _responsibilities.addAll(existing.responsibilities);
     _qualifications.addAll(existing.qualifications);
+    _preferredPrograms.addAll(existing.preferredPrograms);
+    _preferredYears.addAll(existing.preferredYearLevels);
+    _preferredCampuses.addAll(existing.preferredCampuses);
     _skills.addAll(existing.skills);
   }
 
@@ -121,12 +130,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           return false;
         }
         return true;
-      default:
+      case 3:
         _addSkill();
         if (_skills.isEmpty) {
           _notify('Add at least one required skill.');
           return false;
         }
+        return true;
+      default:
+        // Preferred applicants are optional.
         return true;
     }
   }
@@ -163,6 +175,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               responsibilities: _responsibilities,
               qualifications: _qualifications,
               skills: _skills,
+              preferredPrograms: _preferredPrograms.toList(),
+              preferredYearLevels: _preferredYears.toList(),
+              preferredCampuses: _preferredCampuses.toList(),
             )
           : await _service.createPosting(
               jobRole: _jobRole.text.trim(),
@@ -172,6 +187,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               responsibilities: _responsibilities,
               qualifications: _qualifications,
               skills: _skills,
+              preferredPrograms: _preferredPrograms.toList(),
+              preferredYearLevels: _preferredYears.toList(),
+              preferredCampuses: _preferredCampuses.toList(),
             );
 
       if (!mounted) return;
@@ -305,14 +323,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   String get _stepTitle => switch (_step) {
     1 => 'Basic Info',
     2 => 'Work description',
-    _ => 'Skills',
+    3 => 'Skills',
+    _ => 'Preferred applicants',
   };
 
   String get _stepSubtitle => switch (_step) {
     1 => "Let's start with the core details.",
     2 => 'Start with an overview of the role, then break it down.',
-    _ =>
+    3 =>
       'Specify the technical expertise and soft skills required for this internship.',
+    _ =>
+      'Optional. Applicants who fit are marked Preferred in your list; everyone can still apply.',
   };
 
   Widget _buildStep() => switch (_step) {
@@ -332,13 +353,121 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       onAddQualification: _addQualification,
       onRemoveQualification: _removeQualification,
     ),
-    _ => _SkillsStep(
+    3 => _SkillsStep(
       controller: _skillInput,
       items: _skills,
       onAdd: _addSkill,
       onRemove: _removeSkill,
     ),
+    _ => _PreferredStep(
+      options: _preferenceOptions,
+      programs: _preferredPrograms,
+      years: _preferredYears,
+      campuses: _preferredCampuses,
+      onChanged: () => setState(() {}),
+    ),
   };
+}
+
+/// Step 4: tick the programs, year levels and campuses the posting is
+/// meant for - the web's "Preferred applicants" chips.
+class _PreferredStep extends StatelessWidget {
+  const _PreferredStep({
+    required this.options,
+    required this.programs,
+    required this.years,
+    required this.campuses,
+    required this.onChanged,
+  });
+
+  final Future<PreferenceOptions> options;
+  final Set<String> programs;
+  final Set<int> years;
+  final Set<int> campuses;
+  final VoidCallback onChanged;
+
+  Widget _group(String title, List<Widget> chips) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: chips),
+      ],
+    );
+  }
+
+  Widget _chip(String label, bool selected, VoidCallback toggle) {
+    return FilterChip(
+      label: Text(label, style: TextStyle(fontSize: 12, color: selected ? Colors.white : AppColors.textDark)),
+      selected: selected,
+      onSelected: (_) => toggle(),
+      selectedColor: AppColors.primary,
+      checkmarkColor: Colors.white,
+      backgroundColor: Colors.white,
+      side: const BorderSide(color: AppColors.border),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PreferenceOptions>(
+      future: options,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator()));
+        }
+        final opts = snapshot.data;
+        if (opts == null) {
+          return const Text('Could not load the choices. You can still post and set them later on the website.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13));
+        }
+
+        final selected = programs.length + years.length + campuses.length;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                selected == 0 ? 'Nothing picked: anyone is welcome.' : '$selected preference${selected == 1 ? '' : 's'} picked.',
+                style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 14),
+              _group('Year level', [
+                for (final y in opts.years)
+                  _chip(y.label, years.contains(y.value), () {
+                    years.contains(y.value) ? years.remove(y.value) : years.add(y.value);
+                    onChanged();
+                  }),
+              ]),
+              const SizedBox(height: 16),
+              _group('Campus', [
+                for (final c in opts.campuses)
+                  _chip(c.name, campuses.contains(c.id), () {
+                    campuses.contains(c.id) ? campuses.remove(c.id) : campuses.add(c.id);
+                    onChanged();
+                  }),
+              ]),
+              const SizedBox(height: 16),
+              _group('Program', [
+                for (final p in opts.programs)
+                  _chip(p, programs.contains(p), () {
+                    programs.contains(p) ? programs.remove(p) : programs.add(p);
+                    onChanged();
+                  }),
+              ]),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _CreatePostFooter extends StatelessWidget {

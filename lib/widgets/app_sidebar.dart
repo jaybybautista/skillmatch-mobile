@@ -12,12 +12,15 @@ import '../screens/student/requirements/requirements_screen.dart';
 import '../screens/student/resume/resume_list_screen.dart';
 import '../screens/student/roadmap/skill_roadmap_screen.dart';
 import '../screens/student/settings/settings_screen.dart';
+import '../screens/messaging/messages_screen.dart';
+import '../services/messaging_service.dart';
 import '../services/notification_service.dart';
 
 /// Which sidebar entry the current screen is, so it can be highlighted.
 enum SidebarItem {
   home,
   notifications,
+  messages,
   applications,
   bookmarks,
   profile,
@@ -148,6 +151,16 @@ class _AppSidebarState extends State<AppSidebar> {
                         SidebarItem.notifications,
                         NotificationsScreen.new,
                       ),
+                    ),
+                  ),
+                  ValueListenableBuilder<int>(
+                    valueListenable: MessagingService.instance.unreadCount,
+                    builder: (context, unread, _) => _SidebarTile(
+                      icon: Icons.chat_bubble_outline,
+                      label: 'Messages',
+                      badge: unread,
+                      isActive: widget.current == SidebarItem.messages,
+                      onTap: () => _go(SidebarItem.messages, MessagesScreen.new),
                     ),
                   ),
                   _SidebarTile(

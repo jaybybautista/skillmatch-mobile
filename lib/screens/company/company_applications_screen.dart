@@ -14,16 +14,38 @@ import '../../widgets/company_screen_header.dart';
 import '../../widgets/company_sidebar.dart';
 import '../student/profile/student_public_profile_screen.dart';
 import 'assign_assessment_screen.dart';
+import '../../models/meeting.dart';
+import '../../services/meeting_service.dart';
+import '../../widgets/meeting_card.dart';
 
-/// The status filters the web Applications page offers, in the same order.
+/// The status tabs the web Applications page offers, in the same order
+/// (ApplicationStatusService::LABELS).
 const _statusFilters = <({String key, String label})>[
   (key: '', label: 'All'),
   (key: 'pending', label: 'Pending'),
   (key: 'under_review', label: 'Under review'),
+  (key: 'shortlisted', label: 'Shortlisted'),
+  (key: 'assessment', label: 'Assessment'),
   (key: 'interview', label: 'Interview'),
+  (key: 'offered', label: 'Offered'),
   (key: 'accepted', label: 'Accepted'),
   (key: 'rejected', label: 'Rejected'),
+  (key: 'withdrawn', label: 'Withdrawn'),
+  (key: 'on_hold', label: 'On hold'),
+  (key: 'declined', label: 'Offer declined'),
 ];
+
+/// Icons for the transition buttons the web shows per status.
+const _statusIcons = <String, IconData>{
+  'under_review': Icons.visibility_outlined,
+  'shortlisted': Icons.star_outline,
+  'assessment': Icons.fact_check_outlined,
+  'interview': Icons.event_outlined,
+  'offered': Icons.local_offer_outlined,
+  'accepted': Icons.check_circle_outline,
+  'on_hold': Icons.pause_circle_outline,
+  'rejected': Icons.cancel_outlined,
+};
 
 /// Applications — every student who applied to one of this company's
 /// postings. Backed by /api/company/applications, the same `applications`
@@ -50,6 +72,11 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
   ApplicationCounts _counts = const ApplicationCounts({});
   String _status = '';
 
+  /// "Preferred only": applicants who fit the posting's preferred
+  /// program / year level / campus.
+  bool _preferredOnly = false;
+  final _meetings = MeetingService();
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +99,7 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
       final result = await _service.fetchApplications(
         status: _status,
         query: _searchController.text,
+        preferredOnly: _preferredOnly,
       );
       if (!mounted) return;
       setState(() {
@@ -182,6 +210,99 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
     }
   }
 
+  /// "Move to Under review", "Invite to Interview", "Send an offer"...
+  static String _transitionLabel(StatusOption option) {
+    return switch (option.key) {
+      'interview' => 'Invite to Interview',
+      'offered' => 'Send an offer',
+      'accepted' => 'Accept',
+      'on_hold' => 'Put on hold',
+      'assessment' => 'Move to Assessment',
+      _ => 'Move to ${option.label}',
+    };
+  }
+
+  /* ── Online meetings ─────────────────────────────────────────────── */
+
+  Future<void> _scheduleMeeting(CompanyApplication application) async {
+    final input = await showModalBottomSheet<_MeetingInput>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _MeetingSheet(application: application),
+    );
+    if (input == null) return;
+
+    try {
+      final (meeting, message) = await _meetings.schedule(
+        application.id,
+        title: input.title,
+        agenda: input.agenda,
+        type: input.type,
+        startNow: input.startNow,
+        scheduledAt: input.scheduledAt,
+        durationMinutes: input.durationMinutes,
+      );
+      _notify(message);
+      await _load();
+      // "Start now": open the room straight away, like the web.
+      if (input.startNow && mounted) await _meetings.joinWithFeedback(context, meeting.id);
+      if (mounted) _load();
+    } catch (e) {
+      _notify(messageForError(e, 'Could not set up the meeting. Check your connection and try again.'));
+    }
+  }
+
+  Future<void> _rescheduleMeeting(Meeting meeting) async {
+    final picked = await pickDateTime(context, initial: meeting.proposedAt ?? meeting.scheduledAt);
+    if (picked == null) return;
+    try {
+      final (_, message) = await _meetings.reschedule(meeting.id, scheduledAt: picked);
+      _notify(message);
+      await _load();
+    } catch (e) {
+      _notify(messageForError(e, 'Could not move the meeting.'));
+    }
+  }
+
+  Future<void> _cancelMeeting(Meeting meeting) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel this meeting?'),
+        content: const Text('The student will be told it is cancelled.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Keep it')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Cancel meeting', style: TextStyle(color: AppColors.danger))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final (_, message) = await _meetings.cancel(meeting.id);
+      _notify(message);
+      await _load();
+    } catch (e) {
+      _notify(messageForError(e, 'Could not cancel the meeting.'));
+    }
+  }
+
+  Future<void> _completeMeeting(Meeting meeting) async {
+    try {
+      final (_, message) = await _meetings.complete(meeting.id);
+      _notify(message);
+      await _load();
+    } catch (e) {
+      _notify(messageForError(e, 'Could not update the meeting.'));
+    }
+  }
+
+  Future<void> _joinMeeting(Meeting meeting) async {
+    if (await _meetings.joinWithFeedback(context, meeting.id)) _load();
+  }
+
   static String _labelFor(String status) {
     return _statusFilters
         .firstWhere(
@@ -241,32 +362,28 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
                 },
               ),
               const Divider(height: 1),
-              for (final option in const [
-                (
-                  key: 'under_review',
-                  label: 'Move to Under review',
-                  icon: Icons.visibility_outlined,
-                ),
-                (
-                  key: 'interview',
-                  label: 'Invite to Interview',
-                  icon: Icons.event_outlined,
-                ),
-                (
-                  key: 'accepted',
-                  label: 'Accept',
-                  icon: Icons.check_circle_outline,
-                ),
-              ])
-                if (application.status != option.key)
+              // The moves allowed from the current status, exactly as the
+              // web's action buttons (ApplicationStatusService::TRANSITIONS).
+              for (final option in application.transitions)
+                if (option.key != 'rejected')
                   ListTile(
-                    leading: Icon(option.icon, color: AppColors.textDark),
-                    title: Text(option.label),
+                    leading: Icon(_statusIcons[option.key] ?? Icons.arrow_forward, color: AppColors.textDark),
+                    title: Text(_transitionLabel(option)),
                     onTap: () {
                       Navigator.of(sheetContext).pop();
                       _setStatus(application, option.key);
                     },
                   ),
+              if (!application.isClosed)
+                ListTile(
+                  leading: const Icon(Icons.video_call_outlined, color: AppColors.textDark),
+                  title: const Text('Set up a meeting'),
+                  subtitle: const Text('Online interview, scheduled or right now'),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _scheduleMeeting(application);
+                  },
+                ),
               ListTile(
                 leading: const Icon(
                   Icons.fact_check_outlined,
@@ -285,7 +402,7 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
                   _assignAssessment(application);
                 },
               ),
-              if (application.status != 'rejected')
+              if (application.transitions.any((t) => t.key == 'rejected'))
                 ListTile(
                   leading: const Icon(
                     Icons.cancel_outlined,
@@ -403,6 +520,32 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
                           ],
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: Checkbox(
+                                value: _preferredOnly,
+                                activeColor: AppColors.primary,
+                                onChanged: (v) {
+                                  setState(() => _preferredOnly = v ?? false);
+                                  _load();
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'Preferred only (fits the posting\'s program, year level and campus)',
+                                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       Expanded(
                         child: RefreshIndicator(
                           onRefresh: _load,
@@ -489,6 +632,10 @@ class _CompanyApplicationsScreenState extends State<CompanyApplicationsScreen> {
         return _ApplicationCard(
           application: application,
           onActions: () => _showActions(application),
+          onJoinMeeting: _joinMeeting,
+          onRescheduleMeeting: _rescheduleMeeting,
+          onCancelMeeting: _cancelMeeting,
+          onCompleteMeeting: _completeMeeting,
         );
       },
     );
@@ -565,10 +712,21 @@ class _RejectionDialogState extends State<_RejectionDialog> {
 }
 
 class _ApplicationCard extends StatelessWidget {
-  const _ApplicationCard({required this.application, required this.onActions});
+  const _ApplicationCard({
+    required this.application,
+    required this.onActions,
+    required this.onJoinMeeting,
+    required this.onRescheduleMeeting,
+    required this.onCancelMeeting,
+    required this.onCompleteMeeting,
+  });
 
   final CompanyApplication application;
   final VoidCallback onActions;
+  final void Function(Meeting) onJoinMeeting;
+  final void Function(Meeting) onRescheduleMeeting;
+  final void Function(Meeting) onCancelMeeting;
+  final void Function(Meeting) onCompleteMeeting;
 
   @override
   Widget build(BuildContext context) {
@@ -685,8 +843,64 @@ class _ApplicationCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                  // Preferred / Outside preferred, like the web's badge.
+                  if (application.preferredFit != null) ...[
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: application.preferredSummary ?? '',
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: application.preferredFit! ? const Color(0xFFEAFAF1) : const Color(0xFFFFF4E5),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          application.preferredFit! ? 'Preferred' : 'Outside preferred',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: application.preferredFit! ? const Color(0xFF1A7F4B) : const Color(0xFFB87700),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
+              if (application.meetings.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                for (final m in application.meetings.where((m) => m.isOpen))
+                  MeetingCard(
+                    meeting: m,
+                    actions: [
+                      if (m.isJoinable)
+                        FilledButton.icon(
+                          onPressed: () => onJoinMeeting(m),
+                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A), visualDensity: VisualDensity.compact),
+                          icon: Icon(m.isVideo ? Icons.videocam : Icons.call, size: 16),
+                          label: const Text('Join'),
+                        )
+                      else if (!m.isMissed)
+                        Text('Room opens on ${m.opensLabel}.', style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+                      TextButton(
+                        onPressed: () => onRescheduleMeeting(m),
+                        child: Text(m.status == 'reschedule_requested' ? 'Set new time' : 'Reschedule'),
+                      ),
+                      TextButton(
+                        onPressed: () => onCompleteMeeting(m),
+                        style: TextButton.styleFrom(foregroundColor: const Color(0xFF1A7F4B)),
+                        child: const Text('Mark as completed'),
+                      ),
+                      TextButton(
+                        onPressed: () => onCancelMeeting(m),
+                        style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                        child: const Text('Cancel'),
+                      ),
+                    ],
+                  ),
+                for (final m in application.meetings.where((m) => !m.isOpen).take(2))
+                  MeetingCard(meeting: m, compact: true),
+              ],
               if (application.rejectionReason != null &&
                   application.rejectionReason!.trim().isNotEmpty) ...[
                 const SizedBox(height: 10),
@@ -701,6 +915,168 @@ class _ApplicationCard extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// What the "Set up a meeting" sheet hands back.
+class _MeetingInput {
+  const _MeetingInput({
+    required this.title,
+    required this.agenda,
+    required this.type,
+    required this.startNow,
+    required this.scheduledAt,
+    required this.durationMinutes,
+  });
+
+  final String title;
+  final String? agenda;
+  final String type;
+  final bool startNow;
+  final DateTime? scheduledAt;
+  final int durationMinutes;
+}
+
+/// The web's "Set up a meeting" form: title, schedule for later or start
+/// now, duration, video or audio, and an agenda.
+class _MeetingSheet extends StatefulWidget {
+  const _MeetingSheet({required this.application});
+
+  final CompanyApplication application;
+
+  @override
+  State<_MeetingSheet> createState() => _MeetingSheetState();
+}
+
+class _MeetingSheetState extends State<_MeetingSheet> {
+  late final _title = TextEditingController(text: 'Interview - ${widget.application.internshipTitle}');
+  final _agenda = TextEditingController();
+  String _type = 'video';
+  bool _startNow = false;
+  DateTime? _when;
+  int _duration = 30;
+  String? _error;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _agenda.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickWhen() async {
+    final picked = await pickDateTime(context, initial: _when);
+    if (picked != null) setState(() => _when = picked);
+  }
+
+  void _submit() {
+    if (_title.text.trim().isEmpty) {
+      setState(() => _error = 'Give the meeting a title.');
+      return;
+    }
+    if (!_startNow && _when == null) {
+      setState(() => _error = 'Pick a date and time, or choose "Start now".');
+      return;
+    }
+    Navigator.of(context).pop(_MeetingInput(
+      title: _title.text.trim(),
+      agenda: _agenda.text.trim().isEmpty ? null : _agenda.text.trim(),
+      type: _type,
+      startNow: _startNow,
+      scheduledAt: _startNow ? null : _when,
+      durationMinutes: _duration,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 14),
+            Text('Set up a meeting', style: AppFonts.title(fontSize: 18)),
+            Text(
+              'With ${widget.application.student.name} for ${widget.application.internshipTitle}. The student is notified and can confirm or ask for another time.',
+              style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted, height: 1.45),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _title,
+              maxLength: 150,
+              decoration: const InputDecoration(labelText: 'Title', counterText: ''),
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: false, label: Text('Schedule for later'), icon: Icon(Icons.event_outlined)),
+                ButtonSegment(value: true, label: Text('Start now'), icon: Icon(Icons.play_arrow_outlined)),
+              ],
+              selected: {_startNow},
+              onSelectionChanged: (v) => setState(() => _startNow = v.first),
+            ),
+            if (!_startNow) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _pickWhen,
+                icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                label: Text(_when == null ? 'Pick date and time' : formatPickedDateTime(_when!)),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<int>(
+                    initialValue: _duration,
+                    decoration: const InputDecoration(labelText: 'Duration'),
+                    items: const [15, 30, 45, 60, 90, 120]
+                        .map((m) => DropdownMenuItem(value: m, child: Text('$m min')))
+                        .toList(),
+                    onChanged: (v) => setState(() => _duration = v ?? 30),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _type,
+                    decoration: const InputDecoration(labelText: 'Type'),
+                    items: const [
+                      DropdownMenuItem(value: 'video', child: Text('Video')),
+                      DropdownMenuItem(value: 'audio', child: Text('Audio')),
+                    ],
+                    onChanged: (v) => setState(() => _type = v ?? 'video'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _agenda,
+              maxLines: 3,
+              maxLength: 2000,
+              decoration: const InputDecoration(labelText: 'Agenda (optional)', alignLabelWithHint: true, counterText: ''),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!, style: const TextStyle(color: AppColors.danger, fontSize: 12.5)),
+            ],
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _submit,
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 14)),
+              child: Text(_startNow ? 'Start meeting now' : 'Schedule meeting'),
+            ),
+          ],
         ),
       ),
     );
